@@ -16,6 +16,20 @@
 *.dylib
 *.dll
 
+# Compiled AviUtl plugins
+*.auf
+*.aui
+*.auo
+*.auc
+*.aul
+
+# Compiled Resource files
+*.res
+
+# Temporary configuration files
+*.depend
+config.*
+
 # Fortran module files
 *.mod
 *.smod
