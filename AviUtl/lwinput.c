@@ -77,8 +77,8 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     "LW-Libav Index File (" INDEX_FILE_EXT ")\0" INDEX_FILE_EXT "\0"
     "Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
     "L-SMASH Works File Reader r" LSMASHWORKS_REV "\0",             /* Information of plugin */
-    NULL,                                                           /* Pointer to function called when opening DLL (If NULL, won't be called.) */
-    NULL,                                                           /* Pointer to function called when closing DLL (If NULL, won't be called.) */
+    func_init,                                                      /* Pointer to function called when opening DLL (If NULL, won't be called.) */
+    func_exit,                                                      /* Pointer to function called when closing DLL (If NULL, won't be called.) */
     func_open,                                                      /* Pointer to function to open input file */
     func_close,                                                     /* Pointer to function to close input file */
     func_info_get,                                                  /* Pointer to function to get information of input file */
@@ -106,6 +106,9 @@ static const char *scaler_list[] = { "Fast bilinear", "Bilinear", "Bicubic", "Ex
                                      "L-bicubic/C-bilinear", "Gaussian", "Sinc", "Lanczos", "Bicubic spline" };
 static const char *field_dominance_list[] = { "Obey source flags", "Top -> Bottom", "Bottom -> Top" };
 static const char *avs_bit_depth_list[] = { "8", "9", "10", "16" };
+static input_cache *input_cache_list = NULL;
+static int input_cache_count = 0;
+static HANDLE input_cache_mutex = NULL;
 
 void au_message_box_desktop
 (
@@ -313,6 +316,9 @@ static void get_settings( void )
             clean_preferred_decoder_names();
         else
             set_preferred_decoder_names_on_buf( preferred_decoder_names );
+        /* handle cache */
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &video_opt->handle_cache ) != 1 )
+            video_opt->handle_cache = 0;
         fclose( ini );
     }
     else
@@ -352,8 +358,30 @@ static void get_settings( void )
     }
 }
 
+BOOL func_init( void ) {
+    input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
+    return input_cache_list != NULL;
+}
+
+BOOL func_exit( void ) {
+    return CloseHandle( input_cache_mutex );
+}
+
 INPUT_HANDLE func_open( LPSTR file )
 {
+    if( video_opt->handle_cache ) {
+        WaitForSingleObject( input_cache_mutex, INFINITE );
+        for( int i = 0; i < input_cache_count; i++ ) {
+            if( strcmp( input_cache_list[i].file_path, file) == 0 ) {
+                input_cache_list[i].ref_count++;
+                INPUT_HANDLE tmp_handle = input_cache_list[i].input_handle;
+                ReleaseMutex( input_cache_mutex );
+                return tmp_handle;
+            }
+        }
+        ReleaseMutex( input_cache_mutex );
+    }
+
     lsmash_handler_t *hp = (lsmash_handler_t *)lw_malloc_zero( sizeof(lsmash_handler_t) );
     if( !hp )
         return NULL;
@@ -462,11 +490,58 @@ INPUT_HANDLE func_open( LPSTR file )
         func_close( hp );
         return NULL;
     }
+
+    if( video_opt->handle_cache ) {
+        WaitForSingleObject( input_cache_mutex, INFINITE );
+        char* file_name = malloc( ( strlen( file ) + 1 ) * sizeof( char ));
+        if( file_name ) {
+            strcpy( file_name, file );
+            input_cache *cache_list = realloc( input_cache_list, sizeof( input_cache ) * ( input_cache_count + 1 ) );
+            if( cache_list ) {
+                input_cache_list = cache_list;
+                input_cache_list[input_cache_count].file_path = file_name;
+                input_cache_list[input_cache_count].input_handle = hp;
+                input_cache_list[input_cache_count].ref_count = 1;
+                input_cache_count++;
+            } else {
+                free( file_name );
+            }
+        }
+        ReleaseMutex( input_cache_mutex );
+    }
     return hp;
 }
 
 BOOL func_close( INPUT_HANDLE ih )
 {
+    if( video_opt->handle_cache ) {
+        WaitForSingleObject( input_cache_mutex, INFINITE );
+        for( int i = 0; i < input_cache_count; i++ ) {
+            if( input_cache_list[i].input_handle == ih ) {
+                if( --input_cache_list[i].ref_count > 0 ) {
+                    return TRUE;
+                } else {
+                    free( input_cache_list[i].file_path );
+
+                    if( --input_cache_count > 0 ) {
+                        for(int j=i;j<input_cache_count;j++) {
+                            input_cache_list[j] = input_cache_list[j+1];
+                        }
+                        input_cache* cache_list = realloc( input_cache_list, input_cache_count * sizeof(input_cache) );
+                        if( cache_list ) {
+                            input_cache_list = cache_list;
+                        }
+                    } else {
+                        free(input_cache_list);
+                        input_cache_list = NULL;
+                    }
+                    break;
+                }
+            }
+        }
+        ReleaseMutex( input_cache_mutex );
+    }
+
     lw_freep( &reader_opt.preferred_decoder_names );
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     if( !hp )
@@ -791,6 +866,8 @@ static BOOL CALLBACK dialog_proc
             lf.lfHeight *= 0.90;
             lf.lfQuality = ANTIALIASED_QUALITY;
             SendMessage( GetDlgItem( hwnd, IDC_TEXT_LIBRARY_INFO ), WM_SETFONT, (WPARAM)CreateFontIndirect( &lf ), 1 );
+            /* handle cache */
+            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, video_opt->handle_cache );
             return TRUE;
         case WM_NOTIFY :
             if( wparam == IDC_SPIN_THREADS )
@@ -934,6 +1011,9 @@ static BOOL CALLBACK dialog_proc
                         set_preferred_decoder_names_on_buf( edit_buf );
                         fprintf( ini, "preferred_decoders=%s\n", edit_buf );
                     }
+                    /* handle cache */
+                    video_opt->handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
+                    fprintf( ini, "handle_cache=%d\n", video_opt->handle_cache );
                     /* Close */
                     fclose( ini );
                     EndDialog( hwnd, IDOK );

@@ -72,6 +72,7 @@
 #define IDC_COMBOBOX_AVS_BITDEPTH     1171
 #define IDC_EDIT_PREFERRED_DECODERS   1180
 #define IDC_TEXT_LIBRARY_INFO         1190
+#define IDC_CHECK_HANDLE_CACHE        1191
 
 /* Muxer dialog */
 #define IDD_MUXER_OPTIONS              103

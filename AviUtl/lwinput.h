@@ -99,6 +99,7 @@ typedef struct
     {
         int bit_depth;
     } avs;
+    int handle_cache;
 } video_option_t;
 
 enum
@@ -185,3 +186,9 @@ void au_message_box_desktop
     lw_log_level      level,
     const char       *message
 );
+
+typedef struct {
+    char* file_path;
+    INPUT_HANDLE input_handle;
+    int ref_count;
+} input_cache;
