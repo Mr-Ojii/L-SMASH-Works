@@ -571,10 +571,11 @@ int libavsmash_video_setup_timestamp_info
         second_largest_cts   = largest_cts;
         largest_cts          = ts_list.timestamp[i].cts;
     }
-    uint64_t reduce = reduce_fraction( &media_timescale, &composition_timebase );
+    uint64_t media_timescale_for_calc_frame_rate = media_timescale;
+    uint64_t reduce = reduce_fraction( &media_timescale_for_calc_frame_rate, &composition_timebase );
     uint64_t composition_duration = ((largest_cts - ts_list.timestamp[0].cts) + (largest_cts - second_largest_cts)) / reduce;
     lsmash_delete_media_timestamps( &ts_list );
-    double avg_frame_rate = (vdhp->sample_count * ((double)media_timescale / composition_duration));
+    double avg_frame_rate = (vdhp->sample_count * ((double)media_timescale_for_calc_frame_rate / composition_duration));
     if( strict_cfr || !lw_try_rational_framerate( avg_frame_rate, framerate_num, framerate_den, composition_timebase ) )
     {
         uint64_t num = (uint64_t)(avg_frame_rate * composition_timebase + 0.5);
