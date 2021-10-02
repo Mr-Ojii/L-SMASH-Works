@@ -1970,6 +1970,10 @@ static uint64_t xxhash_file( const char *file_path, int64_t file_size )
     FILE *fp = lw_fopen( file_path, "rb" );
     if( !fp ) return 0;
     uint8_t *file_buffer = (uint8_t *)lw_malloc_zero( 1 << 21 );
+    if( !file_buffer ) {
+        fclose( fp );
+        return 0;
+    }
     const size_t read_len = 1 << 20;
     size_t buffer_len = fread( file_buffer, 1, read_len, fp );
     if( file_size > (1 << 21) )

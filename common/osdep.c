@@ -37,6 +37,8 @@ int lw_string_to_wchar( int cp, const char *from, wchar_t **to )
     if( nc == 0 )
         return 0;
     *to = (wchar_t *)lw_malloc_zero( nc * sizeof(wchar_t) );
+    if( !*to )
+        return 0;
     MultiByteToWideChar( cp, 0, from, -1, *to, nc );
     return nc;
 }
@@ -47,6 +49,8 @@ int lw_string_from_wchar( int cp, const wchar_t *from, char **to )
     if( nc == 0 )
         return 0;
     *to = (char *)lw_malloc_zero( nc * sizeof(char) );
+    if( !*to )
+        return 0;
     WideCharToMultiByte( cp, 0, from, -1, *to, nc, 0, 0 );
     return nc;
 }
