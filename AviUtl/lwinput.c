@@ -360,7 +360,7 @@ static void get_settings( void )
 
 BOOL func_init( void ) {
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
-    return input_cache_list != NULL;
+    return input_cache_mutex != NULL;
 }
 
 BOOL func_exit( void ) {
