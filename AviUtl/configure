@@ -94,6 +94,7 @@ SRC_INPUT="lwinput.c libavsmash_input.c lwlibav_input.c avs_input.c dummy_input.
 SRC_MUXER="lwmuxer.c progress_dlg.c ../common/utils.c"
 SRC_DUMPER="lwdumper.c"
 SRC_COLOR="lwcolor.c lwcolor_simd.c ../common/lwsimd.c"
+SRC_BRIDGE="lwbridge.c  ../common/utils.c"
 
 # -- options ----------------------------------------------------------------------------------
 echo all command lines: > config.log
@@ -218,7 +219,6 @@ if ! cc_check "$CFLAGS" "$LDFLAGS $LIBS $XLIBS" "libswresample/swresample.h" "sw
     error_exit "libswresample/swresample.h might not be installed or some libs missing."
 fi
 
-LDFLAGS="$AU_LDFLAGS $LDFLAGS"
 LIBS="-lcomctl32 -lwinmm -lgdi32 $LIBS $XLIBS"
 
 # -- output config.h --------------------------------------------------------------------------
@@ -240,12 +240,14 @@ RC = $RC
 STRIP = $STRIP
 CFLAGS = $CFLAGS
 LDFLAGS = $LDFLAGS
+AU_LDFLAGS = $AU_LDFLAGS
 LIBS = $LIBS
 SRCDIR = $SRCDIR
 SRC_INPUT = $SRC_INPUT
 SRC_MUXER = $SRC_MUXER
 SRC_DUMPER = $SRC_DUMPER
 SRC_COLOR = $SRC_COLOR
+SRC_BRIDGE = $SRC_BRIDGE
 EOF
 
 cat >> config.log << EOF
@@ -274,9 +276,11 @@ test "$SRCDIR" = "." || cp -f $SRCDIR/GNUmakefile .
 cat << EOF
 
 configure finished.
-type 'make'        : compile all plugins
-type 'make input'  : compile lwinput.aui
-type 'make muxer'  : compile lwmuxer.auf
-type 'make dumper' : compile lwdumper.auf
-type 'make color'  : compile lwcolor.auc
+type 'make'           : compile all plugins
+type 'make input'     : compile lwinput.aui
+type 'make muxer'     : compile lwmuxer.auf
+type 'make dumper'    : compile lwdumper.auf
+type 'make color'     : compile lwcolor.auc
+type 'make bridge'    : compile lwbridge.aui
+type 'make inputexe'  : compile lwinput.exe
 EOF

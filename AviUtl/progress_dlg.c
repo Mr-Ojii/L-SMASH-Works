@@ -29,7 +29,7 @@
 #include "progress_dlg.h"
 #include "resource.h"
 
-static BOOL CALLBACK dialog_proc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
+static INT_PTR CALLBACK dialog_proc( HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam )
 {
 	switch( msg )
     {

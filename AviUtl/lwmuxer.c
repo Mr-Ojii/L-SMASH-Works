@@ -1482,7 +1482,7 @@ static inline void disable_chapter( HWND hwnd, option_t *opt )
     SetDlgItemText( hwnd, IDC_EDIT_CHAPTER_PATH, (LPCTSTR)opt->chapter_file );
 }
 
-static BOOL CALLBACK dialog_proc( HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam )
+static INT_PTR CALLBACK dialog_proc( HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam )
 {
     static void   *editp;
     static FILTER *fp;

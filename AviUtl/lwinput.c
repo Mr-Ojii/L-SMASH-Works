@@ -26,6 +26,7 @@
 #include "resource.h"
 
 #include "config.h"
+#include "pipe.h"
 
 #include <commctrl.h>
 
@@ -109,6 +110,12 @@ static const char *avs_bit_depth_list[] = { "8", "9", "10", "16" };
 static input_cache *input_cache_list = NULL;
 static int input_cache_count = 0;
 static HANDLE input_cache_mutex = NULL;
+static HANDLE pipe_handle = NULL;
+
+static BYTE* video_buffer = NULL;
+static DWORD video_buffer_size = 0;
+static BYTE* audio_buffer = NULL;
+static DWORD audio_buffer_size = 0;
 
 void au_message_box_desktop
 (
@@ -721,7 +728,7 @@ static void get_mix_level
     SetWindowText( GetDlgItem( hwnd, text_idc ), (LPCTSTR)edit_buf );
 }
 
-static BOOL CALLBACK dialog_proc
+static INT_PTR CALLBACK dialog_proc
 (
     HWND   hwnd,
     UINT   message,
@@ -1035,4 +1042,188 @@ BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
 {
     DialogBox( dll_hinst, "LWINPUT_CONFIG", hwnd, dialog_proc );
     return TRUE;
+}
+
+INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+    PSTR lpCmdLine, INT nCmdShow)
+{
+    if( strcmp(lpCmdLine, "-config") == 0 ) {
+        func_config( HWND_DESKTOP, hInstance );
+        return 0;
+    }
+
+    if( lpCmdLine != NULL ) {
+        char pipe_name[64] = "\\\\.\\pipe\\L-SMASH-Works\\";
+        strcat(pipe_name, lpCmdLine);
+        pipe_handle = CreateFile(pipe_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+    }
+    if (pipe_handle == INVALID_HANDLE_VALUE || pipe_handle == NULL) {
+        MessageBox( NULL, "Failed to connect to named pipe.", "lwinput", MB_ICONERROR | MB_OK);
+        pipe_handle = NULL;
+        return 1;
+    }
+    func_init();
+
+    BOOL active_loop = TRUE;
+    while(active_loop) {
+        pipe_header header;
+        pipe_read(pipe_handle, (BYTE*)(&header), sizeof(header));
+
+        BYTE data[header.data_size];
+        if(header.data_size != 0) {
+            uint32_t read_size = pipe_read(pipe_handle, data, header.data_size);
+            if(read_size != header.data_size)
+                break;
+        }
+        switch(header.call_func) {
+            case CALL_OPEN:
+            {
+                INPUT_HANDLE ih = func_open((LPSTR)data);
+                pipe_header header;
+                header.call_func = CALL_OPEN;
+                header.data_size = sizeof(INPUT_HANDLE);
+                pipe_write(pipe_handle, (BYTE*)(&header), sizeof(pipe_header));
+                pipe_write(pipe_handle, (BYTE*)(&ih), sizeof(INPUT_HANDLE));
+            }
+            break;
+            case CALL_CLOSE:
+            {
+                INPUT_HANDLE hp;
+                memcpy(&hp, data, sizeof(INPUT_HANDLE));
+                BOOL ret = func_close(hp);
+                
+                pipe_header header;
+                header.call_func = CALL_CLOSE;
+                header.data_size = sizeof(BOOL);
+                pipe_write(pipe_handle, (BYTE*)(&header), sizeof(pipe_header));
+                pipe_write(pipe_handle, (BYTE*)(&ret), sizeof(BOOL));
+            }
+            break;
+            case CALL_INFO_GET:
+            {
+                INPUT_HANDLE hp;
+                memcpy(&hp, data, sizeof(INPUT_HANDLE));
+
+                INPUT_INFO info;
+                BOOL ret = func_info_get((INPUT_HANDLE)hp, &info);
+
+                pipe_input_info pipe_info;
+                pipe_info.audio_format_size = info.audio_format_size;
+                pipe_info.audio_n = info.audio_n;
+                pipe_info.flag = info.flag;
+                pipe_info.format_size = info.format_size;
+                pipe_info.handler = info.handler;
+                pipe_info.n = info.n;
+                pipe_info.rate = info.rate;
+                pipe_info.scale = info.scale;
+                for(int i=0;i<7;i++)
+                    pipe_info.reserve[i] = info.reserve[i];
+
+                pipe_header header;
+                header.call_func = CALL_INFO_GET;
+                BYTE* data;
+                if(ret) {
+                    header.data_size = sizeof(BOOL) + sizeof(pipe_input_info) + info.audio_format_size + info.format_size;
+                    data = lw_malloc_zero(header.data_size);
+                    memcpy(data, &ret, sizeof(BOOL));
+                    memcpy(data + sizeof(BOOL), &pipe_info, sizeof(pipe_input_info));
+                    memcpy(data + sizeof(BOOL) + sizeof(pipe_input_info), info.audio_format, info.audio_format_size);
+                    memcpy(data + sizeof(BOOL) + sizeof(pipe_input_info) + info.audio_format_size, info.format, info.format_size);
+                } else {
+                    header.data_size = sizeof(BOOL);
+                    data = lw_malloc_zero(header.data_size);
+                    memcpy(data, &ret, sizeof(BOOL));
+                }
+                pipe_write(pipe_handle, (BYTE*)(&header), sizeof(pipe_header));
+                pipe_write(pipe_handle, data, header.data_size);
+                lw_free(data);
+            }
+            break;
+            case CALL_READ_VIDEO:
+            {
+                INPUT_HANDLE ih;
+                memcpy(&ih, data + sizeof(int), sizeof(INPUT_HANDLE));
+                lsmash_handler_t *hp = (lsmash_handler_t *)ih;
+                uint64_t buf_size = hp->video_format.biWidth * hp->video_format.biHeight * (hp->video_format.biBitCount / 8);
+
+                if(buf_size > video_buffer_size) {
+                    lw_free(video_buffer);
+                    video_buffer = lw_malloc_zero(buf_size);
+                    if(video_buffer)
+                        video_buffer_size = buf_size;
+                    else
+                        video_buffer_size = 0;
+                }
+
+                int read_size = 0;
+
+                if(video_buffer)
+                    read_size = func_read_video(ih, ((int*)data)[0], video_buffer);
+
+                pipe_header header;
+                header.call_func = CALL_READ_VIDEO;
+                header.data_size = read_size;
+                pipe_write(pipe_handle, (BYTE*)(&header), sizeof(pipe_header));
+                pipe_write(pipe_handle, video_buffer, read_size);
+            }
+            break;
+            case CALL_READ_AUDIO:
+            {
+                INPUT_HANDLE ih;
+                memcpy(&ih, data + sizeof(int) * 2, sizeof(INPUT_HANDLE));
+                lsmash_handler_t *hp = (lsmash_handler_t *)ih;
+                uint32_t buf_size = hp->audio_format.Format.nChannels * (hp->audio_format.Format.wBitsPerSample / 8) * ((int*)data)[1];
+                
+                if(buf_size > audio_buffer_size) {
+                    lw_free(audio_buffer);
+                    audio_buffer = lw_malloc_zero(buf_size);
+                    if(audio_buffer)
+                        audio_buffer_size = buf_size;
+                    else
+                        audio_buffer_size = 0;
+                }
+                
+                int read_size = 0;
+
+                if(audio_buffer)
+                    read_size = func_read_audio(ih, ((int*)data)[0], ((int*)data)[1], audio_buffer);
+                
+                pipe_header header;
+                header.call_func = CALL_READ_AUDIO;
+                header.data_size = sizeof(int) + (hp->audio_format.Format.nChannels * (hp->audio_format.Format.wBitsPerSample / 8) * read_size);
+
+                pipe_write(pipe_handle, (BYTE*)(&header), sizeof(pipe_header));
+                pipe_write(pipe_handle, (BYTE*)(&read_size), sizeof(int));
+                pipe_write(pipe_handle, audio_buffer, (hp->audio_format.Format.nChannels * (hp->audio_format.Format.wBitsPerSample / 8) * read_size));
+            }
+            break;
+            case CALL_IS_KEY_FRAME:
+            {
+                INPUT_HANDLE hp;
+                memcpy(&hp, data + sizeof(int), sizeof(INPUT_HANDLE));
+                BOOL ret = func_is_keyframe(hp, ((int*)data)[0]);
+                pipe_write(pipe_handle, (BYTE*)(&ret), sizeof(BOOL));
+            }
+            break;
+            case CALL_EXIT:
+            {
+                active_loop = FALSE;
+            }
+            break;
+        }
+    }
+
+    if (pipe_handle) {
+        FlushFileBuffers(pipe_handle);
+        DisconnectNamedPipe(pipe_handle);
+        CloseHandle(pipe_handle);
+        pipe_handle = NULL;
+    }
+
+    lw_free(video_buffer);
+    lw_free(audio_buffer);
+
+    func_exit();
+
+    return 0;
 }
