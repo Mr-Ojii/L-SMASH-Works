@@ -90,6 +90,13 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
+    char path[MAX_PATH], drive[MAX_PATH], dir[MAX_PATH], fname[MAX_PATH], ext[MAX_PATH], dir_path[MAX_PATH];
+    if( GetModuleFileName(NULL, path, MAX_PATH) ) {
+        _splitpath(path, drive, dir, fname, ext);
+        strcpy(dir_path, drive);
+        strcat(dir_path, dir);
+        SetCurrentDirectory(dir_path);
+    }
     return &input_plugin_table;
 }
 
