@@ -113,8 +113,7 @@ static const char *scaler_list[] = { "Fast bilinear", "Bilinear", "Bicubic", "Ex
                                      "L-bicubic/C-bilinear", "Gaussian", "Sinc", "Lanczos", "Bicubic spline" };
 static const char *field_dominance_list[] = { "Obey source flags", "Top -> Bottom", "Bottom -> Top" };
 static const char *avs_bit_depth_list[] = { "8", "9", "10", "16" };
-static input_cache *input_cache_list = NULL;
-static int input_cache_count = 0;
+static input_cache *first_input_cache = NULL;
 static HANDLE input_cache_mutex = NULL;
 
 void au_message_box_desktop
@@ -376,12 +375,12 @@ BOOL func_exit( void ) {
 
 INPUT_HANDLE func_open( LPSTR file )
 {
-    if( video_opt->handle_cache ) {
+    if( video_opt->handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
-        for( int i = 0; i < input_cache_count; i++ ) {
-            if( strcmp( input_cache_list[i].file_path, file) == 0 ) {
-                input_cache_list[i].ref_count++;
-                INPUT_HANDLE tmp_handle = input_cache_list[i].input_handle;
+        for( input_cache* tmp_cache = first_input_cache; tmp_cache ; tmp_cache = tmp_cache->next_cache ) {
+            if( strcmp( tmp_cache->file_path, file ) == 0 ) {
+                tmp_cache->ref_count++;
+                INPUT_HANDLE tmp_handle = tmp_cache->input_handle;
                 ReleaseMutex( input_cache_mutex );
                 return tmp_handle;
             }
@@ -500,18 +499,19 @@ INPUT_HANDLE func_open( LPSTR file )
 
     if( video_opt->handle_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
-        char* file_name = malloc( ( strlen( file ) + 1 ) * sizeof( char ));
+        char* file_name = lw_malloc_zero( ( strlen( file ) + 1 ) * sizeof( char ));
         if( file_name ) {
             strcpy( file_name, file );
-            input_cache *cache_list = realloc( input_cache_list, sizeof( input_cache ) * ( input_cache_count + 1 ) );
-            if( cache_list ) {
-                input_cache_list = cache_list;
-                input_cache_list[input_cache_count].file_path = file_name;
-                input_cache_list[input_cache_count].input_handle = hp;
-                input_cache_list[input_cache_count].ref_count = 1;
-                input_cache_count++;
+            input_cache* tmp_cache = lw_malloc_zero( sizeof(input_cache) );
+
+            if( tmp_cache ) {
+                tmp_cache->next_cache = first_input_cache;
+                first_input_cache = tmp_cache;
+                tmp_cache->file_path = file_name;
+                tmp_cache->input_handle = hp;
+                tmp_cache->ref_count = 1;
             } else {
-                free( file_name );
+                lw_free( file_name );
             }
         }
         ReleaseMutex( input_cache_mutex );
@@ -521,29 +521,27 @@ INPUT_HANDLE func_open( LPSTR file )
 
 BOOL func_close( INPUT_HANDLE ih )
 {
-    if( video_opt->handle_cache ) {
+    if( video_opt->handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
-        for( int i = 0; i < input_cache_count; i++ ) {
-            if( input_cache_list[i].input_handle == ih ) {
-                if( --input_cache_list[i].ref_count > 0 ) {
+        input_cache* tmp_cache, * prev_cache = NULL;
+        for( tmp_cache = first_input_cache; tmp_cache; prev_cache = tmp_cache, tmp_cache = tmp_cache->next_cache ) {
+            if( tmp_cache->input_handle == ih ) {
+                if( --tmp_cache->ref_count > 0 ) {
+                    ReleaseMutex( input_cache_mutex );
                     return TRUE;
                 } else {
-                    free( input_cache_list[i].file_path );
+                    lw_free( tmp_cache->file_path );
 
-                    if( --input_cache_count > 0 ) {
-                        for(int j=i;j<input_cache_count;j++) {
-                            input_cache_list[j] = input_cache_list[j+1];
-                        }
-                        input_cache* cache_list = realloc( input_cache_list, input_cache_count * sizeof(input_cache) );
-                        if( cache_list ) {
-                            input_cache_list = cache_list;
-                        }
+                    if( prev_cache ) {
+                        prev_cache->next_cache = tmp_cache->next_cache;
                     } else {
-                        free(input_cache_list);
-                        input_cache_list = NULL;
+                        first_input_cache = tmp_cache->next_cache;
                     }
+
+                    lw_free( tmp_cache );
                     break;
                 }
+                
             }
         }
         ReleaseMutex( input_cache_mutex );
