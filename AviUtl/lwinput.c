@@ -50,6 +50,7 @@
 #define ANY_FILE_EXT        "*.*"
 
 static char plugin_information[512] = { 0 };
+static char aviutl_dir[_MAX_PATH * 2];
 
 static void get_plugin_information( void )
 {
@@ -90,12 +91,11 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
-    char path[MAX_PATH], drive[MAX_PATH], dir[MAX_PATH], fname[MAX_PATH], ext[MAX_PATH], dir_path[MAX_PATH];
-    if( GetModuleFileName(NULL, path, MAX_PATH) ) {
+    char path[_MAX_PATH * 2], drive[_MAX_DRIVE], dir[_MAX_DIR * 2], fname[_MAX_FNAME * 2], ext[_MAX_EXT * 2];
+    if( GetModuleFileName(NULL, path, MAX_PATH * 2) ) {
         _splitpath(path, drive, dir, fname, ext);
-        strcpy(dir_path, drive);
-        strcat(dir_path, dir);
-        SetCurrentDirectory(dir_path);
+        strcpy(aviutl_dir, drive);
+        strcat(aviutl_dir, dir);
     }
     return &input_plugin_table;
 }
@@ -127,12 +127,24 @@ void au_message_box_desktop
     MessageBox( HWND_DESKTOP, message, "lwinput", uType );
 }
 
-static FILE *open_settings( void )
+static FILE *open_settings( const char* mode )
 {
     FILE *ini = NULL;
+    char ini_file_path[_MAX_PATH * 2];
+
+    if( settings_path ) {
+        strcpy(ini_file_path, aviutl_dir);
+        strcat(ini_file_path, settings_path);
+        ini = fopen( ini_file_path, mode );
+        if( ini )
+            return ini;
+    }
+
     for( int i = 0; i < 2; i++ )
     {
-        ini = fopen( settings_path_list[i], "rb" );
+        strcpy(ini_file_path, aviutl_dir);
+        strcat(ini_file_path, settings_path_list[i]);
+        ini = fopen( ini_file_path, mode );
         if( ini )
         {
             settings_path = (char *)settings_path_list[i];
@@ -169,7 +181,7 @@ static inline void set_preferred_decoder_names_on_buf
 
 static void get_settings( void )
 {
-    FILE *ini = open_settings();
+    FILE *ini = open_settings( "rb" );
     char buf[512];
     if( ini )
     {
@@ -918,9 +930,7 @@ static BOOL CALLBACK dialog_proc
                 case IDOK :
                 {
                     /* Open */
-                    if( !settings_path )
-                        settings_path = (char *)settings_path_list[0];
-                    FILE *ini = fopen( settings_path, "w" );
+                    FILE *ini = open_settings( "w" );
                     if( !ini )
                     {
                         MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to update configuration file" );
