@@ -187,8 +187,9 @@ void au_message_box_desktop
     const char       *message
 );
 
-typedef struct {
+typedef struct i_cache {
     char* file_path;
     INPUT_HANDLE input_handle;
     int ref_count;
+    struct i_cache* next_cache;
 } input_cache;

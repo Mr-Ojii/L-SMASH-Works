@@ -51,6 +51,7 @@
 #define ANY_FILE_EXT        "*.*"
 
 static char plugin_information[512] = { 0 };
+static char aviutl_dir[_MAX_PATH * 2];
 
 static void get_plugin_information( void )
 {
@@ -91,6 +92,12 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
+    char path[_MAX_PATH * 2], drive[_MAX_DRIVE], dir[_MAX_DIR * 2], fname[_MAX_FNAME * 2], ext[_MAX_EXT * 2];
+    if( GetModuleFileName(NULL, path, MAX_PATH * 2) ) {
+        _splitpath(path, drive, dir, fname, ext);
+        strcpy(aviutl_dir, drive);
+        strcat(aviutl_dir, dir);
+    }
     return &input_plugin_table;
 }
 
@@ -107,8 +114,7 @@ static const char *scaler_list[] = { "Fast bilinear", "Bilinear", "Bicubic", "Ex
                                      "L-bicubic/C-bilinear", "Gaussian", "Sinc", "Lanczos", "Bicubic spline" };
 static const char *field_dominance_list[] = { "Obey source flags", "Top -> Bottom", "Bottom -> Top" };
 static const char *avs_bit_depth_list[] = { "8", "9", "10", "16" };
-static input_cache *input_cache_list = NULL;
-static int input_cache_count = 0;
+static input_cache *first_input_cache = NULL;
 static HANDLE input_cache_mutex = NULL;
 static HANDLE pipe_handle = NULL;
 
@@ -128,12 +134,24 @@ void au_message_box_desktop
     MessageBox( HWND_DESKTOP, message, "lwinput", uType );
 }
 
-static FILE *open_settings( void )
+static FILE *open_settings( const char* mode )
 {
     FILE *ini = NULL;
+    char ini_file_path[_MAX_PATH * 2];
+
+    if( settings_path ) {
+        strcpy(ini_file_path, aviutl_dir);
+        strcat(ini_file_path, settings_path);
+        ini = fopen( ini_file_path, mode );
+        if( ini )
+            return ini;
+    }
+
     for( int i = 0; i < 2; i++ )
     {
-        ini = fopen( settings_path_list[i], "rb" );
+        strcpy(ini_file_path, aviutl_dir);
+        strcat(ini_file_path, settings_path_list[i]);
+        ini = fopen( ini_file_path, mode );
         if( ini )
         {
             settings_path = (char *)settings_path_list[i];
@@ -170,7 +188,7 @@ static inline void set_preferred_decoder_names_on_buf
 
 static void get_settings( void )
 {
-    FILE *ini = open_settings();
+    FILE *ini = open_settings( "rb" );
     char buf[512];
     if( ini )
     {
@@ -367,7 +385,7 @@ static void get_settings( void )
 
 BOOL func_init( void ) {
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
-    return input_cache_list != NULL;
+    return input_cache_mutex != NULL;
 }
 
 BOOL func_exit( void ) {
@@ -376,12 +394,12 @@ BOOL func_exit( void ) {
 
 INPUT_HANDLE func_open( LPSTR file )
 {
-    if( video_opt->handle_cache ) {
+    if( video_opt->handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
-        for( int i = 0; i < input_cache_count; i++ ) {
-            if( strcmp( input_cache_list[i].file_path, file) == 0 ) {
-                input_cache_list[i].ref_count++;
-                INPUT_HANDLE tmp_handle = input_cache_list[i].input_handle;
+        for( input_cache* tmp_cache = first_input_cache; tmp_cache ; tmp_cache = tmp_cache->next_cache ) {
+            if( strcmp( tmp_cache->file_path, file ) == 0 ) {
+                tmp_cache->ref_count++;
+                INPUT_HANDLE tmp_handle = tmp_cache->input_handle;
                 ReleaseMutex( input_cache_mutex );
                 return tmp_handle;
             }
@@ -500,18 +518,19 @@ INPUT_HANDLE func_open( LPSTR file )
 
     if( video_opt->handle_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
-        char* file_name = malloc( ( strlen( file ) + 1 ) * sizeof( char ));
+        char* file_name = lw_malloc_zero( ( strlen( file ) + 1 ) * sizeof( char ));
         if( file_name ) {
             strcpy( file_name, file );
-            input_cache *cache_list = realloc( input_cache_list, sizeof( input_cache ) * ( input_cache_count + 1 ) );
-            if( cache_list ) {
-                input_cache_list = cache_list;
-                input_cache_list[input_cache_count].file_path = file_name;
-                input_cache_list[input_cache_count].input_handle = hp;
-                input_cache_list[input_cache_count].ref_count = 1;
-                input_cache_count++;
+            input_cache* tmp_cache = lw_malloc_zero( sizeof(input_cache) );
+
+            if( tmp_cache ) {
+                tmp_cache->next_cache = first_input_cache;
+                first_input_cache = tmp_cache;
+                tmp_cache->file_path = file_name;
+                tmp_cache->input_handle = hp;
+                tmp_cache->ref_count = 1;
             } else {
-                free( file_name );
+                lw_free( file_name );
             }
         }
         ReleaseMutex( input_cache_mutex );
@@ -521,29 +540,27 @@ INPUT_HANDLE func_open( LPSTR file )
 
 BOOL func_close( INPUT_HANDLE ih )
 {
-    if( video_opt->handle_cache ) {
+    if( video_opt->handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
-        for( int i = 0; i < input_cache_count; i++ ) {
-            if( input_cache_list[i].input_handle == ih ) {
-                if( --input_cache_list[i].ref_count > 0 ) {
+        input_cache* tmp_cache, * prev_cache = NULL;
+        for( tmp_cache = first_input_cache; tmp_cache; prev_cache = tmp_cache, tmp_cache = tmp_cache->next_cache ) {
+            if( tmp_cache->input_handle == ih ) {
+                if( --tmp_cache->ref_count > 0 ) {
+                    ReleaseMutex( input_cache_mutex );
                     return TRUE;
                 } else {
-                    free( input_cache_list[i].file_path );
+                    lw_free( tmp_cache->file_path );
 
-                    if( --input_cache_count > 0 ) {
-                        for(int j=i;j<input_cache_count;j++) {
-                            input_cache_list[j] = input_cache_list[j+1];
-                        }
-                        input_cache* cache_list = realloc( input_cache_list, input_cache_count * sizeof(input_cache) );
-                        if( cache_list ) {
-                            input_cache_list = cache_list;
-                        }
+                    if( prev_cache ) {
+                        prev_cache->next_cache = tmp_cache->next_cache;
                     } else {
-                        free(input_cache_list);
-                        input_cache_list = NULL;
+                        first_input_cache = tmp_cache->next_cache;
                     }
+
+                    lw_free( tmp_cache );
                     break;
                 }
+                
             }
         }
         ReleaseMutex( input_cache_mutex );
@@ -920,9 +937,7 @@ static INT_PTR CALLBACK dialog_proc
                 case IDOK :
                 {
                     /* Open */
-                    if( !settings_path )
-                        settings_path = (char *)settings_path_list[0];
-                    FILE *ini = fopen( settings_path, "w" );
+                    FILE *ini = open_settings( "w" );
                     if( !ini )
                     {
                         MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to update configuration file" );
