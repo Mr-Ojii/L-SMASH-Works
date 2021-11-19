@@ -58,7 +58,7 @@ static int is_decoder_available
     return 1;
 }
 
-static AVCodec *select_hw_decoder
+const static AVCodec *select_hw_decoder
 (
     const char              *codec_name,
     const int                prefer_hw_decoder,
@@ -70,7 +70,7 @@ static AVCodec *select_hw_decoder
     const char *wrapper = prefer_hw_decoder == 1 ? "_cuvid" : "_qsv";
     memcpy( hw_decoder_name, codec_name, codec_name_length );
     memcpy( hw_decoder_name + codec_name_length, wrapper, strlen( wrapper ) );
-    AVCodec *hw_decoder = avcodec_find_decoder_by_name( hw_decoder_name );
+    const AVCodec *hw_decoder = avcodec_find_decoder_by_name( hw_decoder_name );
     if( !hw_decoder )
         return NULL;
     if( !is_decoder_available( hw_decoder, codecpar ) )
@@ -86,7 +86,7 @@ const AVCodec *find_decoder
     const int                prefer_hw_decoder
 )
 {
-    AVCodec *codec = avcodec_find_decoder( codec_id );
+    const AVCodec *codec = avcodec_find_decoder( codec_id );
     if( !codec )
         return NULL;
     if( preferred_decoder_names
@@ -94,7 +94,7 @@ const AVCodec *find_decoder
      && *preferred_decoder_names[0] )
         for( const char **decoder_name = preferred_decoder_names; *decoder_name != NULL; decoder_name++ )
         {
-            AVCodec *preferred_decoder = avcodec_find_decoder_by_name( *decoder_name );
+            const AVCodec *preferred_decoder = avcodec_find_decoder_by_name( *decoder_name );
             if( preferred_decoder
              && preferred_decoder->id == codec->id
              && is_decoder_available( preferred_decoder, codecpar ) )
@@ -113,7 +113,7 @@ const AVCodec *find_decoder
             codec_name = "mpeg2";
         else
             codec_name = codec->name;
-        AVCodec *preferred_decoder;
+        const AVCodec *preferred_decoder;
         if( prefer_hw_decoder == 3 )
         {
             preferred_decoder = select_hw_decoder( codec_name, 1, codecpar );
