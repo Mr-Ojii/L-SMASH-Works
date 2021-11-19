@@ -23,3 +23,6 @@
 
 int avstream_get_index_entries_count(const AVStream *st);
 const AVIndexEntry *avstream_index_get_entry(const AVStream *st, int idx);
+int avstream_add_index_entry(AVStream *st, int64_t pos, int64_t timestamp, int size, int distance, int flags);
+
+void avstream_update_index_entries(AVStream *st, AVIndexEntry *entries, int n, unsigned int alloc_size);

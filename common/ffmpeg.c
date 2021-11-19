@@ -46,3 +46,25 @@ const AVIndexEntry *avstream_index_get_entry(const AVStream *st, int idx) {
     return &st->index_entries[idx];
 #endif
 }
+
+int avstream_add_index_entry(AVStream *st, int64_t pos, int64_t timestamp, int size, int distance, int flags) {
+    return av_add_index_entry( st, pos, timestamp, size, distance, flags );
+}
+
+void avstream_update_index_entries(AVStream *st, AVIndexEntry *entries, int n, unsigned int alloc_size) {
+#ifdef FFMPEG_45
+    // There is no way but to insert them one by one.
+    if ( !entries ) {
+        // TODO: There is no API to remove entries....
+        return;
+    }
+    for ( int i = 0; i < n; i++ )
+        avstream_add_index_entry( st, entries[i].pos, entries[i].timestamp,
+                entries[i].size, entries[i].min_distance, entries[i].flags );
+#else
+    av_free( st->index_entries );
+    st->index_entries                = entries;
+    st->nb_index_entries             = n;
+    st->index_entries_allocated_size = alloc_size;
+#endif
+}
