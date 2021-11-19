@@ -47,6 +47,7 @@ extern "C"
 #include "progress.h"
 #include "lwindex.h"
 #include "decode.h"
+#include "ffmpeg.h"
 
 #include <sys/stat.h>
 #include "xxhash.h"
@@ -1872,8 +1873,8 @@ static inline void print_index
 
 static inline void write_av_index_entry
 (
-    FILE         *index,
-    AVIndexEntry *ie
+    FILE               *index,
+    const AVIndexEntry *ie
 )
 {
     print_index( index, "POS=%" PRId64 ",TS=%" PRId64 ",Flags=%x,Size=%d,Distance=%d\n",
@@ -2540,7 +2541,7 @@ static int create_index
     else
     {
         /* Check the active stream is DV in AVI Type-1 or not. */
-        if( adhp->dv_in_avi == 1 && format_ctx->streams[ adhp->stream_index ]->nb_index_entries == 0 )
+        if( adhp->dv_in_avi == 1 && avstream_get_index_entries_count( format_ctx->streams[ adhp->stream_index ] ) == 0 )
         {
             /* DV in AVI Type-1 */
             audio_sample_count = video_info ? MIN( video_sample_count, audio_sample_count ) : 0;
@@ -2648,45 +2649,47 @@ static int create_index
         AVStream *stream = format_ctx->streams[stream_index];
         if( stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
         {
-            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_VIDEO, stream->nb_index_entries );
+            const int nr = avstream_get_index_entries_count( stream );
+            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_VIDEO, nr );
             if( vdhp->stream_index != stream_index )
-                for( int i = 0; i < stream->nb_index_entries; i++ )
-                    write_av_index_entry( index, &stream->index_entries[i] );
-            else if( stream->nb_index_entries > 0 )
+                for( int i = 0; i < nr; i++ )
+                    write_av_index_entry( index, avstream_index_get_entry( stream, i ) );
+            else if( nr > 0 )
             {
-                vdhp->index_entries = (AVIndexEntry *)av_malloc( stream->index_entries_allocated_size );
+                vdhp->index_entries = (AVIndexEntry *)av_malloc( nr * sizeof( AVIndexEntry ) );
                 if( !vdhp->index_entries )
                     goto fail_index;
-                for( int i = 0; i < stream->nb_index_entries; i++ )
+                for( int i = 0; i < nr; i++ )
                 {
-                    AVIndexEntry *ie = &stream->index_entries[i];
+                    const AVIndexEntry *ie = avstream_index_get_entry( stream, i );
                     vdhp->index_entries[i] = *ie;
                     write_av_index_entry( index, ie );
                 }
-                vdhp->index_entries_count = stream->nb_index_entries;
+                vdhp->index_entries_count = nr;
             }
             print_index( index, "</StreamIndexEntries>\n" );
         }
         else if( stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && adhp->stream_index != -2 )
         {
-            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_AUDIO, stream->nb_index_entries );
+            const int nr = avstream_get_index_entries_count( stream );
+            print_index( index, "<StreamIndexEntries=%d,%d,%d>\n", stream_index, AVMEDIA_TYPE_AUDIO, nr );
             if( adhp->stream_index != stream_index )
-                for( int i = 0; i < stream->nb_index_entries; i++ )
-                    write_av_index_entry( index, &stream->index_entries[i] );
-            else if( stream->nb_index_entries > 0 )
+                for( int i = 0; i < nr; i++ )
+                    write_av_index_entry( index, avstream_index_get_entry( stream, i ) );
+            else if( nr > 0 )
             {
                 /* Audio stream in matroska container requires index_entries for seeking.
                  * This avoids for re-reading the file to create index_entries since the file will be closed once. */
-                adhp->index_entries = (AVIndexEntry *)av_malloc( stream->index_entries_allocated_size );
+                adhp->index_entries = (AVIndexEntry *)av_malloc( nr * sizeof( AVIndexEntry ) );
                 if( !adhp->index_entries )
                     goto fail_index;
-                for( int i = 0; i < stream->nb_index_entries; i++ )
+                for( int i = 0; i < nr; i++ )
                 {
-                    AVIndexEntry *ie = &stream->index_entries[i];
+                    const AVIndexEntry *ie = avstream_index_get_entry( stream, i );
                     adhp->index_entries[i] = *ie;
                     write_av_index_entry( index, ie );
                 }
-                adhp->index_entries_count = stream->nb_index_entries;
+                adhp->index_entries_count = nr;
             }
             print_index( index, "</StreamIndexEntries>\n" );
         }

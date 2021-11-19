@@ -21,3 +21,5 @@
 
 /* This file is available under an ISC license. */
 
+int avstream_get_index_entries_count(const AVStream *st);
+const AVIndexEntry *avstream_index_get_entry(const AVStream *st, int idx);
