@@ -185,6 +185,7 @@
     <ClCompile Include="..\common\lwsimd.c" />
     <ClCompile Include="..\common\resample.c" />
     <ClCompile Include="..\common\utils.c" />
+    <ClCompile Include="..\common\ffmpeg.c" />
     <ClCompile Include="..\common\video_output.c">
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">$(IntDir)common_video_output.obj</ObjectFileName>
       <ObjectFileName Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">$(IntDir)common_video_output.obj</ObjectFileName>
@@ -212,6 +213,7 @@
     <ClInclude Include="..\common\progress.h" />
     <ClInclude Include="..\common\resample.h" />
     <ClInclude Include="..\common\utils.h" />
+    <ClInclude Include="..\common\ffmpeg.h" />
     <ClInclude Include="video_output.h" />
     <ClInclude Include="..\common\video_output.h" />
   </ItemGroup>

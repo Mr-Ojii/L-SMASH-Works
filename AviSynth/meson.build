@@ -21,6 +21,8 @@ sources = [
   '../common/cpp_compat.h',
   '../common/decode.c',
   '../common/decode.h',
+  '../common/ffmpeg.c',
+  '../common/ffmpeg.h',
   '../common/libavsmash.c',
   '../common/libavsmash.h',
   '../common/libavsmash_audio.c',

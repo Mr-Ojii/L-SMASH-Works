@@ -14,6 +14,8 @@ sources = [
   'video_output.h',
   '../common/decode.c',
   '../common/decode.h',
+  '../common/ffmpeg.c',
+  '../common/ffmpeg.h',
   '../common/libavsmash.c',
   '../common/libavsmash.h',
   '../common/libavsmash_video.c',
