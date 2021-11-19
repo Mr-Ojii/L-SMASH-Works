@@ -32,7 +32,7 @@
 
 int avstream_get_index_entries_count(const AVStream *st) {
 #ifdef FFMPEG_45
-    return avformat_index_get_entries_count(st);
+    return avformat_index_get_entries_count( st );
 #else
     return st->nb_index_entries;
 #endif
@@ -40,9 +40,10 @@ int avstream_get_index_entries_count(const AVStream *st) {
 
 const AVIndexEntry *avstream_index_get_entry(const AVStream *st, int idx) {
 #ifdef FFMPEG_45
-    return avformat_index_get_entry(st, idx);
+    return avformat_index_get_entry( (AVStream *)st, idx );
 #else
-    if (idx < 0 || idx >= avstream_get_index_entries_count(st)) return NULL;
+    if ( idx < 0 || idx >= avstream_get_index_entries_count(st) )
+        return NULL;
     return &st->index_entries[idx];
 #endif
 }
