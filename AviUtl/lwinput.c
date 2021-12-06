@@ -369,6 +369,7 @@ static void get_settings( void )
         video_opt->dummy.framerate_den    = 1;
         video_opt->dummy.colorspace       = OUTPUT_YUY2;
         video_opt->avs.bit_depth          = 8;
+        video_opt->handle_cache           = 0;
         audio_delay                       = 0;
         audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
