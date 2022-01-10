@@ -1987,7 +1987,52 @@ static uint64_t xxhash_file( const char *file_path, int64_t file_size )
     return hash;
 }
 
-static void create_index
+static char *create_lwi_path
+(
+    lwlibav_option_t *opt
+)
+{
+    if ( !opt->cache_dir || opt->cache_dir[0] == '\0' ) {
+        char *buf = lw_malloc_zero ( strlen( opt->file_path ) + 5 );
+        sprintf( buf, "%s.lwi", opt->file_path );
+        return buf;
+    }
+
+    const int max_filename = 254; // be conservative
+    const char *dir = opt->cache_dir ? opt->cache_dir : ".";
+    const char *rpath = lw_realpath( opt->file_path, NULL );
+    char *malloced = NULL;
+    if ( rpath )
+        malloced = (char *)rpath;
+    else // realpath on Unix might fail if the file does not exist.
+        rpath = opt->file_path;
+    const char *suffix = ".lwi";
+    int l = strlen( rpath );
+    const int max_elem_size = max_filename - strlen( suffix );
+
+    // shorten path from the front until it fits into max_filename UTF-8 bytes.
+    const char *p = rpath;
+    while (l > max_elem_size && *p != '\0') {
+        if ((*p & 0x80) == 0) l--, p++;
+        else if ((*p & 0xe0) == 0xc0) l-=2, p+=2;
+        else if ((*p & 0xe0) == 0xe0) l-=3, p+=3;
+        else if ((*p & 0xf8) == 0xf0) l-=4, p+=4;
+        assert(l >= 0);
+    }
+
+    char *buf = (char *)lw_malloc_zero( strlen(dir) + 1 + max_filename + 1 );
+    char *q = strcpy(buf, dir) + strlen(dir);
+    *q++ = '/';
+    for (; *p; p++) {
+        if (*p == '/' || *p == '\\' || *p == ':') *q++ = '_';
+        else *q++ = *p;
+    }
+    strcpy(q, suffix);
+    lw_free( malloced );
+    return buf;
+}
+
+static int create_index
 (
     lwlibav_file_handler_t         *lwhp,
     lwlibav_video_decode_handler_t *vdhp,
@@ -2004,12 +2049,12 @@ static void create_index
     uint32_t audio_info_count = 1 << 16;
     video_frame_info_t *video_info = (video_frame_info_t *)lw_malloc_zero( video_info_count * sizeof(video_frame_info_t) );
     if( !video_info )
-        return;
+        return -1;
     audio_frame_info_t *audio_info = (audio_frame_info_t *)lw_malloc_zero( audio_info_count * sizeof(audio_frame_info_t) );
     if( !audio_info )
     {
         free( video_info );
-        return;
+        return -1;
     }
     /*
         # Structure of Libav reader index file
@@ -2036,20 +2081,22 @@ static void create_index
         </ExtraDataList>
         </LibavReaderIndexFile>
      */
-    FILE *index;
+    FILE *index = NULL;
     if( opt->index_file_path )
         index = !opt->no_create_index ? lw_fopen( opt->index_file_path, "wb" ) : NULL;
-    else
+    else if ( !opt->no_create_index )
     {
-        char index_path[512] = { 0 };
-        sprintf( index_path, "%s.lwi", lwhp->file_path );
-        index = !opt->no_create_index ? lw_fopen( index_path, "wb" ) : NULL;
+        char *index_path = create_lwi_path( opt );
+        index = lw_fopen( index_path, "wb" );
+        if ( !index )
+            fprintf(stderr, "lsmas: unable to create index file %s\n", index_path);
+        lw_free( index_path );
     }
     if( !index && !opt->no_create_index )
     {
         free( video_info );
         free( audio_info );
-        return;
+        return -1;
     }
     lwhp->format_name  = (char *)format_ctx->iformat->name;
     lwhp->format_flags = format_ctx->iformat->flags;
@@ -2751,7 +2798,7 @@ static void create_index
         indicator->close( php );
     vdhp->format = NULL;
     adhp->format = NULL;
-    return;
+    return 0;
 fail_index:
     cleanup_index_helpers( &indexer, format_ctx );
     free( video_info );
@@ -2762,7 +2809,7 @@ fail_index:
         indicator->close( php );
     vdhp->format = NULL;
     adhp->format = NULL;
-    return;
+    return -1;
 }
 
 static int parse_index
@@ -3364,12 +3411,9 @@ int lwlibav_construct_index
         index = lw_fopen( opt->index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
     else
     {
-        char *index_file_path = (char *)lw_malloc_zero( file_path_length + 5 );
+        char *index_file_path = create_lwi_path ( opt );
         if( !index_file_path )
             return -1;
-        memcpy( index_file_path, opt->file_path, file_path_length );
-        memcpy( index_file_path + file_path_length, ".lwi", strlen( ".lwi" ) );
-        index_file_path[file_path_length + 4] = '\0';
         index = lw_fopen( index_file_path, (opt->force_video || opt->force_audio) ? "r+b" : "rb" );
         free( index_file_path );
     }
@@ -3412,13 +3456,13 @@ int lwlibav_construct_index
     vdhp->stream_index = -1;
     adhp->stream_index = ( opt->force_audio_index == -2 ) ? -2 : -1;
     /* Create the index file. */
-    create_index( lwhp, vdhp, vohp, adhp, aohp, format_ctx, opt, indicator, php );
+    int err = create_index( lwhp, vdhp, vohp, adhp, aohp, format_ctx, opt, indicator, php );
     /* Close file.
      * By opening file for video and audio separately, indecent work about frame reading can be avoidable. */
     lavf_close_file( &format_ctx );
     vdhp->ctx = NULL;
     adhp->ctx = NULL;
-    return 0;
+    return err;
 fail:
     if( lwhp->file_path )
         lw_freep( &lwhp->file_path );
