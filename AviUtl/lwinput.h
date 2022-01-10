@@ -128,6 +128,8 @@ typedef struct
     int force_video_index;
     int force_audio;
     int force_audio_index;
+    int use_cache_dir;
+    char *cache_dir_name;
     /* for video stream */
     video_option_t video_opt;
     /* for audio stream */

@@ -51,6 +51,7 @@
 
 static char plugin_information[512] = { 0 };
 static char aviutl_dir[_MAX_PATH * 2];
+static char index_dir[_MAX_PATH * 2];
 
 static void get_plugin_information( void )
 {
@@ -96,6 +97,8 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
         _splitpath(path, drive, dir, fname, ext);
         strcpy(aviutl_dir, drive);
         strcat(aviutl_dir, dir);
+        strcpy(index_dir, aviutl_dir);
+        strcat(index_dir, "lwi\\");
     }
     return &input_plugin_table;
 }
@@ -177,6 +180,20 @@ static inline void set_preferred_decoder_names_on_buf
     memcpy( reader_opt.preferred_decoder_names_buf, preferred_decoder_names,
             MIN( PREFERRED_DECODER_NAMES_BUFSIZE - 1, strlen(preferred_decoder_names) ) );
     reader_opt.preferred_decoder_names = lw_tokenize_string( reader_opt.preferred_decoder_names_buf, ',', NULL );
+}
+
+static inline void set_cache_dir( void )
+{
+    reader_opt.cache_dir_name = NULL;
+    if( reader_opt.use_cache_dir ) {
+        DWORD dwAttrib = GetFileAttributes( index_dir );
+        if(!((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)))
+            if(!CreateDirectory(index_dir, NULL)) {
+                MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
+                return;
+            }
+        reader_opt.cache_dir_name = index_dir;
+    }
 }
 
 static void get_settings( void )
@@ -337,6 +354,10 @@ static void get_settings( void )
         /* handle cache */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &video_opt->handle_cache ) != 1 )
             video_opt->handle_cache = 0;
+        /* use cache dir */
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt.use_cache_dir ) != 1 )
+            reader_opt.use_cache_dir = 0;
+        set_cache_dir();
         fclose( ini );
     }
     else
@@ -350,6 +371,8 @@ static void get_settings( void )
         reader_opt.force_video_index      = -1;
         reader_opt.force_audio            = 0;
         reader_opt.force_audio_index      = -1;
+        reader_opt.use_cache_dir          = 0;
+        reader_opt.cache_dir_name         = NULL;
         reader_disabled[0]                = 0;
         reader_disabled[1]                = 0;
         reader_disabled[2]                = 0;
@@ -886,6 +909,8 @@ static BOOL CALLBACK dialog_proc
             SendMessage( GetDlgItem( hwnd, IDC_TEXT_LIBRARY_INFO ), WM_SETFONT, (WPARAM)CreateFontIndirect( &lf ), 1 );
             /* handle cache */
             set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, video_opt->handle_cache );
+            /* use cache dir */
+            set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt.use_cache_dir );
             return TRUE;
         case WM_NOTIFY :
             if( wparam == IDC_SPIN_THREADS )
@@ -1030,6 +1055,10 @@ static BOOL CALLBACK dialog_proc
                     /* handle cache */
                     video_opt->handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
                     fprintf( ini, "handle_cache=%d\n", video_opt->handle_cache );
+                    /* use cache dir */
+                    reader_opt.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
+                    fprintf( ini, "use_cache_dir=%d\n", video_opt->handle_cache );
+                    set_cache_dir();
                     /* Close */
                     fclose( ini );
                     EndDialog( hwnd, IDOK );
