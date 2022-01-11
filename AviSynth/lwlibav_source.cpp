@@ -150,12 +150,6 @@ LWLibavVideoSource::LWLibavVideoSource
     free_audio_output_handler();
     if( ret < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to construct index." );
-    /* Eliminate silent failure: if apply_repeat_flag == 1, then fail if repeat is not applied. */
-    if (opt->apply_repeat_flag == 1)
-    {
-        if (vohp->repeat_requested && !vohp->repeat_control)
-            env->ThrowError("LWLibavVideoSource: repeat requested for %d frames by input video, but unable to obey (try repeat=0 to get a VFR clip).");
-    }
     /* Get the desired video track. */
     if( lwlibav_video_get_desired_track( lwh.file_path, vdhp, lwh.threads ) < 0 )
         env->ThrowError( "LWLibavVideoSource: failed to get the video track." );
