@@ -1057,7 +1057,7 @@ static BOOL CALLBACK dialog_proc
                     fprintf( ini, "handle_cache=%d\n", video_opt->handle_cache );
                     /* use cache dir */
                     reader_opt.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
-                    fprintf( ini, "use_cache_dir=%d\n", video_opt->handle_cache );
+                    fprintf( ini, "use_cache_dir=%d\n", reader_opt.use_cache_dir );
                     set_cache_dir();
                     /* Close */
                     fclose( ini );
