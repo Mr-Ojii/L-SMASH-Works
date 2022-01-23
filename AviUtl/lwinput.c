@@ -50,8 +50,9 @@
 #define ANY_FILE_EXT        "*.*"
 
 static char plugin_information[512] = { 0 };
-static char aviutl_dir[_MAX_PATH * 2];
+static char plugin_dir[_MAX_PATH * 2];
 static char index_dir[_MAX_PATH * 2];
+static HMODULE hModuleDLL = NULL;
 
 static void get_plugin_information( void )
 {
@@ -93,11 +94,11 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
     char path[_MAX_PATH * 2], drive[_MAX_DRIVE], dir[_MAX_DIR * 2], fname[_MAX_FNAME * 2], ext[_MAX_EXT * 2];
-    if( GetModuleFileName(NULL, path, MAX_PATH * 2) ) {
+    if( GetModuleFileName( hModuleDLL, path, MAX_PATH * 2) ) {
         _splitpath(path, drive, dir, fname, ext);
-        strcpy(aviutl_dir, drive);
-        strcat(aviutl_dir, dir);
-        strcpy(index_dir, aviutl_dir);
+        strcpy(plugin_dir, drive);
+        strcat(plugin_dir, dir);
+        strcpy(index_dir, plugin_dir);
         strcat(index_dir, "lwi\\");
     }
     return &input_plugin_table;
@@ -136,7 +137,7 @@ static FILE *open_settings( const char* mode )
     char ini_file_path[_MAX_PATH * 2];
 
     if( settings_path ) {
-        strcpy(ini_file_path, aviutl_dir);
+        strcpy(ini_file_path, plugin_dir);
         strcat(ini_file_path, settings_path);
         ini = fopen( ini_file_path, mode );
         if( ini )
@@ -145,7 +146,7 @@ static FILE *open_settings( const char* mode )
 
     for( int i = 0; i < 2; i++ )
     {
-        strcpy(ini_file_path, aviutl_dir);
+        strcpy(ini_file_path, plugin_dir);
         strcat(ini_file_path, settings_path_list[i]);
         ini = fopen( ini_file_path, mode );
         if( ini )
@@ -1079,5 +1080,16 @@ static BOOL CALLBACK dialog_proc
 BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
 {
     DialogBox( dll_hinst, "LWINPUT_CONFIG", hwnd, dialog_proc );
+    return TRUE;
+}
+
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
+{
+    switch( fdwReason ) 
+    { 
+        case DLL_PROCESS_ATTACH:
+            hModuleDLL = hinstDLL;
+            break;
+    }
     return TRUE;
 }
