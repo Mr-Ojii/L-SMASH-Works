@@ -92,7 +92,7 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     func_config,                                                    /* Pointer to function called when configuration dialog is required */
 };
 
-EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
+static inline void get_plugin_dir( void ) 
 {
     char path[_MAX_PATH * 2], drive[_MAX_DRIVE], dir[_MAX_DIR * 2], fname[_MAX_FNAME * 2], ext[_MAX_EXT * 2];
     if( GetModuleFileName( hModuleDLL, path, MAX_PATH * 2) ) {
@@ -102,6 +102,11 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
         strcpy(index_dir, plugin_dir);
         strcat(index_dir, "lwi\\");
     }
+}
+
+EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
+{
+    get_plugin_dir();
     return &input_plugin_table;
 }
 
@@ -1093,6 +1098,9 @@ BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
 INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     PSTR lpCmdLine, INT nCmdShow)
 {
+    hModuleDLL = hInstance;
+    get_plugin_dir();
+
     if( strcmp(lpCmdLine, "-config") == 0 ) {
         func_config( HWND_DESKTOP, hInstance );
         return 0;
