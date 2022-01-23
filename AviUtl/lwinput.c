@@ -51,7 +51,9 @@
 #define ANY_FILE_EXT        "*.*"
 
 static char plugin_information[512] = { 0 };
-static char aviutl_dir[_MAX_PATH * 2];
+static char plugin_dir[_MAX_PATH * 2];
+static char index_dir[_MAX_PATH * 2];
+static HMODULE hModuleDLL = NULL;
 
 static void get_plugin_information( void )
 {
@@ -93,10 +95,12 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
     char path[_MAX_PATH * 2], drive[_MAX_DRIVE], dir[_MAX_DIR * 2], fname[_MAX_FNAME * 2], ext[_MAX_EXT * 2];
-    if( GetModuleFileName(NULL, path, MAX_PATH * 2) ) {
+    if( GetModuleFileName( hModuleDLL, path, MAX_PATH * 2) ) {
         _splitpath(path, drive, dir, fname, ext);
-        strcpy(aviutl_dir, drive);
-        strcat(aviutl_dir, dir);
+        strcpy(plugin_dir, drive);
+        strcat(plugin_dir, dir);
+        strcpy(index_dir, plugin_dir);
+        strcat(index_dir, "lwi\\");
     }
     return &input_plugin_table;
 }
@@ -140,7 +144,7 @@ static FILE *open_settings( const char* mode )
     char ini_file_path[_MAX_PATH * 2];
 
     if( settings_path ) {
-        strcpy(ini_file_path, aviutl_dir);
+        strcpy(ini_file_path, plugin_dir);
         strcat(ini_file_path, settings_path);
         ini = fopen( ini_file_path, mode );
         if( ini )
@@ -149,7 +153,7 @@ static FILE *open_settings( const char* mode )
 
     for( int i = 0; i < 2; i++ )
     {
-        strcpy(ini_file_path, aviutl_dir);
+        strcpy(ini_file_path, plugin_dir);
         strcat(ini_file_path, settings_path_list[i]);
         ini = fopen( ini_file_path, mode );
         if( ini )
@@ -184,6 +188,20 @@ static inline void set_preferred_decoder_names_on_buf
     memcpy( reader_opt.preferred_decoder_names_buf, preferred_decoder_names,
             MIN( PREFERRED_DECODER_NAMES_BUFSIZE - 1, strlen(preferred_decoder_names) ) );
     reader_opt.preferred_decoder_names = lw_tokenize_string( reader_opt.preferred_decoder_names_buf, ',', NULL );
+}
+
+static inline void set_cache_dir( void )
+{
+    reader_opt.cache_dir_name = NULL;
+    if( reader_opt.use_cache_dir ) {
+        DWORD dwAttrib = GetFileAttributes( index_dir );
+        if(!((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)))
+            if(!CreateDirectory(index_dir, NULL)) {
+                MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
+                return;
+            }
+        reader_opt.cache_dir_name = index_dir;
+    }
 }
 
 static void get_settings( void )
@@ -344,6 +362,10 @@ static void get_settings( void )
         /* handle cache */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &video_opt->handle_cache ) != 1 )
             video_opt->handle_cache = 0;
+        /* use cache dir */
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt.use_cache_dir ) != 1 )
+            reader_opt.use_cache_dir = 0;
+        set_cache_dir();
         fclose( ini );
     }
     else
@@ -357,6 +379,8 @@ static void get_settings( void )
         reader_opt.force_video_index      = -1;
         reader_opt.force_audio            = 0;
         reader_opt.force_audio_index      = -1;
+        reader_opt.use_cache_dir          = 0;
+        reader_opt.cache_dir_name         = NULL;
         reader_disabled[0]                = 0;
         reader_disabled[1]                = 0;
         reader_disabled[2]                = 0;
@@ -376,6 +400,7 @@ static void get_settings( void )
         video_opt->dummy.framerate_den    = 1;
         video_opt->dummy.colorspace       = OUTPUT_YUY2;
         video_opt->avs.bit_depth          = 8;
+        video_opt->handle_cache           = 0;
         audio_delay                       = 0;
         audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
@@ -892,6 +917,8 @@ static INT_PTR CALLBACK dialog_proc
             SendMessage( GetDlgItem( hwnd, IDC_TEXT_LIBRARY_INFO ), WM_SETFONT, (WPARAM)CreateFontIndirect( &lf ), 1 );
             /* handle cache */
             set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, video_opt->handle_cache );
+            /* use cache dir */
+            set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt.use_cache_dir );
             return TRUE;
         case WM_NOTIFY :
             if( wparam == IDC_SPIN_THREADS )
@@ -1036,6 +1063,10 @@ static INT_PTR CALLBACK dialog_proc
                     /* handle cache */
                     video_opt->handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
                     fprintf( ini, "handle_cache=%d\n", video_opt->handle_cache );
+                    /* use cache dir */
+                    reader_opt.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
+                    fprintf( ini, "use_cache_dir=%d\n", reader_opt.use_cache_dir );
+                    set_cache_dir();
                     /* Close */
                     fclose( ini );
                     EndDialog( hwnd, IDOK );
@@ -1241,4 +1272,15 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     func_exit();
 
     return 0;
+}
+
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
+{
+    switch( fdwReason ) 
+    { 
+        case DLL_PROCESS_ATTACH:
+            hModuleDLL = hinstDLL;
+            break;
+    }
+    return TRUE;
 }

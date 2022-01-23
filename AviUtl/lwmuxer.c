@@ -98,13 +98,30 @@ FILTER_DLL filter =
     "L-SMASH Works Muxer r" LSMASHWORKS_REV "\0",       /* Information of filter plugin */
 };
 
+static char plugin_dir[_MAX_PATH * 2];
+static char *settings_path = NULL;
+static const char *settings_path_list[] = { "lsmash.ini", "plugins/lsmash.ini" };
+static HMODULE hModuleDLL = NULL;
+
+static inline void get_plugin_dir( void ) 
+{
+    char path[_MAX_PATH * 2], drive[_MAX_DRIVE], dir[_MAX_DIR * 2], fname[_MAX_FNAME * 2], ext[_MAX_EXT * 2];
+    if( GetModuleFileName( hModuleDLL, path, MAX_PATH * 2) ) {
+        _splitpath(path, drive, dir, fname, ext);
+        strcpy(plugin_dir, drive);
+        strcat(plugin_dir, dir);
+    }
+}
+
 EXTERN_C FILTER_DLL __declspec(dllexport) * __stdcall GetFilterTable( void )
 {
+    get_plugin_dir();
     return &filter;
 }
 
 EXTERN_C FILTER_DLL __declspec(dllexport) * __stdcall GetFilterTableYUY2( void )
 {
+    get_plugin_dir();
     return &filter;
 }
 
@@ -240,12 +257,26 @@ typedef struct
 static FILE *open_settings( void )
 {
     FILE *ini = NULL;
-    for( int i = 0; i < 2; i++ )
-    {
-        static const char *settings_path_list[2] = { "lsmash.ini", "plugins/lsmash.ini" };
-        ini = fopen( settings_path_list[i], "rb" );
+    char ini_file_path[_MAX_PATH * 2];
+
+    if( settings_path ) {
+        strcpy(ini_file_path, plugin_dir);
+        strcat(ini_file_path, settings_path);
+        ini = fopen( ini_file_path, "rb" );
         if( ini )
             return ini;
+    }
+
+    for( int i = 0; i < 2; i++ )
+    {
+        strcpy(ini_file_path, plugin_dir);
+        strcat(ini_file_path, settings_path_list[i]);
+        ini = fopen( ini_file_path, "rb" );
+        if( ini )
+        {
+            settings_path = (char *)settings_path_list[i];
+            return ini;
+        }
     }
     return NULL;
 }
@@ -1650,4 +1681,15 @@ BOOL func_exit( FILTER *fp )
 {
     cleanup_option( fp );
     return FALSE;
+}
+
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
+{
+    switch( fdwReason ) 
+    { 
+        case DLL_PROCESS_ATTACH:
+            hModuleDLL = hinstDLL;
+            break;
+    }
+    return TRUE;
 }
