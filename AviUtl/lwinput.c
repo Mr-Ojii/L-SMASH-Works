@@ -126,12 +126,6 @@ static const char *field_dominance_list[] = { "Obey source flags", "Top -> Botto
 static const char *avs_bit_depth_list[] = { "8", "9", "10", "16" };
 static input_cache *first_input_cache = NULL;
 static HANDLE input_cache_mutex = NULL;
-static HANDLE pipe_handle = NULL;
-
-static BYTE* video_buffer = NULL;
-static DWORD video_buffer_size = 0;
-static BYTE* audio_buffer = NULL;
-static DWORD audio_buffer_size = 0;
 
 void au_message_box_desktop
 (
@@ -1137,6 +1131,12 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         return 0;
     }
 
+    HANDLE pipe_handle = NULL;
+    BYTE* video_buffer = NULL;
+    DWORD video_buffer_size = 0;
+    BYTE* audio_buffer = NULL;
+    DWORD audio_buffer_size = 0;
+
     if( lpCmdLine != NULL ) {
         char pipe_name[64] = "\\\\.\\pipe\\L-SMASH-Works\\";
         strcat(pipe_name, lpCmdLine);
@@ -1147,6 +1147,7 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         pipe_handle = NULL;
         return 1;
     }
+
     func_init();
 
     BOOL active_loop = TRUE;
@@ -1201,7 +1202,7 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
                 pipe_info.n = info.n;
                 pipe_info.rate = info.rate;
                 pipe_info.scale = info.scale;
-                for(int i=0;i<7;i++)
+                for(int i = 0; i < 7; i++)
                     pipe_info.reserve[i] = info.reserve[i];
 
                 pipe_header header;

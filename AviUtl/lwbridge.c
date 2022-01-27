@@ -259,7 +259,7 @@ BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
         iip->handler = pipe_info.handler;
         iip->n = pipe_info.n;
         iip->rate = pipe_info.rate;
-        for(int i=0;i<7;i++)
+        for(int i = 0; i < 7; i++)
             iip->reserve[i] = pipe_info.reserve[i];
         iip->scale = pipe_info.scale;
     }
