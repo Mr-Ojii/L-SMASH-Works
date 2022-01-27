@@ -52,7 +52,8 @@
 
 static char plugin_information[512] = { 0 };
 static char plugin_dir[_MAX_PATH * 2];
-static char index_dir[_MAX_PATH * 2];
+static char default_index_dir[_MAX_PATH * 2];
+static char user_index_dir[_MAX_PATH * 2];
 static HMODULE hModuleDLL = NULL;
 
 static void get_plugin_information( void )
@@ -99,8 +100,8 @@ static inline void get_plugin_dir( void )
         _splitpath(path, drive, dir, fname, ext);
         strcpy(plugin_dir, drive);
         strcat(plugin_dir, dir);
-        strcpy(index_dir, plugin_dir);
-        strcat(index_dir, "lwi\\");
+        strcpy(default_index_dir, plugin_dir);
+        strcat(default_index_dir, "lwi\\");
     }
 }
 
@@ -199,13 +200,19 @@ static inline void set_cache_dir( void )
 {
     reader_opt.cache_dir_name = NULL;
     if( reader_opt.use_cache_dir ) {
-        DWORD dwAttrib = GetFileAttributes( index_dir );
-        if(!((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)))
-            if(!CreateDirectory(index_dir, NULL)) {
-                MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
-                return;
-            }
-        reader_opt.cache_dir_name = index_dir;
+        DWORD dwAttrib = GetFileAttributes( user_index_dir );
+        if((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
+            reader_opt.cache_dir_name = user_index_dir;
+        }
+        else {
+            DWORD dwAttrib_default_index_dir = GetFileAttributes( default_index_dir );
+            if(!((dwAttrib_default_index_dir != INVALID_FILE_ATTRIBUTES) && (dwAttrib_default_index_dir & FILE_ATTRIBUTE_DIRECTORY)))
+                if(!CreateDirectory(default_index_dir, NULL)) {
+                    MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
+                    return;
+                }
+            reader_opt.cache_dir_name = default_index_dir;
+        }
     }
 }
 
@@ -370,6 +377,14 @@ static void get_settings( void )
         /* use cache dir */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt.use_cache_dir ) != 1 )
             reader_opt.use_cache_dir = 0;
+            
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_dir_path=%s", user_index_dir ) != 1 )
+            strcpy( user_index_dir, "" );
+        else {
+            // "sscanf" abort loading with a space character.
+            buf[strlen(buf) - 1] = '\0';
+            strcpy( user_index_dir, buf + 15 );
+        }
         set_cache_dir();
         fclose( ini );
     }
@@ -909,6 +924,8 @@ static INT_PTR CALLBACK dialog_proc
             }
             else
                 set_string_to_dlg( hwnd, IDC_EDIT_PREFERRED_DECODERS, "" );
+            /* cache dir path */
+            set_string_to_dlg( hwnd, IDC_EDIT_CACHE_DIR_PATH, user_index_dir );
             /* Library informations */
             if( plugin_information[0] == 0 )
                 get_plugin_information();
@@ -969,7 +986,7 @@ static INT_PTR CALLBACK dialog_proc
                 case IDOK :
                 {
                     /* Open */
-                    FILE *ini = open_settings( "w" );
+                    FILE *ini = open_settings( "wb" );
                     if( !ini )
                     {
                         MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to update configuration file" );
@@ -1071,7 +1088,21 @@ static INT_PTR CALLBACK dialog_proc
                     /* use cache dir */
                     reader_opt.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
                     fprintf( ini, "use_cache_dir=%d\n", reader_opt.use_cache_dir );
-                    set_cache_dir();
+                    /* cache dir path */
+                    {
+                        char edit_buf[_MAX_PATH * 2];
+                        GetDlgItemText( hwnd, IDC_EDIT_CACHE_DIR_PATH, (LPTSTR)edit_buf, sizeof(edit_buf) );
+                        if( edit_buf[0] != '\0' ) {
+                            size_t edit_len = strlen(edit_buf);
+                            if( edit_buf[edit_len - 1] != '\\' ) {
+                                edit_buf[edit_len] = '\\';
+                                edit_buf[edit_len + 1] = '\0';
+                            }
+                        }
+                        strcpy(user_index_dir, edit_buf);
+                        set_cache_dir();
+                        fprintf( ini, "cache_dir_path=%s\n", user_index_dir );
+                    }
                     /* Close */
                     fclose( ini );
                     EndDialog( hwnd, IDOK );
