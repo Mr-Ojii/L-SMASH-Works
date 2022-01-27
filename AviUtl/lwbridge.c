@@ -160,17 +160,17 @@ INPUT_HANDLE func_open( LPSTR file )
     pipe_read(pipe_handle, hp->handle, received_header.data_size);
 
     BOOL is_NULL = TRUE;
-    for(int i=0;i<received_header.data_size;i++) {
-        if(hp->handle[i]!=0) {
+    for(int i = 0; i < received_header.data_size; i++) {
+        if( hp->handle[i] != 0 ) {
             is_NULL = FALSE;
             break;
         }
     }
-    if(is_NULL) {
+    if( is_NULL ) {
         lw_free(hp->handle);
         hp->handle = NULL;
         lw_free(hp);
-        hp=NULL;
+        hp = NULL;
     }
 
     ReleaseMutex(mutex);
@@ -220,10 +220,13 @@ BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
     header.data_size = hp->length;
 
     pipe_write(pipe_handle, (BYTE*)(&header), sizeof(header));
-    pipe_write(pipe_handle,  hp->handle, hp->length);
+    pipe_write(pipe_handle, hp->handle, hp->length);
 
     pipe_header received_header;
     pipe_read(pipe_handle, (BYTE*)(&received_header), sizeof(received_header));
+    if (received_header.data_size == 0)
+        return FALSE;
+    
     BYTE* data = lw_malloc_zero(received_header.data_size);
     if(!data)
         return FALSE;

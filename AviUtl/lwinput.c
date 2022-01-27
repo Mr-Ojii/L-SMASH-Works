@@ -1206,21 +1206,31 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
                 pipe_header header;
                 header.call_func = CALL_INFO_GET;
-                BYTE* data;
+                BYTE* data = NULL;
                 if(ret) {
                     header.data_size = sizeof(BOOL) + sizeof(pipe_input_info) + info.audio_format_size + info.format_size;
                     data = lw_malloc_zero(header.data_size);
-                    memcpy(data, &ret, sizeof(BOOL));
-                    memcpy(data + sizeof(BOOL), &pipe_info, sizeof(pipe_input_info));
-                    memcpy(data + sizeof(BOOL) + sizeof(pipe_input_info), info.audio_format, info.audio_format_size);
-                    memcpy(data + sizeof(BOOL) + sizeof(pipe_input_info) + info.audio_format_size, info.format, info.format_size);
+                    if(data) {
+                        memcpy(data, &ret, sizeof(BOOL));
+                        memcpy(data + sizeof(BOOL), &pipe_info, sizeof(pipe_input_info));
+                        memcpy(data + sizeof(BOOL) + sizeof(pipe_input_info), info.audio_format, info.audio_format_size);
+                        memcpy(data + sizeof(BOOL) + sizeof(pipe_input_info) + info.audio_format_size, info.format, info.format_size);
+                    }
                 } else {
                     header.data_size = sizeof(BOOL);
                     data = lw_malloc_zero(header.data_size);
-                    memcpy(data, &ret, sizeof(BOOL));
+                    if(data)
+                        memcpy(data, &ret, sizeof(BOOL));
                 }
+                
+                if(!data)
+                    header.data_size = 0;
+                
                 pipe_write(pipe_handle, (BYTE*)(&header), sizeof(pipe_header));
-                pipe_write(pipe_handle, data, header.data_size);
+
+                if(data)
+                    pipe_write(pipe_handle, data, header.data_size);
+                
                 lw_free(data);
             }
             break;
