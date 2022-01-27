@@ -1296,8 +1296,13 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
             {
                 INPUT_HANDLE hp;
                 memcpy(&hp, data + sizeof(int), sizeof(INPUT_HANDLE));
+                
+                pipe_header header;
+                header.call_func = CALL_IS_KEY_FRAME;
+                header.data_size = sizeof(BOOL);
+                pipe_write(pipe_handle, (BYTE*)(&header), sizeof(pipe_header));
                 BOOL ret = func_is_keyframe(hp, ((int*)data)[0]);
-                pipe_write(pipe_handle, (BYTE*)(&ret), sizeof(BOOL));
+                pipe_write(pipe_handle, (BYTE*)(&ret), header.data_size);
             }
             break;
             case CALL_EXIT:
