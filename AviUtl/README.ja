@@ -1,10 +1,12 @@
 [File]
     lwinput.aui     : AviUtl用 入力プラグイン
+    lwinput.exe     : AviUtl用 入力プラグイン実行ファイル(lwbridge.auiと一緒に用いる)
+    lwbridge.aui    : AviUtl用 入力プラグインブリッジ(lwinput.exeと一緒に用いる)
     lwmuxer.auf     : AviUtl用 MUXER エクスポートプラグイン
     lwdumper.auf    : AviUtl用 ファイル解析 エクスポートプラグイン
     lwcolor.auc     : AviUtl用 色変換プラグイン
 
-[lwinput.aui: L-SMASH Works File Reader]
+[lwinput.aui/lwinput.exe: L-SMASH Works File Reader]
     [設定]
         設定ダイアログを開くには、"ファイル" -> "環境設定" -> "入力プラグインの設定" -> "L-SMASH Works File Reader"と進みます。
         [ファイルリーダー]

@@ -1,10 +1,12 @@
 [File]
     lwinput.aui     : An input plugin for AviUtl
+    lwinput.exe     : An input plugin executable for AviUtl(Use with lwbridge.aui)
+    lwbridge.aui    : An input plugin bridge for AviUtl(Use with lwinput.exe)
     lwmuxer.auf     : A filter plugin to multiplex file for AviUtl
     lwdumper.auf    : A filter plugin to dump file for AviUtl
     lwcolor.auc     : A color space conversion plugin for AviUtl
 
-[lwinput.aui: L-SMASH Works File Reader]
+[lwinput.aui/lwinput.exe: L-SMASH Works File Reader]
     [Settings]
         You can open the settings dialog by "File" -> "General settings" -> "Input plugins configure" -> "L-SMASH Works File Reader".
         [File readers]
