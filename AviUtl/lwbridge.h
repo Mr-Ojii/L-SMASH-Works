@@ -1,7 +1,7 @@
 /*****************************************************************************
  * lwbridge.h
  *****************************************************************************
- * Copyright (C) 2013-2021 L-SMASH Works project
+ * Copyright (C) 2013-2022 L-SMASH Works project
  *
  * Authors: Mr-Ojii <okaschan@gmail.com>
  *
