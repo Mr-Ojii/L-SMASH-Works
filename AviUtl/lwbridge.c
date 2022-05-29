@@ -32,6 +32,15 @@
 #define INDEX_FILE_EXT      "*.lwi"
 #define ANY_FILE_EXT        "*.*"
 
+static HANDLE pipe_handle = NULL;
+static char pipe_name[56];
+static char random_string[33];
+static char plugin_dir[_MAX_PATH * 2];
+static char exe_path[_MAX_PATH * 2];
+static const char *exe_path_list[] = { "lwinput.exe", "plugins\\lwinput.exe" };
+static HMODULE hModuleDLL = NULL;
+static HANDLE mutex = NULL;
+
 
 INPUT_PLUGIN_TABLE input_plugin_table =
 {
@@ -55,28 +64,35 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
+    char path[_MAX_PATH * 2], drive[_MAX_DRIVE], dir[_MAX_DIR * 2], fname[_MAX_FNAME * 2], ext[_MAX_EXT * 2];
+    if( GetModuleFileName( hModuleDLL, path, MAX_PATH * 2) ) {
+        _splitpath(path, drive, dir, fname, ext);
+        strcpy(plugin_dir, drive);
+        strcat(plugin_dir, dir);
+    }
     return &input_plugin_table;
 }
 
-static HANDLE pipe_handle = NULL;
-static char pipe_name[56];
-static char random_string[33];
-static char exe_path[20];
-static HANDLE mutex = NULL;
-
 BOOL func_init( void )
 {
-    strcpy(exe_path,"lwinput.exe");
-    FILE *target = fopen( "lwinput.exe", "rb");
-    if( !target ) {
-        strcpy(exe_path,"plugins\\lwinput.exe");
-        target = fopen( "plugins\\lwinput.exe", "rb");
-        if( !target ) {
-            MessageBox( HWND_DESKTOP, "'lwinput.exe' not found.\n'L-SMASH Works File Reader' will be disabled.", "lwbridge", MB_ICONERROR | MB_OK );
-            return FALSE;
+    BOOL exe_search_success = FALSE;
+    for( int i = 0; i < 2; i++ )
+    {
+        strcpy(exe_path, plugin_dir);
+        strcat(exe_path, exe_path_list[i]);
+        FILE* target = fopen( exe_path, "rb" );
+        if( target )
+        {
+            fclose(target);
+            exe_search_success = TRUE;
+            break;
         }
     }
-    fclose( target );
+
+    if(!exe_search_success) {
+        MessageBox( HWND_DESKTOP, "'lwinput.exe' not found.\n'L-SMASH Works File Reader' will be disabled.", "lwbridge", MB_ICONERROR | MB_OK );
+        return FALSE;
+    }
     
     mutex = CreateMutex( NULL, FALSE, NULL );
     if( !mutex ) {
@@ -351,5 +367,16 @@ BOOL func_is_keyframe( INPUT_HANDLE ih, int sample_number )
 BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
 {
     ShellExecute( NULL, NULL, exe_path, "-config", NULL, SW_HIDE );
+    return TRUE;
+}
+
+BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
+{
+    switch( fdwReason ) 
+    { 
+        case DLL_PROCESS_ATTACH:
+            hModuleDLL = hinstDLL;
+            break;
+    }
     return TRUE;
 }
