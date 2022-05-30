@@ -423,8 +423,9 @@ static void get_settings( void )
 }
 
 BOOL func_init( void ) {
+    get_settings();
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
-    return input_cache_mutex != NULL;
+    return (input_cache_mutex != NULL);
 }
 
 BOOL func_exit( void ) {
@@ -451,7 +452,6 @@ INPUT_HANDLE func_open( LPSTR file )
         return NULL;
     hp->video_reader = READER_NONE;
     hp->audio_reader = READER_NONE;
-    get_settings();
     if( reader_opt.threads <= 0 )
         reader_opt.threads = get_auto_threads();
     extern lsmash_reader_t libavsmash_reader;
@@ -796,7 +796,6 @@ static INT_PTR CALLBACK dialog_proc
     {
         case WM_INITDIALOG :
             InitCommonControls();
-            get_settings();
             /* threads */
             set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt.threads );
             set_buddy_window_for_updown_control( hwnd, IDC_SPIN_THREADS, IDC_EDIT_THREADS );
@@ -1100,7 +1099,7 @@ static INT_PTR CALLBACK dialog_proc
                     /* Close */
                     fclose( ini );
                     EndDialog( hwnd, IDOK );
-                    MESSAGE_BOX_DESKTOP( MB_OK, "Please reopen the input file for updating settings!" );
+                    MESSAGE_BOX_DESKTOP( MB_OK, "Please relaunch AviUtl for updating settings!" );
                     return TRUE;
                 }
                 default :
