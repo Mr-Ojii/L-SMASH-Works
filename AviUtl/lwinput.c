@@ -108,6 +108,11 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
 static reader_option_t reader_opt = { 0 };
 static video_option_t *video_opt = &reader_opt.video_opt;
 static audio_option_t *audio_opt = &reader_opt.audio_opt;
+
+static reader_option_t reader_opt_config = { 0 };
+static video_option_t *video_opt_config = &reader_opt_config.video_opt;
+static audio_option_t *audio_opt_config = &reader_opt_config.audio_opt;
+
 static int reader_disabled[5] = { 0 };
 static int audio_delay = 0;
 static char *settings_path = NULL;
@@ -418,6 +423,7 @@ static void get_settings( void )
 
 BOOL func_init( void ) {
     get_settings();
+    reader_opt_config = reader_opt;
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
     return (input_cache_mutex != NULL);
 }
@@ -791,61 +797,61 @@ static BOOL CALLBACK dialog_proc
         case WM_INITDIALOG :
             InitCommonControls();
             /* threads */
-            set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt.threads );
+            set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt_config.threads );
             set_buddy_window_for_updown_control( hwnd, IDC_SPIN_THREADS, IDC_EDIT_THREADS );
             /* av_sync */
-            set_check_state( hwnd, IDC_CHECK_AV_SYNC, reader_opt.av_sync );
+            set_check_state( hwnd, IDC_CHECK_AV_SYNC, reader_opt_config.av_sync );
             /* no_create_index */
-            set_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE, !reader_opt.no_create_index );
+            set_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE, !reader_opt_config.no_create_index );
             /* force stream index */
-            set_check_state( hwnd, IDC_CHECK_FORCE_VIDEO, reader_opt.force_video );
-            set_check_state( hwnd, IDC_CHECK_FORCE_AUDIO, reader_opt.force_audio );
-            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, reader_opt.force_video_index );
-            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, reader_opt.force_audio_index );
+            set_check_state( hwnd, IDC_CHECK_FORCE_VIDEO, reader_opt_config.force_video );
+            set_check_state( hwnd, IDC_CHECK_FORCE_AUDIO, reader_opt_config.force_audio );
+            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, reader_opt_config.force_video_index );
+            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, reader_opt_config.force_audio_index );
             /* forward_seek_threshold */
-            set_int_to_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD, video_opt->forward_seek_threshold );
+            set_int_to_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD, video_opt_config->forward_seek_threshold );
             set_buddy_window_for_updown_control( hwnd, IDC_SPIN_FORWARD_THRESHOLD, IDC_EDIT_FORWARD_THRESHOLD );
             /* seek mode */
             HWND hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE );
             for( int i = 0; i < 3; i++ )
                 SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)seek_mode_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt->seek_mode, 0 );
+            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->seek_mode, 0 );
             /* scaler */
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_SCALER );
             for( int i = 0; i < 11; i++ )
                 SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)scaler_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt->scaler, 0 );
+            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->scaler, 0 );
             /* apply_repeat_flag */
-            set_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG, video_opt->apply_repeat_flag );
+            set_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG, video_opt_config->apply_repeat_flag );
             /* field_dominance */
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE );
             for( int i = 0; i < 3; i++ )
                 SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)field_dominance_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt->field_dominance, 0 );
+            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->field_dominance, 0 );
             /* VFR->CFR */
-            set_check_state( hwnd, IDC_CHECK_VFR_TO_CFR, video_opt->vfr2cfr.active );
-            set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, video_opt->vfr2cfr.framerate_num );
-            set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, video_opt->vfr2cfr.framerate_den );
+            set_check_state( hwnd, IDC_CHECK_VFR_TO_CFR, video_opt_config->vfr2cfr.active );
+            set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, video_opt_config->vfr2cfr.framerate_num );
+            set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, video_opt_config->vfr2cfr.framerate_den );
             /* LW48 output */
-            set_check_state( hwnd, IDC_CHECK_LW48_OUTPUT, video_opt->colorspace != 0 );
+            set_check_state( hwnd, IDC_CHECK_LW48_OUTPUT, video_opt_config->colorspace != 0 );
             /* AVS bit-depth */
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_AVS_BITDEPTH );
             for( int i = 0; i < 4; i++ )
             {
                 SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)avs_bit_depth_list[i] );
-                if( video_opt->avs.bit_depth == atoi( avs_bit_depth_list[i] ) )
+                if( video_opt_config->avs.bit_depth == atoi( avs_bit_depth_list[i] ) )
                     SendMessage( hcombo, CB_SETCURSEL, i, 0 );
             }
             /* audio_delay */
             set_int_to_dlg( hwnd, IDC_EDIT_AUDIO_DELAY, audio_delay );
             /* channel_layout */
-            if( audio_opt->channel_layout )
+            if( audio_opt_config->channel_layout )
             {
                 char edit_buf[512] = { 0 };
                 char *buf = edit_buf;
                 for( int i = 0; i < 64; i++ )
                 {
-                    uint64_t audio_channel = audio_opt->channel_layout & (1ULL << i);
+                    uint64_t audio_channel = audio_opt_config->channel_layout & (1ULL << i);
                     if( audio_channel )
                     {
                         const char *channel_name = av_get_channel_name( audio_channel );
@@ -869,39 +875,39 @@ static BOOL CALLBACK dialog_proc
             else
                 set_string_to_dlg( hwnd, IDC_EDIT_CHANNEL_LAYOUT, "Unspecified" );
             /* sample_rate */
-            if( audio_opt->sample_rate > 0 )
-                set_int_to_dlg( hwnd, IDC_EDIT_SAMPLE_RATE, audio_opt->sample_rate );
+            if( audio_opt_config->sample_rate > 0 )
+                set_int_to_dlg( hwnd, IDC_EDIT_SAMPLE_RATE, audio_opt_config->sample_rate );
             else
             {
-                audio_opt->sample_rate = 0;
+                audio_opt_config->sample_rate = 0;
                 set_string_to_dlg( hwnd, IDC_EDIT_SAMPLE_RATE, "0 (Auto)" );
             }
             /* mix_level */
-            send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_CENTER,   IDC_TEXT_MIX_LEVEL_CENTER,   0, 500, audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] );
-            send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_SURROUND, IDC_TEXT_MIX_LEVEL_SURROUND, 0, 500, audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] );
-            send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_LFE,      IDC_TEXT_MIX_LEVEL_LFE,      0, 500, audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] );
+            send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_CENTER,   IDC_TEXT_MIX_LEVEL_CENTER,   0, 500, audio_opt_config->mix_level[MIX_LEVEL_INDEX_CENTER  ] );
+            send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_SURROUND, IDC_TEXT_MIX_LEVEL_SURROUND, 0, 500, audio_opt_config->mix_level[MIX_LEVEL_INDEX_SURROUND] );
+            send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_LFE,      IDC_TEXT_MIX_LEVEL_LFE,      0, 500, audio_opt_config->mix_level[MIX_LEVEL_INDEX_LFE     ] );
             /* readers */
             set_check_state( hwnd, IDC_CHECK_LIBAVSMASH_INPUT, !reader_disabled[0] );
             set_check_state( hwnd, IDC_CHECK_AVS_INPUT,        !reader_disabled[1] );
             set_check_state( hwnd, IDC_CHECK_VPY_INPUT,        !reader_disabled[2] );
             set_check_state( hwnd, IDC_CHECK_LIBAV_INPUT,      !reader_disabled[3] );
             /* dummy reader */
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_WIDTH,         video_opt->dummy.width );
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_HEIGHT,        video_opt->dummy.height );
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, video_opt->dummy.framerate_num );
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, video_opt->dummy.framerate_den );
+            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_WIDTH,         video_opt_config->dummy.width );
+            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_HEIGHT,        video_opt_config->dummy.height );
+            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, video_opt_config->dummy.framerate_num );
+            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, video_opt_config->dummy.framerate_den );
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE );
             for( int i = 0; i < 3; i++ )
                 SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)dummy_colorspace_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt->dummy.colorspace, 0 );
+            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->dummy.colorspace, 0 );
             /* preferred decoders */
-            if( reader_opt.preferred_decoder_names )
+            if( reader_opt_config.preferred_decoder_names )
             {
                 char edit_buf[512] = { 0 };
                 char *buf = edit_buf;
-                for( const char **decoder = reader_opt.preferred_decoder_names; *decoder != NULL; decoder++ )
+                for( const char **decoder = reader_opt_config.preferred_decoder_names; *decoder != NULL; decoder++ )
                 {
-                    if( *decoder != *reader_opt.preferred_decoder_names )
+                    if( *decoder != *reader_opt_config.preferred_decoder_names )
                         *(buf++) = ',';
                     int length = strlen( *decoder );
                     memcpy( buf, *decoder, length );
@@ -925,9 +931,9 @@ static BOOL CALLBACK dialog_proc
             lf.lfQuality = ANTIALIASED_QUALITY;
             SendMessage( GetDlgItem( hwnd, IDC_TEXT_LIBRARY_INFO ), WM_SETFONT, (WPARAM)CreateFontIndirect( &lf ), 1 );
             /* handle cache */
-            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, video_opt->handle_cache );
+            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, video_opt_config->handle_cache );
             /* use cache dir */
-            set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt.use_cache_dir );
+            set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt_config.use_cache_dir );
             return TRUE;
         case WM_NOTIFY :
             if( wparam == IDC_SPIN_THREADS )
@@ -935,12 +941,12 @@ static BOOL CALLBACK dialog_proc
                 LPNMUPDOWN lpnmud = (LPNMUPDOWN)lparam;
                 if( lpnmud->hdr.code == UDN_DELTAPOS )
                 {
-                    reader_opt.threads = get_int_from_dlg( hwnd, IDC_EDIT_THREADS );
+                    reader_opt_config.threads = get_int_from_dlg( hwnd, IDC_EDIT_THREADS );
                     if( lpnmud->iDelta )
-                        reader_opt.threads += lpnmud->iDelta > 0 ? -1 : 1;
-                    if( reader_opt.threads < 0 )
-                        reader_opt.threads = 0;
-                    set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt.threads );
+                        reader_opt_config.threads += lpnmud->iDelta > 0 ? -1 : 1;
+                    if( reader_opt_config.threads < 0 )
+                        reader_opt_config.threads = 0;
+                    set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt_config.threads );
                 }
             }
             else if( wparam == IDC_SPIN_FORWARD_THRESHOLD )
@@ -948,21 +954,21 @@ static BOOL CALLBACK dialog_proc
                 LPNMUPDOWN lpnmud = (LPNMUPDOWN)lparam;
                 if( lpnmud->hdr.code == UDN_DELTAPOS )
                 {
-                    video_opt->forward_seek_threshold = get_int_from_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD );
+                    video_opt_config->forward_seek_threshold = get_int_from_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD );
                     if( lpnmud->iDelta )
-                        video_opt->forward_seek_threshold += lpnmud->iDelta > 0 ? -1 : 1;
-                    video_opt->forward_seek_threshold = CLIP_VALUE( video_opt->forward_seek_threshold, 1, 999 );
-                    set_int_to_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD, video_opt->forward_seek_threshold );
+                        video_opt_config->forward_seek_threshold += lpnmud->iDelta > 0 ? -1 : 1;
+                    video_opt_config->forward_seek_threshold = CLIP_VALUE( video_opt_config->forward_seek_threshold, 1, 999 );
+                    set_int_to_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD, video_opt_config->forward_seek_threshold );
                 }
             }
             return TRUE;
         case WM_HSCROLL :
             if( GetDlgItem( hwnd, IDC_SLIDER_MIX_LEVEL_CENTER ) == (HWND)lparam )
-                get_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_CENTER,   IDC_TEXT_MIX_LEVEL_CENTER,   &audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] );
+                get_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_CENTER,   IDC_TEXT_MIX_LEVEL_CENTER,   &audio_opt_config->mix_level[MIX_LEVEL_INDEX_CENTER  ] );
             else if( GetDlgItem( hwnd, IDC_SLIDER_MIX_LEVEL_SURROUND ) == (HWND)lparam )
-                get_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_SURROUND, IDC_TEXT_MIX_LEVEL_SURROUND, &audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] );
+                get_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_SURROUND, IDC_TEXT_MIX_LEVEL_SURROUND, &audio_opt_config->mix_level[MIX_LEVEL_INDEX_SURROUND] );
             else if( GetDlgItem( hwnd, IDC_SLIDER_MIX_LEVEL_LFE ) == (HWND)lparam )
-                get_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_LFE,      IDC_TEXT_MIX_LEVEL_LFE,      &audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] );
+                get_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_LFE,      IDC_TEXT_MIX_LEVEL_LFE,      &audio_opt_config->mix_level[MIX_LEVEL_INDEX_LFE     ] );
             return FALSE;
         case WM_COMMAND :
             switch( wparam )
@@ -980,52 +986,52 @@ static BOOL CALLBACK dialog_proc
                         return FALSE;
                     }
                     /* threads */
-                    reader_opt.threads = get_int_from_dlg_with_min( hwnd, IDC_EDIT_THREADS, 0 );
-                    if( reader_opt.threads > 0 )
-                        fprintf( ini, "threads=%d\n", reader_opt.threads );
+                    reader_opt_config.threads = get_int_from_dlg_with_min( hwnd, IDC_EDIT_THREADS, 0 );
+                    if( reader_opt_config.threads > 0 )
+                        fprintf( ini, "threads=%d\n", reader_opt_config.threads );
                     else
                         fprintf( ini, "threads=0 (auto)\n" );
                     /* av_sync */
-                    reader_opt.av_sync = get_check_state( hwnd, IDC_CHECK_AV_SYNC );
-                    fprintf( ini, "av_sync=%d\n", reader_opt.av_sync );
+                    reader_opt_config.av_sync = get_check_state( hwnd, IDC_CHECK_AV_SYNC );
+                    fprintf( ini, "av_sync=%d\n", reader_opt_config.av_sync );
                     /* no_create_index */
-                    reader_opt.no_create_index = !get_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE );
-                    fprintf( ini, "no_create_index=%d\n", reader_opt.no_create_index );
+                    reader_opt_config.no_create_index = !get_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE );
+                    fprintf( ini, "no_create_index=%d\n", reader_opt_config.no_create_index );
                     /* force stream index */
-                    reader_opt.force_video = get_check_state( hwnd, IDC_CHECK_FORCE_VIDEO );
-                    reader_opt.force_audio = get_check_state( hwnd, IDC_CHECK_FORCE_AUDIO );
-                    reader_opt.force_video_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, -1 );
-                    reader_opt.force_audio_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, -1 );
-                    fprintf( ini, "force_video_index=%d:%d\n", reader_opt.force_video, reader_opt.force_video_index );
-                    fprintf( ini, "force_audio_index=%d:%d\n", reader_opt.force_audio, reader_opt.force_audio_index );
+                    reader_opt_config.force_video = get_check_state( hwnd, IDC_CHECK_FORCE_VIDEO );
+                    reader_opt_config.force_audio = get_check_state( hwnd, IDC_CHECK_FORCE_AUDIO );
+                    reader_opt_config.force_video_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, -1 );
+                    reader_opt_config.force_audio_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, -1 );
+                    fprintf( ini, "force_video_index=%d:%d\n", reader_opt_config.force_video, reader_opt_config.force_video_index );
+                    fprintf( ini, "force_audio_index=%d:%d\n", reader_opt_config.force_audio, reader_opt_config.force_audio_index );
                     /* seek_mode */
-                    video_opt->seek_mode = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "seek_mode=%d\n", video_opt->seek_mode );
+                    video_opt_config->seek_mode = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE ), CB_GETCURSEL, 0, 0 );
+                    fprintf( ini, "seek_mode=%d\n", video_opt_config->seek_mode );
                     /* forward_seek_threshold */
-                    video_opt->forward_seek_threshold = get_int_from_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD );
-                    video_opt->forward_seek_threshold = CLIP_VALUE( video_opt->forward_seek_threshold, 1, 999 );
-                    fprintf( ini, "forward_threshold=%d\n", video_opt->forward_seek_threshold );
+                    video_opt_config->forward_seek_threshold = get_int_from_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD );
+                    video_opt_config->forward_seek_threshold = CLIP_VALUE( video_opt_config->forward_seek_threshold, 1, 999 );
+                    fprintf( ini, "forward_threshold=%d\n", video_opt_config->forward_seek_threshold );
                     /* scaler */
-                    video_opt->scaler = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SCALER ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "scaler=%d\n", video_opt->scaler );
+                    video_opt_config->scaler = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SCALER ), CB_GETCURSEL, 0, 0 );
+                    fprintf( ini, "scaler=%d\n", video_opt_config->scaler );
                     /* apply_repeat_flag */
-                    video_opt->apply_repeat_flag = get_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG );
-                    fprintf( ini, "apply_repeat_flag=%d\n", video_opt->apply_repeat_flag );
+                    video_opt_config->apply_repeat_flag = get_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG );
+                    fprintf( ini, "apply_repeat_flag=%d\n", video_opt_config->apply_repeat_flag );
                     /* field_dominance */
-                    video_opt->field_dominance = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "field_dominance=%d\n", video_opt->field_dominance );
+                    video_opt_config->field_dominance = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
+                    fprintf( ini, "field_dominance=%d\n", video_opt_config->field_dominance );
                     /* VFR->CFR */
-                    video_opt->vfr2cfr.active = get_check_state( hwnd, IDC_CHECK_VFR_TO_CFR );
-                    video_opt->vfr2cfr.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, 1 );
-                    video_opt->vfr2cfr.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, 1 );
-                    fprintf( ini, "vfr2cfr=%d:%d:%d\n", video_opt->vfr2cfr.active, video_opt->vfr2cfr.framerate_num, video_opt->vfr2cfr.framerate_den );
+                    video_opt_config->vfr2cfr.active = get_check_state( hwnd, IDC_CHECK_VFR_TO_CFR );
+                    video_opt_config->vfr2cfr.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, 1 );
+                    video_opt_config->vfr2cfr.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, 1 );
+                    fprintf( ini, "vfr2cfr=%d:%d:%d\n", video_opt_config->vfr2cfr.active, video_opt_config->vfr2cfr.framerate_num, video_opt_config->vfr2cfr.framerate_den );
                     /* LW48 output */
-                    video_opt->colorspace = (get_check_state( hwnd, IDC_CHECK_LW48_OUTPUT ) ? OUTPUT_LW48 : 0);
-                    fprintf( ini, "colorspace=%d\n", video_opt->colorspace );
+                    video_opt_config->colorspace = (get_check_state( hwnd, IDC_CHECK_LW48_OUTPUT ) ? OUTPUT_LW48 : 0);
+                    fprintf( ini, "colorspace=%d\n", video_opt_config->colorspace );
                     /* AVS bit-depth */
-                    video_opt->avs.bit_depth = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_AVS_BITDEPTH ), CB_GETCURSEL, 0, 0 );
-                    video_opt->avs.bit_depth = atoi( avs_bit_depth_list[ video_opt->avs.bit_depth ] );
-                    fprintf( ini, "avs_bit_depth=%d\n", video_opt->avs.bit_depth );
+                    video_opt_config->avs.bit_depth = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_AVS_BITDEPTH ), CB_GETCURSEL, 0, 0 );
+                    video_opt_config->avs.bit_depth = atoi( avs_bit_depth_list[ video_opt_config->avs.bit_depth ] );
+                    fprintf( ini, "avs_bit_depth=%d\n", video_opt_config->avs.bit_depth );
                     /* audio_delay */
                     audio_delay = get_int_from_dlg( hwnd, IDC_EDIT_AUDIO_DELAY );
                     fprintf( ini, "audio_delay=%d\n", audio_delay );
@@ -1033,17 +1039,17 @@ static BOOL CALLBACK dialog_proc
                     {
                         char edit_buf[512];
                         GetDlgItemText( hwnd, IDC_EDIT_CHANNEL_LAYOUT, (LPTSTR)edit_buf, sizeof(edit_buf) );
-                        audio_opt->channel_layout = av_get_channel_layout( edit_buf );
+                        audio_opt_config->channel_layout = av_get_channel_layout( edit_buf );
                     }
-                    fprintf( ini, "channel_layout=0x%"PRIx64"\n", audio_opt->channel_layout );
+                    fprintf( ini, "channel_layout=0x%"PRIx64"\n", audio_opt_config->channel_layout );
                     /* sample_rate */
-                    audio_opt->sample_rate = get_int_from_dlg_with_min( hwnd, IDC_EDIT_SAMPLE_RATE, 0 );
-                    fprintf( ini, "sample_rate=%d\n", audio_opt->sample_rate );
+                    audio_opt_config->sample_rate = get_int_from_dlg_with_min( hwnd, IDC_EDIT_SAMPLE_RATE, 0 );
+                    fprintf( ini, "sample_rate=%d\n", audio_opt_config->sample_rate );
                     /* mix_level */
                     fprintf( ini, "mix_level=%d:%d:%d\n",
-                             audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ],
-                             audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND],
-                             audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] );
+                             audio_opt_config->mix_level[MIX_LEVEL_INDEX_CENTER  ],
+                             audio_opt_config->mix_level[MIX_LEVEL_INDEX_SURROUND],
+                             audio_opt_config->mix_level[MIX_LEVEL_INDEX_LFE     ] );
                     /* readers */
                     reader_disabled[0] = !get_check_state( hwnd, IDC_CHECK_LIBAVSMASH_INPUT );
                     reader_disabled[1] = !get_check_state( hwnd, IDC_CHECK_AVS_INPUT        );
@@ -1054,14 +1060,14 @@ static BOOL CALLBACK dialog_proc
                     fprintf( ini, "vpy_disabled=%d\n",        reader_disabled[2] );
                     fprintf( ini, "libav_disabled=%d\n",      reader_disabled[3] );
                     /* dummy reader */
-                    video_opt->dummy.width         = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_WIDTH,  32 );
-                    video_opt->dummy.height        = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_HEIGHT, 32 );
-                    video_opt->dummy.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, 1 );
-                    video_opt->dummy.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, 1 );
-                    video_opt->dummy.colorspace    = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "dummy_resolution=%dx%d\n", video_opt->dummy.width, video_opt->dummy.height );
-                    fprintf( ini, "dummy_framerate=%d/%d\n",  video_opt->dummy.framerate_num, video_opt->dummy.framerate_den );
-                    fprintf( ini, "dummy_colorspace=%d\n",    video_opt->dummy.colorspace );
+                    video_opt_config->dummy.width         = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_WIDTH,  32 );
+                    video_opt_config->dummy.height        = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_HEIGHT, 32 );
+                    video_opt_config->dummy.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, 1 );
+                    video_opt_config->dummy.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, 1 );
+                    video_opt_config->dummy.colorspace    = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE ), CB_GETCURSEL, 0, 0 );
+                    fprintf( ini, "dummy_resolution=%dx%d\n", video_opt_config->dummy.width, video_opt_config->dummy.height );
+                    fprintf( ini, "dummy_framerate=%d/%d\n",  video_opt_config->dummy.framerate_num, video_opt_config->dummy.framerate_den );
+                    fprintf( ini, "dummy_colorspace=%d\n",    video_opt_config->dummy.colorspace );
                     /* preferred decoders */
                     {
                         char edit_buf[512];
@@ -1070,11 +1076,11 @@ static BOOL CALLBACK dialog_proc
                         fprintf( ini, "preferred_decoders=%s\n", edit_buf );
                     }
                     /* handle cache */
-                    video_opt->handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
-                    fprintf( ini, "handle_cache=%d\n", video_opt->handle_cache );
+                    video_opt_config->handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
+                    fprintf( ini, "handle_cache=%d\n", video_opt_config->handle_cache );
                     /* use cache dir */
-                    reader_opt.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
-                    fprintf( ini, "use_cache_dir=%d\n", reader_opt.use_cache_dir );
+                    reader_opt_config.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
+                    fprintf( ini, "use_cache_dir=%d\n", reader_opt_config.use_cache_dir );
                     /* cache dir path */
                     {
                         char edit_buf[_MAX_PATH * 2];
