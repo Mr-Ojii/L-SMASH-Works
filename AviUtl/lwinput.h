@@ -99,7 +99,6 @@ typedef struct
     {
         int bit_depth;
     } avs;
-    int handle_cache;
 } video_option_t;
 
 enum
@@ -122,6 +121,7 @@ typedef struct
     int av_sync;
     char         preferred_decoder_names_buf[PREFERRED_DECODER_NAMES_BUFSIZE];
     const char **preferred_decoder_names;
+    int handle_cache;
     /* for libav reader */
     int no_create_index;
     int force_video;

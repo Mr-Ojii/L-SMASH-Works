@@ -365,8 +365,8 @@ static void get_settings( void )
         else
             set_preferred_decoder_names_on_buf( preferred_decoder_names );
         /* handle cache */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &video_opt->handle_cache ) != 1 )
-            video_opt->handle_cache = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &reader_opt.handle_cache ) != 1 )
+            reader_opt.handle_cache = 0;
         /* use cache dir */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt.use_cache_dir ) != 1 )
             reader_opt.use_cache_dir = 0;
@@ -392,6 +392,7 @@ static void get_settings( void )
         reader_opt.force_video_index      = -1;
         reader_opt.force_audio            = 0;
         reader_opt.force_audio_index      = -1;
+        reader_opt.handle_cache           = 0;
         reader_opt.use_cache_dir          = 0;
         reader_opt.cache_dir_name         = NULL;
         reader_disabled[0]                = 0;
@@ -413,7 +414,6 @@ static void get_settings( void )
         video_opt->dummy.framerate_den    = 1;
         video_opt->dummy.colorspace       = OUTPUT_YUY2;
         video_opt->avs.bit_depth          = 8;
-        video_opt->handle_cache           = 0;
         audio_delay                       = 0;
         audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
@@ -434,7 +434,7 @@ BOOL func_exit( void ) {
 
 INPUT_HANDLE func_open( LPSTR file )
 {
-    if( video_opt->handle_cache && first_input_cache ) {
+    if( reader_opt.handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         for( input_cache* tmp_cache = first_input_cache; tmp_cache ; tmp_cache = tmp_cache->next_cache ) {
             if( strcmp( tmp_cache->file_path, file ) == 0 ) {
@@ -555,7 +555,7 @@ INPUT_HANDLE func_open( LPSTR file )
         return NULL;
     }
 
-    if( video_opt->handle_cache ) {
+    if( reader_opt.handle_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         char* file_name = lw_malloc_zero( ( strlen( file ) + 1 ) * sizeof( char ));
         if( file_name ) {
@@ -579,7 +579,7 @@ INPUT_HANDLE func_open( LPSTR file )
 
 BOOL func_close( INPUT_HANDLE ih )
 {
-    if( video_opt->handle_cache && first_input_cache ) {
+    if( reader_opt.handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         input_cache* tmp_cache, * prev_cache = NULL;
         for( tmp_cache = first_input_cache; tmp_cache; prev_cache = tmp_cache, tmp_cache = tmp_cache->next_cache ) {
@@ -931,7 +931,7 @@ static BOOL CALLBACK dialog_proc
             lf.lfQuality = ANTIALIASED_QUALITY;
             SendMessage( GetDlgItem( hwnd, IDC_TEXT_LIBRARY_INFO ), WM_SETFONT, (WPARAM)CreateFontIndirect( &lf ), 1 );
             /* handle cache */
-            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, video_opt_config->handle_cache );
+            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, reader_opt_config.handle_cache );
             /* use cache dir */
             set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt_config.use_cache_dir );
             return TRUE;
@@ -1076,8 +1076,8 @@ static BOOL CALLBACK dialog_proc
                         fprintf( ini, "preferred_decoders=%s\n", edit_buf );
                     }
                     /* handle cache */
-                    video_opt_config->handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
-                    fprintf( ini, "handle_cache=%d\n", video_opt_config->handle_cache );
+                    reader_opt_config.handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
+                    fprintf( ini, "handle_cache=%d\n", reader_opt_config.handle_cache );
                     /* use cache dir */
                     reader_opt_config.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
                     fprintf( ini, "use_cache_dir=%d\n", reader_opt_config.use_cache_dir );
