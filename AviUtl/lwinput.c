@@ -52,7 +52,6 @@
 static char plugin_information[512] = { 0 };
 static char plugin_dir[_MAX_PATH * 2];
 static char default_index_dir[_MAX_PATH * 2];
-static char user_index_dir[_MAX_PATH * 2];
 static HMODULE hModuleDLL = NULL;
 
 static void get_plugin_information( void )
@@ -189,13 +188,14 @@ static inline void set_preferred_decoder_names_on_buf
     reader_opt->preferred_decoder_names = lw_tokenize_string( reader_opt->preferred_decoder_names_buf, ',', NULL );
 }
 
-static inline void set_cache_dir( void )
+static inline void set_cache_dir( reader_option_t *_reader_opt, char *user_index_dir )
 {
-    reader_opt->cache_dir_name = NULL;
-    if( reader_opt->use_cache_dir ) {
-        DWORD dwAttrib = GetFileAttributes( user_index_dir );
+    strcpy(_reader_opt->cache_dir_name_buf, user_index_dir);
+    _reader_opt->cache_dir_name = NULL;
+    if( _reader_opt->use_cache_dir ) {
+        DWORD dwAttrib = GetFileAttributes( _reader_opt->cache_dir_name_buf );
         if((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
-            reader_opt->cache_dir_name = user_index_dir;
+            _reader_opt->cache_dir_name = _reader_opt->cache_dir_name_buf;
         }
         else {
             DWORD dwAttrib_default_index_dir = GetFileAttributes( default_index_dir );
@@ -204,7 +204,7 @@ static inline void set_cache_dir( void )
                     MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
                     return;
                 }
-            reader_opt->cache_dir_name = default_index_dir;
+            _reader_opt->cache_dir_name = default_index_dir;
         }
     }
 }
@@ -371,14 +371,14 @@ static void get_settings( void )
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt->use_cache_dir ) != 1 )
             reader_opt->use_cache_dir = 0;
             
+        char user_index_dir[_MAX_PATH * 2] = { 0 };
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_dir_path=%s", user_index_dir ) != 1 )
-            strcpy( user_index_dir, "" );
+            set_cache_dir( reader_opt, "" );
         else {
             // "sscanf" abort loading with a space character.
             buf[strlen(buf) - 1] = '\0';
-            strcpy( user_index_dir, buf + 15 );
+            set_cache_dir( reader_opt, buf + 15 );
         }
-        set_cache_dir();
         fclose( ini );
     }
     else
@@ -918,7 +918,7 @@ static BOOL CALLBACK dialog_proc
             else
                 set_string_to_dlg( hwnd, IDC_EDIT_PREFERRED_DECODERS, "" );
             /* cache dir path */
-            set_string_to_dlg( hwnd, IDC_EDIT_CACHE_DIR_PATH, user_index_dir );
+            set_string_to_dlg( hwnd, IDC_EDIT_CACHE_DIR_PATH, reader_opt_config->cache_dir_name_buf );
             /* Library informations */
             if( plugin_information[0] == 0 )
                 get_plugin_information();
@@ -1092,9 +1092,8 @@ static BOOL CALLBACK dialog_proc
                                 edit_buf[edit_len + 1] = '\0';
                             }
                         }
-                        strcpy(user_index_dir, edit_buf);
-                        set_cache_dir();
-                        fprintf( ini, "cache_dir_path=%s\n", user_index_dir );
+                        set_cache_dir(reader_opt_config, edit_buf);
+                        fprintf( ini, "cache_dir_path=%s\n", edit_buf );
                     }
                     /* Close */
                     fclose( ini );
