@@ -190,7 +190,8 @@ static inline void set_preferred_decoder_names_on_buf
 
 static inline void set_cache_dir( reader_option_t *_reader_opt, char *user_index_dir )
 {
-    strcpy(_reader_opt->cache_dir_name_buf, user_index_dir);
+    memcpy( _reader_opt->cache_dir_name_buf, user_index_dir, 
+            MIN( CACHE_DIR_NAME_BUFSIZE - 1, strlen(user_index_dir) ) );
     _reader_opt->cache_dir_name = NULL;
     if( _reader_opt->use_cache_dir ) {
         DWORD dwAttrib = GetFileAttributes( _reader_opt->cache_dir_name_buf );
