@@ -105,16 +105,16 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
     return &input_plugin_table;
 }
 
-static reader_option_t reader_opt = { 0 };
-static video_option_t *video_opt = &reader_opt.video_opt;
-static audio_option_t *audio_opt = &reader_opt.audio_opt;
+static lwinput_option_t lwinput_opt = { 0 };
+static reader_option_t *reader_opt = &lwinput_opt.reader_opt;
+static video_option_t *video_opt = &lwinput_opt.reader_opt.video_opt;
+static audio_option_t *audio_opt = &lwinput_opt.reader_opt.audio_opt;
 
-static reader_option_t reader_opt_config = { 0 };
-static video_option_t *video_opt_config = &reader_opt_config.video_opt;
-static audio_option_t *audio_opt_config = &reader_opt_config.audio_opt;
+static lwinput_option_t lwinput_opt_config = { 0 };
+static reader_option_t *reader_opt_config = &lwinput_opt_config.reader_opt;
+static video_option_t *video_opt_config = &lwinput_opt_config.reader_opt.video_opt;
+static audio_option_t *audio_opt_config = &lwinput_opt_config.reader_opt.audio_opt;
 
-static int reader_disabled[5] = { 0 };
-static int audio_delay = 0;
 static char *settings_path = NULL;
 static const char *settings_path_list[] = { "lsmash.ini", "plugins/lsmash.ini" };
 static const char *seek_mode_list[] = { "Normal", "Unsafe", "Aggressive" };
@@ -174,8 +174,8 @@ static int get_auto_threads( void )
 
 static inline void clean_preferred_decoder_names( void )
 {
-    lw_freep( &reader_opt.preferred_decoder_names );
-    memset( reader_opt.preferred_decoder_names_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE );
+    lw_freep( &reader_opt->preferred_decoder_names );
+    memset( reader_opt->preferred_decoder_names_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE );
 }
 
 static inline void set_preferred_decoder_names_on_buf
@@ -184,18 +184,18 @@ static inline void set_preferred_decoder_names_on_buf
 )
 {
     clean_preferred_decoder_names();
-    memcpy( reader_opt.preferred_decoder_names_buf, preferred_decoder_names,
+    memcpy( reader_opt->preferred_decoder_names_buf, preferred_decoder_names,
             MIN( PREFERRED_DECODER_NAMES_BUFSIZE - 1, strlen(preferred_decoder_names) ) );
-    reader_opt.preferred_decoder_names = lw_tokenize_string( reader_opt.preferred_decoder_names_buf, ',', NULL );
+    reader_opt->preferred_decoder_names = lw_tokenize_string( reader_opt->preferred_decoder_names_buf, ',', NULL );
 }
 
 static inline void set_cache_dir( void )
 {
-    reader_opt.cache_dir_name = NULL;
-    if( reader_opt.use_cache_dir ) {
+    reader_opt->cache_dir_name = NULL;
+    if( reader_opt->use_cache_dir ) {
         DWORD dwAttrib = GetFileAttributes( user_index_dir );
         if((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
-            reader_opt.cache_dir_name = user_index_dir;
+            reader_opt->cache_dir_name = user_index_dir;
         }
         else {
             DWORD dwAttrib_default_index_dir = GetFileAttributes( default_index_dir );
@@ -204,7 +204,7 @@ static inline void set_cache_dir( void )
                     MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
                     return;
                 }
-            reader_opt.cache_dir_name = default_index_dir;
+            reader_opt->cache_dir_name = default_index_dir;
         }
     }
 }
@@ -216,33 +216,33 @@ static void get_settings( void )
     if( ini )
     {
         /* threads */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "threads=%d", &reader_opt.threads ) != 1 )
-            reader_opt.threads = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "threads=%d", &reader_opt->threads ) != 1 )
+            reader_opt->threads = 0;
         /* av_sync */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "av_sync=%d", &reader_opt.av_sync ) != 1 )
-            reader_opt.av_sync = 1;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "av_sync=%d", &reader_opt->av_sync ) != 1 )
+            reader_opt->av_sync = 1;
         /* no_create_index */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "no_create_index=%d", &reader_opt.no_create_index ) != 1 )
-            reader_opt.no_create_index = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "no_create_index=%d", &reader_opt->no_create_index ) != 1 )
+            reader_opt->no_create_index = 0;
         /* force stream index */
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "force_video_index=%d:%d",
-                    &reader_opt.force_video, &reader_opt.force_video_index ) != 2 )
+                    &reader_opt->force_video, &reader_opt->force_video_index ) != 2 )
         {
-            reader_opt.force_video       = 0;
-            reader_opt.force_video_index = -1;
+            reader_opt->force_video       = 0;
+            reader_opt->force_video_index = -1;
         }
         else
-            reader_opt.force_video_index = MAX( reader_opt.force_video_index, -1 );
+            reader_opt->force_video_index = MAX( reader_opt->force_video_index, -1 );
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "force_audio_index=%d:%d",
-                    &reader_opt.force_audio, &reader_opt.force_audio_index ) != 2 )
+                    &reader_opt->force_audio, &reader_opt->force_audio_index ) != 2 )
         {
-            reader_opt.force_audio       = 0;
-            reader_opt.force_audio_index = -1;
+            reader_opt->force_audio       = 0;
+            reader_opt->force_audio_index = -1;
         }
         else
-            reader_opt.force_audio_index = MAX( reader_opt.force_audio_index, -1 );
+            reader_opt->force_audio_index = MAX( reader_opt->force_audio_index, -1 );
         /* seek_mode */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "seek_mode=%d", &video_opt->seek_mode ) != 1 )
             video_opt->seek_mode = 0;
@@ -297,8 +297,8 @@ static void get_settings( void )
                 video_opt->avs.bit_depth = 16;
         }
         /* audio_delay */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "audio_delay=%d", &audio_delay ) != 1 )
-            audio_delay = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "audio_delay=%d", &lwinput_opt.audio_delay ) != 1 )
+            lwinput_opt.audio_delay = 0;
         /* channel_layout */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "channel_layout=0x%"SCNx64, &audio_opt->channel_layout ) != 1 )
             audio_opt->channel_layout = 0;
@@ -323,14 +323,14 @@ static void get_settings( void )
             audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = CLIP_VALUE( audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ], 0, 30000 );
         }
         /* readers */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libavsmash_disabled=%d", &reader_disabled[0] ) != 1 )
-            reader_disabled[0] = 0;
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "avs_disabled=%d",        &reader_disabled[1] ) != 1 )
-            reader_disabled[1] = 0;
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "vpy_disabled=%d",        &reader_disabled[2] ) != 1 )
-            reader_disabled[2] = 0;
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libav_disabled=%d",      &reader_disabled[3] ) != 1 )
-            reader_disabled[3] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libavsmash_disabled=%d", &lwinput_opt.reader_disabled[0] ) != 1 )
+            lwinput_opt.reader_disabled[0] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "avs_disabled=%d",        &lwinput_opt.reader_disabled[1] ) != 1 )
+            lwinput_opt.reader_disabled[1] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "vpy_disabled=%d",        &lwinput_opt.reader_disabled[2] ) != 1 )
+            lwinput_opt.reader_disabled[2] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libav_disabled=%d",      &lwinput_opt.reader_disabled[3] ) != 1 )
+            lwinput_opt.reader_disabled[3] = 0;
         /* dummy reader */
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "dummy_resolution=%dx%d", &video_opt->dummy.width, &video_opt->dummy.height ) != 2 )
@@ -365,11 +365,11 @@ static void get_settings( void )
         else
             set_preferred_decoder_names_on_buf( preferred_decoder_names );
         /* handle cache */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &reader_opt.handle_cache ) != 1 )
-            reader_opt.handle_cache = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &lwinput_opt.handle_cache ) != 1 )
+            lwinput_opt.handle_cache = 0;
         /* use cache dir */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt.use_cache_dir ) != 1 )
-            reader_opt.use_cache_dir = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt->use_cache_dir ) != 1 )
+            reader_opt->use_cache_dir = 0;
             
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_dir_path=%s", user_index_dir ) != 1 )
             strcpy( user_index_dir, "" );
@@ -385,20 +385,20 @@ static void get_settings( void )
     {
         /* Set up defalut values. */
         clean_preferred_decoder_names();
-        reader_opt.threads                = 0;
-        reader_opt.av_sync                = 1;
-        reader_opt.no_create_index        = 0;
-        reader_opt.force_video            = 0;
-        reader_opt.force_video_index      = -1;
-        reader_opt.force_audio            = 0;
-        reader_opt.force_audio_index      = -1;
-        reader_opt.handle_cache           = 0;
-        reader_opt.use_cache_dir          = 0;
-        reader_opt.cache_dir_name         = NULL;
-        reader_disabled[0]                = 0;
-        reader_disabled[1]                = 0;
-        reader_disabled[2]                = 0;
-        reader_disabled[3]                = 0;
+        reader_opt->threads                = 0;
+        reader_opt->av_sync                = 1;
+        reader_opt->no_create_index        = 0;
+        reader_opt->force_video            = 0;
+        reader_opt->force_video_index      = -1;
+        reader_opt->force_audio            = 0;
+        reader_opt->force_audio_index      = -1;
+        lwinput_opt.handle_cache           = 0;
+        reader_opt->use_cache_dir          = 0;
+        reader_opt->cache_dir_name         = NULL;
+        lwinput_opt.reader_disabled[0]    = 0;
+        lwinput_opt.reader_disabled[1]    = 0;
+        lwinput_opt.reader_disabled[2]    = 0;
+        lwinput_opt.reader_disabled[3]    = 0;
         video_opt->seek_mode              = 0;
         video_opt->forward_seek_threshold = 10;
         video_opt->scaler                 = 0;
@@ -414,16 +414,16 @@ static void get_settings( void )
         video_opt->dummy.framerate_den    = 1;
         video_opt->dummy.colorspace       = OUTPUT_YUY2;
         video_opt->avs.bit_depth          = 8;
-        audio_delay                       = 0;
+        lwinput_opt.audio_delay           = 0;
         audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
         audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
     }
+    lwinput_opt_config = lwinput_opt;
 }
 
 BOOL func_init( void ) {
     get_settings();
-    reader_opt_config = reader_opt;
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
     return (input_cache_mutex != NULL);
 }
@@ -434,7 +434,7 @@ BOOL func_exit( void ) {
 
 INPUT_HANDLE func_open( LPSTR file )
 {
-    if( reader_opt.handle_cache && first_input_cache ) {
+    if( lwinput_opt.handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         for( input_cache* tmp_cache = first_input_cache; tmp_cache ; tmp_cache = tmp_cache->next_cache ) {
             if( strcmp( tmp_cache->file_path, file ) == 0 ) {
@@ -452,8 +452,8 @@ INPUT_HANDLE func_open( LPSTR file )
         return NULL;
     hp->video_reader = READER_NONE;
     hp->audio_reader = READER_NONE;
-    if( reader_opt.threads <= 0 )
-        reader_opt.threads = get_auto_threads();
+    if( reader_opt->threads <= 0 )
+        reader_opt->threads = get_auto_threads();
     extern lsmash_reader_t libavsmash_reader;
     extern lsmash_reader_t avs_reader;
     extern lsmash_reader_t vpy_reader;
@@ -480,13 +480,13 @@ INPUT_HANDLE func_open( LPSTR file )
         };
     for( int i = 0; lsmash_reader_table[i].reader; i++ )
     {
-        if( reader_disabled[lsmash_reader_table[i].reader->type - 1] )
+        if( lwinput_opt.reader_disabled[lsmash_reader_table[i].reader->type - 1] )
             continue;
         int video_none = 1;
         int audio_none = 1;
         lsmash_reader_t reader      = *lsmash_reader_table[i].reader;
         int             reader_attr =  lsmash_reader_table[i].attribute;
-        void *private_stuff = reader.open_file( file, &reader_opt );
+        void *private_stuff = reader.open_file( file, reader_opt );
         if( private_stuff )
         {
             if( !hp->video_private )
@@ -555,7 +555,7 @@ INPUT_HANDLE func_open( LPSTR file )
         return NULL;
     }
 
-    if( reader_opt.handle_cache ) {
+    if( lwinput_opt.handle_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         char* file_name = lw_malloc_zero( ( strlen( file ) + 1 ) * sizeof( char ));
         if( file_name ) {
@@ -579,7 +579,7 @@ INPUT_HANDLE func_open( LPSTR file )
 
 BOOL func_close( INPUT_HANDLE ih )
 {
-    if( reader_opt.handle_cache && first_input_cache ) {
+    if( lwinput_opt.handle_cache && first_input_cache ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         input_cache* tmp_cache, * prev_cache = NULL;
         for( tmp_cache = first_input_cache; tmp_cache; prev_cache = tmp_cache, tmp_cache = tmp_cache->next_cache ) {
@@ -605,7 +605,7 @@ BOOL func_close( INPUT_HANDLE ih )
         ReleaseMutex( input_cache_mutex );
     }
 
-    lw_freep( &reader_opt.preferred_decoder_names );
+    lw_freep( &reader_opt->preferred_decoder_names );
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     if( !hp )
         return TRUE;
@@ -643,7 +643,7 @@ BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
     if( hp->audio_reader != READER_NONE )
     {
         iip->flag             |= INPUT_INFO_FLAG_AUDIO;
-        iip->audio_n           = hp->audio_pcm_sample_count + audio_delay;
+        iip->audio_n           = hp->audio_pcm_sample_count + lwinput_opt.audio_delay;
         iip->audio_format      = &hp->audio_format.Format;
         iip->audio_format_size = sizeof( WAVEFORMATEX ) + hp->audio_format.Format.cbSize;
     }
@@ -659,7 +659,7 @@ int func_read_video( INPUT_HANDLE ih, int sample_number, void *buf )
 int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf )
 {
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
-    if( hp->read_audio && hp->delay_audio( hp, &start, length, audio_delay ) )
+    if( hp->read_audio && hp->delay_audio( hp, &start, length, lwinput_opt.audio_delay ) )
         return hp->read_audio( hp, start, length, buf );
     uint8_t silence = hp->audio_format.Format.wBitsPerSample == 8 ? 128 : 0;
     memset( buf, silence, length * hp->audio_format.Format.nBlockAlign );
@@ -797,17 +797,17 @@ static BOOL CALLBACK dialog_proc
         case WM_INITDIALOG :
             InitCommonControls();
             /* threads */
-            set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt_config.threads );
+            set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt_config->threads );
             set_buddy_window_for_updown_control( hwnd, IDC_SPIN_THREADS, IDC_EDIT_THREADS );
             /* av_sync */
-            set_check_state( hwnd, IDC_CHECK_AV_SYNC, reader_opt_config.av_sync );
+            set_check_state( hwnd, IDC_CHECK_AV_SYNC, reader_opt_config->av_sync );
             /* no_create_index */
-            set_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE, !reader_opt_config.no_create_index );
+            set_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE, !reader_opt_config->no_create_index );
             /* force stream index */
-            set_check_state( hwnd, IDC_CHECK_FORCE_VIDEO, reader_opt_config.force_video );
-            set_check_state( hwnd, IDC_CHECK_FORCE_AUDIO, reader_opt_config.force_audio );
-            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, reader_opt_config.force_video_index );
-            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, reader_opt_config.force_audio_index );
+            set_check_state( hwnd, IDC_CHECK_FORCE_VIDEO, reader_opt_config->force_video );
+            set_check_state( hwnd, IDC_CHECK_FORCE_AUDIO, reader_opt_config->force_audio );
+            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, reader_opt_config->force_video_index );
+            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, reader_opt_config->force_audio_index );
             /* forward_seek_threshold */
             set_int_to_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD, video_opt_config->forward_seek_threshold );
             set_buddy_window_for_updown_control( hwnd, IDC_SPIN_FORWARD_THRESHOLD, IDC_EDIT_FORWARD_THRESHOLD );
@@ -843,7 +843,7 @@ static BOOL CALLBACK dialog_proc
                     SendMessage( hcombo, CB_SETCURSEL, i, 0 );
             }
             /* audio_delay */
-            set_int_to_dlg( hwnd, IDC_EDIT_AUDIO_DELAY, audio_delay );
+            set_int_to_dlg( hwnd, IDC_EDIT_AUDIO_DELAY, lwinput_opt_config.audio_delay );
             /* channel_layout */
             if( audio_opt_config->channel_layout )
             {
@@ -887,10 +887,10 @@ static BOOL CALLBACK dialog_proc
             send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_SURROUND, IDC_TEXT_MIX_LEVEL_SURROUND, 0, 500, audio_opt_config->mix_level[MIX_LEVEL_INDEX_SURROUND] );
             send_mix_level( hwnd, IDC_SLIDER_MIX_LEVEL_LFE,      IDC_TEXT_MIX_LEVEL_LFE,      0, 500, audio_opt_config->mix_level[MIX_LEVEL_INDEX_LFE     ] );
             /* readers */
-            set_check_state( hwnd, IDC_CHECK_LIBAVSMASH_INPUT, !reader_disabled[0] );
-            set_check_state( hwnd, IDC_CHECK_AVS_INPUT,        !reader_disabled[1] );
-            set_check_state( hwnd, IDC_CHECK_VPY_INPUT,        !reader_disabled[2] );
-            set_check_state( hwnd, IDC_CHECK_LIBAV_INPUT,      !reader_disabled[3] );
+            set_check_state( hwnd, IDC_CHECK_LIBAVSMASH_INPUT, !lwinput_opt_config.reader_disabled[0] );
+            set_check_state( hwnd, IDC_CHECK_AVS_INPUT,        !lwinput_opt_config.reader_disabled[1] );
+            set_check_state( hwnd, IDC_CHECK_VPY_INPUT,        !lwinput_opt_config.reader_disabled[2] );
+            set_check_state( hwnd, IDC_CHECK_LIBAV_INPUT,      !lwinput_opt_config.reader_disabled[3] );
             /* dummy reader */
             set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_WIDTH,         video_opt_config->dummy.width );
             set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_HEIGHT,        video_opt_config->dummy.height );
@@ -901,13 +901,13 @@ static BOOL CALLBACK dialog_proc
                 SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)dummy_colorspace_list[i] );
             SendMessage( hcombo, CB_SETCURSEL, video_opt_config->dummy.colorspace, 0 );
             /* preferred decoders */
-            if( reader_opt_config.preferred_decoder_names )
+            if( reader_opt_config->preferred_decoder_names )
             {
                 char edit_buf[512] = { 0 };
                 char *buf = edit_buf;
-                for( const char **decoder = reader_opt_config.preferred_decoder_names; *decoder != NULL; decoder++ )
+                for( const char **decoder = reader_opt_config->preferred_decoder_names; *decoder != NULL; decoder++ )
                 {
-                    if( *decoder != *reader_opt_config.preferred_decoder_names )
+                    if( *decoder != *reader_opt_config->preferred_decoder_names )
                         *(buf++) = ',';
                     int length = strlen( *decoder );
                     memcpy( buf, *decoder, length );
@@ -931,9 +931,9 @@ static BOOL CALLBACK dialog_proc
             lf.lfQuality = ANTIALIASED_QUALITY;
             SendMessage( GetDlgItem( hwnd, IDC_TEXT_LIBRARY_INFO ), WM_SETFONT, (WPARAM)CreateFontIndirect( &lf ), 1 );
             /* handle cache */
-            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, reader_opt_config.handle_cache );
+            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, lwinput_opt_config.handle_cache );
             /* use cache dir */
-            set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt_config.use_cache_dir );
+            set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt_config->use_cache_dir );
             return TRUE;
         case WM_NOTIFY :
             if( wparam == IDC_SPIN_THREADS )
@@ -941,12 +941,12 @@ static BOOL CALLBACK dialog_proc
                 LPNMUPDOWN lpnmud = (LPNMUPDOWN)lparam;
                 if( lpnmud->hdr.code == UDN_DELTAPOS )
                 {
-                    reader_opt_config.threads = get_int_from_dlg( hwnd, IDC_EDIT_THREADS );
+                    reader_opt_config->threads = get_int_from_dlg( hwnd, IDC_EDIT_THREADS );
                     if( lpnmud->iDelta )
-                        reader_opt_config.threads += lpnmud->iDelta > 0 ? -1 : 1;
-                    if( reader_opt_config.threads < 0 )
-                        reader_opt_config.threads = 0;
-                    set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt_config.threads );
+                        reader_opt_config->threads += lpnmud->iDelta > 0 ? -1 : 1;
+                    if( reader_opt_config->threads < 0 )
+                        reader_opt_config->threads = 0;
+                    set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt_config->threads );
                 }
             }
             else if( wparam == IDC_SPIN_FORWARD_THRESHOLD )
@@ -986,24 +986,24 @@ static BOOL CALLBACK dialog_proc
                         return FALSE;
                     }
                     /* threads */
-                    reader_opt_config.threads = get_int_from_dlg_with_min( hwnd, IDC_EDIT_THREADS, 0 );
-                    if( reader_opt_config.threads > 0 )
-                        fprintf( ini, "threads=%d\n", reader_opt_config.threads );
+                    reader_opt_config->threads = get_int_from_dlg_with_min( hwnd, IDC_EDIT_THREADS, 0 );
+                    if( reader_opt_config->threads > 0 )
+                        fprintf( ini, "threads=%d\n", reader_opt_config->threads );
                     else
                         fprintf( ini, "threads=0 (auto)\n" );
                     /* av_sync */
-                    reader_opt_config.av_sync = get_check_state( hwnd, IDC_CHECK_AV_SYNC );
-                    fprintf( ini, "av_sync=%d\n", reader_opt_config.av_sync );
+                    reader_opt_config->av_sync = get_check_state( hwnd, IDC_CHECK_AV_SYNC );
+                    fprintf( ini, "av_sync=%d\n", reader_opt_config->av_sync );
                     /* no_create_index */
-                    reader_opt_config.no_create_index = !get_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE );
-                    fprintf( ini, "no_create_index=%d\n", reader_opt_config.no_create_index );
+                    reader_opt_config->no_create_index = !get_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE );
+                    fprintf( ini, "no_create_index=%d\n", reader_opt_config->no_create_index );
                     /* force stream index */
-                    reader_opt_config.force_video = get_check_state( hwnd, IDC_CHECK_FORCE_VIDEO );
-                    reader_opt_config.force_audio = get_check_state( hwnd, IDC_CHECK_FORCE_AUDIO );
-                    reader_opt_config.force_video_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, -1 );
-                    reader_opt_config.force_audio_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, -1 );
-                    fprintf( ini, "force_video_index=%d:%d\n", reader_opt_config.force_video, reader_opt_config.force_video_index );
-                    fprintf( ini, "force_audio_index=%d:%d\n", reader_opt_config.force_audio, reader_opt_config.force_audio_index );
+                    reader_opt_config->force_video = get_check_state( hwnd, IDC_CHECK_FORCE_VIDEO );
+                    reader_opt_config->force_audio = get_check_state( hwnd, IDC_CHECK_FORCE_AUDIO );
+                    reader_opt_config->force_video_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, -1 );
+                    reader_opt_config->force_audio_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, -1 );
+                    fprintf( ini, "force_video_index=%d:%d\n", reader_opt_config->force_video, reader_opt_config->force_video_index );
+                    fprintf( ini, "force_audio_index=%d:%d\n", reader_opt_config->force_audio, reader_opt_config->force_audio_index );
                     /* seek_mode */
                     video_opt_config->seek_mode = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE ), CB_GETCURSEL, 0, 0 );
                     fprintf( ini, "seek_mode=%d\n", video_opt_config->seek_mode );
@@ -1033,8 +1033,8 @@ static BOOL CALLBACK dialog_proc
                     video_opt_config->avs.bit_depth = atoi( avs_bit_depth_list[ video_opt_config->avs.bit_depth ] );
                     fprintf( ini, "avs_bit_depth=%d\n", video_opt_config->avs.bit_depth );
                     /* audio_delay */
-                    audio_delay = get_int_from_dlg( hwnd, IDC_EDIT_AUDIO_DELAY );
-                    fprintf( ini, "audio_delay=%d\n", audio_delay );
+                    lwinput_opt_config.audio_delay = get_int_from_dlg( hwnd, IDC_EDIT_AUDIO_DELAY );
+                    fprintf( ini, "audio_delay=%d\n", lwinput_opt_config.audio_delay );
                     /* channel_layout */
                     {
                         char edit_buf[512];
@@ -1051,14 +1051,14 @@ static BOOL CALLBACK dialog_proc
                              audio_opt_config->mix_level[MIX_LEVEL_INDEX_SURROUND],
                              audio_opt_config->mix_level[MIX_LEVEL_INDEX_LFE     ] );
                     /* readers */
-                    reader_disabled[0] = !get_check_state( hwnd, IDC_CHECK_LIBAVSMASH_INPUT );
-                    reader_disabled[1] = !get_check_state( hwnd, IDC_CHECK_AVS_INPUT        );
-                    reader_disabled[2] = !get_check_state( hwnd, IDC_CHECK_VPY_INPUT        );
-                    reader_disabled[3] = !get_check_state( hwnd, IDC_CHECK_LIBAV_INPUT      );
-                    fprintf( ini, "libavsmash_disabled=%d\n", reader_disabled[0] );
-                    fprintf( ini, "avs_disabled=%d\n",        reader_disabled[1] );
-                    fprintf( ini, "vpy_disabled=%d\n",        reader_disabled[2] );
-                    fprintf( ini, "libav_disabled=%d\n",      reader_disabled[3] );
+                    lwinput_opt_config.reader_disabled[0] = !get_check_state( hwnd, IDC_CHECK_LIBAVSMASH_INPUT );
+                    lwinput_opt_config.reader_disabled[1] = !get_check_state( hwnd, IDC_CHECK_AVS_INPUT        );
+                    lwinput_opt_config.reader_disabled[2] = !get_check_state( hwnd, IDC_CHECK_VPY_INPUT        );
+                    lwinput_opt_config.reader_disabled[3] = !get_check_state( hwnd, IDC_CHECK_LIBAV_INPUT      );
+                    fprintf( ini, "libavsmash_disabled=%d\n", lwinput_opt_config.reader_disabled[0] );
+                    fprintf( ini, "avs_disabled=%d\n",        lwinput_opt_config.reader_disabled[1] );
+                    fprintf( ini, "vpy_disabled=%d\n",        lwinput_opt_config.reader_disabled[2] );
+                    fprintf( ini, "libav_disabled=%d\n",      lwinput_opt_config.reader_disabled[3] );
                     /* dummy reader */
                     video_opt_config->dummy.width         = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_WIDTH,  32 );
                     video_opt_config->dummy.height        = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_HEIGHT, 32 );
@@ -1076,11 +1076,11 @@ static BOOL CALLBACK dialog_proc
                         fprintf( ini, "preferred_decoders=%s\n", edit_buf );
                     }
                     /* handle cache */
-                    reader_opt_config.handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
-                    fprintf( ini, "handle_cache=%d\n", reader_opt_config.handle_cache );
+                    lwinput_opt_config.handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
+                    fprintf( ini, "handle_cache=%d\n", lwinput_opt_config.handle_cache );
                     /* use cache dir */
-                    reader_opt_config.use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
-                    fprintf( ini, "use_cache_dir=%d\n", reader_opt_config.use_cache_dir );
+                    reader_opt_config->use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
+                    fprintf( ini, "use_cache_dir=%d\n", reader_opt_config->use_cache_dir );
                     /* cache dir path */
                     {
                         char edit_buf[_MAX_PATH * 2];

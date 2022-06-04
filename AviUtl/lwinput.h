@@ -121,7 +121,6 @@ typedef struct
     int av_sync;
     char         preferred_decoder_names_buf[PREFERRED_DECODER_NAMES_BUFSIZE];
     const char **preferred_decoder_names;
-    int handle_cache;
     /* for libav reader */
     int no_create_index;
     int force_video;
@@ -135,6 +134,14 @@ typedef struct
     /* for audio stream */
     audio_option_t audio_opt;
 } reader_option_t;
+
+typedef struct
+{
+    int reader_disabled[5];
+    int audio_delay;
+    int handle_cache;
+    reader_option_t reader_opt;
+} lwinput_option_t;
 
 typedef struct lsmash_handler_tag lsmash_handler_t;
 
