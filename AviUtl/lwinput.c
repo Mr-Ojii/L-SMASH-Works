@@ -429,6 +429,7 @@ BOOL func_init( void ) {
 }
 
 BOOL func_exit( void ) {
+    clean_preferred_decoder_names();
     return CloseHandle( input_cache_mutex );
 }
 
