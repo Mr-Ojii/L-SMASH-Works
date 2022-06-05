@@ -35,6 +35,7 @@
 
 #define MAKE_AVIUTL_PITCH( x ) ((((x) + 31) & ~31) >> 3)
 #define PREFERRED_DECODER_NAMES_BUFSIZE 512
+#define CACHE_DIR_NAME_BUFSIZE (_MAX_PATH * 2)
 
 #define MESSAGE_BOX_DESKTOP( uType, ... ) \
 do \
@@ -99,7 +100,6 @@ typedef struct
     {
         int bit_depth;
     } avs;
-    int handle_cache;
 } video_option_t;
 
 enum
@@ -129,12 +129,21 @@ typedef struct
     int force_audio;
     int force_audio_index;
     int use_cache_dir;
+    char  cache_dir_name_buf[CACHE_DIR_NAME_BUFSIZE];
     char *cache_dir_name;
     /* for video stream */
     video_option_t video_opt;
     /* for audio stream */
     audio_option_t audio_opt;
 } reader_option_t;
+
+typedef struct
+{
+    int reader_disabled[5];
+    int audio_delay;
+    int handle_cache;
+    reader_option_t reader_opt;
+} lwinput_option_t;
 
 typedef struct lsmash_handler_tag lsmash_handler_t;
 

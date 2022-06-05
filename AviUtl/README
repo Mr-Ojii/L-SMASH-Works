@@ -187,7 +187,7 @@
                 This settings is enabled only if one or more of the following conditions is true.
                     - 'Apply repeat flag' is checked.
                     - There is a video frame consisting of two separated field coded pictures.
-            + Use cache dir : check box (default : unchecked)
+            + Use cache dir : check box (default : checked)
                 This settings is enabled only if the "Create Index file" checkbox is checked.
                 Create the index file in a certain directory based on the contents of the "Cache directory path".
             + Cache directory path : edit box (default : empty)
