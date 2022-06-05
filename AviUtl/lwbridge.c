@@ -37,7 +37,6 @@ static char pipe_name[56];
 static char random_string[33];
 static char plugin_dir[_MAX_PATH * 2];
 static char exe_path[_MAX_PATH * 2];
-static const char *exe_path_list[] = { "lwinput.exe", "plugins\\lwinput.exe" };
 static HMODULE hModuleDLL = NULL;
 static HANDLE mutex = NULL;
 
@@ -75,24 +74,15 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
 
 BOOL func_init( void )
 {
-    BOOL exe_search_success = FALSE;
-    for( int i = 0; i < 2; i++ )
+    strcpy(exe_path, plugin_dir);
+    strcat(exe_path, "lwinput.exe");
+    FILE* target = fopen( exe_path, "rb" );
+    if( !target )
     {
-        strcpy(exe_path, plugin_dir);
-        strcat(exe_path, exe_path_list[i]);
-        FILE* target = fopen( exe_path, "rb" );
-        if( target )
-        {
-            fclose(target);
-            exe_search_success = TRUE;
-            break;
-        }
-    }
-
-    if(!exe_search_success) {
         MessageBox( HWND_DESKTOP, "'lwinput.exe' not found.\n'L-SMASH Works File Reader' will be disabled.", "lwbridge", MB_ICONERROR | MB_OK );
         return FALSE;
     }
+    fclose(target);
     
     mutex = CreateMutex( NULL, FALSE, NULL );
     if( !mutex ) {
