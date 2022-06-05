@@ -374,7 +374,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
             _lwinput_opt->handle_cache = 0;
         /* use cache dir */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &_reader_opt->use_cache_dir ) != 1 )
-            _reader_opt->use_cache_dir = 0;
+            _reader_opt->use_cache_dir = 1;
             
         char user_index_dir[_MAX_PATH * 2] = { 0 };
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_dir_path=%s", user_index_dir ) != 1 )
@@ -398,7 +398,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _reader_opt->force_audio            = 0;
         _reader_opt->force_audio_index      = -1;
         _lwinput_opt->handle_cache          = 0;
-        _reader_opt->use_cache_dir          = 0;
+        _reader_opt->use_cache_dir          = 1;
         _reader_opt->cache_dir_name         = NULL;
         _lwinput_opt->reader_disabled[0]    = 0;
         _lwinput_opt->reader_disabled[1]    = 0;
@@ -423,6 +423,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
+        set_cache_dir( _reader_opt, "" );
     }
 }
 
