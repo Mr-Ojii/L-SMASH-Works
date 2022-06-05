@@ -171,21 +171,22 @@ static int get_auto_threads( void )
     return n;
 }
 
-static inline void clean_preferred_decoder_names( void )
+static inline void clean_preferred_decoder_names( reader_option_t *_reader_opt )
 {
-    lw_freep( &reader_opt->preferred_decoder_names );
-    memset( reader_opt->preferred_decoder_names_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE );
+    lw_freep( &_reader_opt->preferred_decoder_names );
+    memset( _reader_opt->preferred_decoder_names_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE );
 }
 
 static inline void set_preferred_decoder_names_on_buf
 (
+    reader_option_t *_reader_opt,
     const char *preferred_decoder_names
 )
 {
-    clean_preferred_decoder_names();
-    memcpy( reader_opt->preferred_decoder_names_buf, preferred_decoder_names,
+    clean_preferred_decoder_names( _reader_opt );
+    memcpy( _reader_opt->preferred_decoder_names_buf, preferred_decoder_names,
             MIN( PREFERRED_DECODER_NAMES_BUFSIZE - 1, strlen(preferred_decoder_names) ) );
-    reader_opt->preferred_decoder_names = lw_tokenize_string( reader_opt->preferred_decoder_names_buf, ',', NULL );
+    _reader_opt->preferred_decoder_names = lw_tokenize_string( _reader_opt->preferred_decoder_names_buf, ',', NULL );
 }
 
 static inline void set_cache_dir( reader_option_t *_reader_opt, char *user_index_dir )
@@ -209,227 +210,231 @@ static inline void set_cache_dir( reader_option_t *_reader_opt, char *user_index
     }
 }
 
-static void get_settings( void )
+static void get_settings( lwinput_option_t *_lwinput_opt )
 {
+    reader_option_t *_reader_opt = &_lwinput_opt->reader_opt;
+    video_option_t *_video_opt = &_reader_opt->video_opt;
+    audio_option_t *_audio_opt = &_reader_opt->audio_opt;
+
     FILE *ini = open_settings( "rb" );
     char buf[512];
     if( ini )
     {
         /* threads */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "threads=%d", &reader_opt->threads ) != 1 )
-            reader_opt->threads = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "threads=%d", &_reader_opt->threads ) != 1 )
+            _reader_opt->threads = 0;
         /* av_sync */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "av_sync=%d", &reader_opt->av_sync ) != 1 )
-            reader_opt->av_sync = 1;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "av_sync=%d", &_reader_opt->av_sync ) != 1 )
+            _reader_opt->av_sync = 1;
         /* no_create_index */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "no_create_index=%d", &reader_opt->no_create_index ) != 1 )
-            reader_opt->no_create_index = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "no_create_index=%d", &_reader_opt->no_create_index ) != 1 )
+            _reader_opt->no_create_index = 0;
         /* force stream index */
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "force_video_index=%d:%d",
-                    &reader_opt->force_video, &reader_opt->force_video_index ) != 2 )
+                    &_reader_opt->force_video, &_reader_opt->force_video_index ) != 2 )
         {
-            reader_opt->force_video       = 0;
-            reader_opt->force_video_index = -1;
+            _reader_opt->force_video       = 0;
+            _reader_opt->force_video_index = -1;
         }
         else
-            reader_opt->force_video_index = MAX( reader_opt->force_video_index, -1 );
+            _reader_opt->force_video_index = MAX( _reader_opt->force_video_index, -1 );
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "force_audio_index=%d:%d",
-                    &reader_opt->force_audio, &reader_opt->force_audio_index ) != 2 )
+                    &_reader_opt->force_audio, &_reader_opt->force_audio_index ) != 2 )
         {
-            reader_opt->force_audio       = 0;
-            reader_opt->force_audio_index = -1;
+            _reader_opt->force_audio       = 0;
+            _reader_opt->force_audio_index = -1;
         }
         else
-            reader_opt->force_audio_index = MAX( reader_opt->force_audio_index, -1 );
+            _reader_opt->force_audio_index = MAX( _reader_opt->force_audio_index, -1 );
         /* seek_mode */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "seek_mode=%d", &video_opt->seek_mode ) != 1 )
-            video_opt->seek_mode = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "seek_mode=%d", &_video_opt->seek_mode ) != 1 )
+            _video_opt->seek_mode = 0;
         else
-            video_opt->seek_mode = CLIP_VALUE( video_opt->seek_mode, 0, 2 );
+            _video_opt->seek_mode = CLIP_VALUE( _video_opt->seek_mode, 0, 2 );
         /* forward_seek_threshold */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "forward_threshold=%d", &video_opt->forward_seek_threshold ) != 1 )
-            video_opt->forward_seek_threshold = 10;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "forward_threshold=%d", &_video_opt->forward_seek_threshold ) != 1 )
+            _video_opt->forward_seek_threshold = 10;
         else
-            video_opt->forward_seek_threshold = CLIP_VALUE( video_opt->forward_seek_threshold, 1, 999 );
+            _video_opt->forward_seek_threshold = CLIP_VALUE( _video_opt->forward_seek_threshold, 1, 999 );
         /* scaler */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "scaler=%d", &video_opt->scaler ) != 1 )
-            video_opt->scaler = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "scaler=%d", &_video_opt->scaler ) != 1 )
+            _video_opt->scaler = 0;
         else
-            video_opt->scaler = CLIP_VALUE( video_opt->scaler, 0, 10 );
+            _video_opt->scaler = CLIP_VALUE( _video_opt->scaler, 0, 10 );
         /* apply_repeat_flag */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "apply_repeat_flag=%d", &video_opt->apply_repeat_flag ) != 1 )
-            video_opt->apply_repeat_flag = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "apply_repeat_flag=%d", &_video_opt->apply_repeat_flag ) != 1 )
+            _video_opt->apply_repeat_flag = 0;
         /* field_dominance */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "field_dominance=%d", &video_opt->field_dominance ) != 1 )
-            video_opt->field_dominance = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "field_dominance=%d", &_video_opt->field_dominance ) != 1 )
+            _video_opt->field_dominance = 0;
         else
-            video_opt->field_dominance = CLIP_VALUE( video_opt->field_dominance, 0, 2 );
+            _video_opt->field_dominance = CLIP_VALUE( _video_opt->field_dominance, 0, 2 );
         /* VFR->CFR */
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "vfr2cfr=%d:%d:%d",
-                    &video_opt->vfr2cfr.active,
-                    &video_opt->vfr2cfr.framerate_num,
-                    &video_opt->vfr2cfr.framerate_den ) != 3 )
+                    &_video_opt->vfr2cfr.active,
+                    &_video_opt->vfr2cfr.framerate_num,
+                    &_video_opt->vfr2cfr.framerate_den ) != 3 )
         {
-            video_opt->vfr2cfr.active        = 0;
-            video_opt->vfr2cfr.framerate_num = 60000;
-            video_opt->vfr2cfr.framerate_den = 1001;
+            _video_opt->vfr2cfr.active        = 0;
+            _video_opt->vfr2cfr.framerate_num = 60000;
+            _video_opt->vfr2cfr.framerate_den = 1001;
         }
         else
         {
-            video_opt->vfr2cfr.framerate_num = MAX( video_opt->vfr2cfr.framerate_num, 1 );
-            video_opt->vfr2cfr.framerate_den = MAX( video_opt->vfr2cfr.framerate_den, 1 );
+            _video_opt->vfr2cfr.framerate_num = MAX( _video_opt->vfr2cfr.framerate_num, 1 );
+            _video_opt->vfr2cfr.framerate_den = MAX( _video_opt->vfr2cfr.framerate_den, 1 );
         }
         /* LW48 output */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "colorspace=%d", (int *)&video_opt->colorspace ) != 1 )
-            video_opt->colorspace = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "colorspace=%d", (int *)&_video_opt->colorspace ) != 1 )
+            _video_opt->colorspace = 0;
         else
-            video_opt->colorspace = video_opt->colorspace ? OUTPUT_LW48 : 0;
+            _video_opt->colorspace = _video_opt->colorspace ? OUTPUT_LW48 : 0;
         /* AVS bit-depth */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "avs_bit_depth=%d", &video_opt->avs.bit_depth ) != 1 )
-            video_opt->avs.bit_depth = 8;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "avs_bit_depth=%d", &_video_opt->avs.bit_depth ) != 1 )
+            _video_opt->avs.bit_depth = 8;
         else
         {
-            video_opt->avs.bit_depth = CLIP_VALUE( video_opt->avs.bit_depth, 8, 16 );
-            if( video_opt->avs.bit_depth > 10 )
-                video_opt->avs.bit_depth = 16;
+            _video_opt->avs.bit_depth = CLIP_VALUE( _video_opt->avs.bit_depth, 8, 16 );
+            if( _video_opt->avs.bit_depth > 10 )
+                _video_opt->avs.bit_depth = 16;
         }
         /* audio_delay */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "audio_delay=%d", &lwinput_opt.audio_delay ) != 1 )
-            lwinput_opt.audio_delay = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "audio_delay=%d", &_lwinput_opt->audio_delay ) != 1 )
+            _lwinput_opt->audio_delay = 0;
         /* channel_layout */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "channel_layout=0x%"SCNx64, &audio_opt->channel_layout ) != 1 )
-            audio_opt->channel_layout = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "channel_layout=0x%"SCNx64, &_audio_opt->channel_layout ) != 1 )
+            _audio_opt->channel_layout = 0;
         /* sample_rate */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "sample_rate=%d", &audio_opt->sample_rate ) != 1 )
-            audio_opt->sample_rate = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "sample_rate=%d", &_audio_opt->sample_rate ) != 1 )
+            _audio_opt->sample_rate = 0;
         /* mix_level */
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "mix_level=%d:%d:%d",
-                    &audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ],
-                    &audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND],
-                    &audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] ) != 3 )
+                    &_audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ],
+                    &_audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND],
+                    &_audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] ) != 3 )
         {
-            audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
-            audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
-            audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
+            _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
+            _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
+            _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
         }
         else
         {
-            audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = CLIP_VALUE( audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ], 0, 10000 );
-            audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = CLIP_VALUE( audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND], 0, 10000 );
-            audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = CLIP_VALUE( audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ], 0, 30000 );
+            _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = CLIP_VALUE( _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ], 0, 10000 );
+            _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = CLIP_VALUE( _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND], 0, 10000 );
+            _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = CLIP_VALUE( _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ], 0, 30000 );
         }
         /* readers */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libavsmash_disabled=%d", &lwinput_opt.reader_disabled[0] ) != 1 )
-            lwinput_opt.reader_disabled[0] = 0;
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "avs_disabled=%d",        &lwinput_opt.reader_disabled[1] ) != 1 )
-            lwinput_opt.reader_disabled[1] = 0;
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "vpy_disabled=%d",        &lwinput_opt.reader_disabled[2] ) != 1 )
-            lwinput_opt.reader_disabled[2] = 0;
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libav_disabled=%d",      &lwinput_opt.reader_disabled[3] ) != 1 )
-            lwinput_opt.reader_disabled[3] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libavsmash_disabled=%d", &_lwinput_opt->reader_disabled[0] ) != 1 )
+            _lwinput_opt->reader_disabled[0] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "avs_disabled=%d",        &_lwinput_opt->reader_disabled[1] ) != 1 )
+            _lwinput_opt->reader_disabled[1] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "vpy_disabled=%d",        &_lwinput_opt->reader_disabled[2] ) != 1 )
+            _lwinput_opt->reader_disabled[2] = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libav_disabled=%d",      &_lwinput_opt->reader_disabled[3] ) != 1 )
+            _lwinput_opt->reader_disabled[3] = 0;
         /* dummy reader */
         if( !fgets( buf, sizeof(buf), ini )
-         || sscanf( buf, "dummy_resolution=%dx%d", &video_opt->dummy.width, &video_opt->dummy.height ) != 2 )
+         || sscanf( buf, "dummy_resolution=%dx%d", &_video_opt->dummy.width, &_video_opt->dummy.height ) != 2 )
         {
-            video_opt->dummy.width  = 720;
-            video_opt->dummy.height = 480;
+            _video_opt->dummy.width  = 720;
+            _video_opt->dummy.height = 480;
         }
         else
         {
-            video_opt->dummy.width  = MAX( video_opt->dummy.width,  32 );
-            video_opt->dummy.height = MAX( video_opt->dummy.height, 32 );
+            _video_opt->dummy.width  = MAX( _video_opt->dummy.width,  32 );
+            _video_opt->dummy.height = MAX( _video_opt->dummy.height, 32 );
         }
         if( !fgets( buf, sizeof(buf), ini )
-         || sscanf( buf, "dummy_framerate=%d/%d", &video_opt->dummy.framerate_num, &video_opt->dummy.framerate_den ) != 2 )
+         || sscanf( buf, "dummy_framerate=%d/%d", &_video_opt->dummy.framerate_num, &_video_opt->dummy.framerate_den ) != 2 )
         {
-            video_opt->dummy.framerate_num = 24;
-            video_opt->dummy.framerate_den = 1;
+            _video_opt->dummy.framerate_num = 24;
+            _video_opt->dummy.framerate_den = 1;
         }
         else
         {
-            video_opt->dummy.framerate_num = MAX( video_opt->dummy.framerate_num, 1 );
-            video_opt->dummy.framerate_den = MAX( video_opt->dummy.framerate_den, 1 );
+            _video_opt->dummy.framerate_num = MAX( _video_opt->dummy.framerate_num, 1 );
+            _video_opt->dummy.framerate_den = MAX( _video_opt->dummy.framerate_den, 1 );
         }
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "dummy_colorspace=%d", (int *)&video_opt->dummy.colorspace ) != 1 )
-            video_opt->dummy.colorspace = OUTPUT_YUY2;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "dummy_colorspace=%d", (int *)&_video_opt->dummy.colorspace ) != 1 )
+            _video_opt->dummy.colorspace = OUTPUT_YUY2;
         else
-            video_opt->dummy.colorspace = CLIP_VALUE( video_opt->dummy.colorspace, 0, 2 );
+            _video_opt->dummy.colorspace = CLIP_VALUE( _video_opt->dummy.colorspace, 0, 2 );
         /* preferred decoders settings */
         char preferred_decoder_names[512] = { 0 };
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "preferred_decoders=%s", preferred_decoder_names ) != 1 )
-            clean_preferred_decoder_names();
+            clean_preferred_decoder_names( _reader_opt );
         else
-            set_preferred_decoder_names_on_buf( preferred_decoder_names );
+            set_preferred_decoder_names_on_buf( _reader_opt, preferred_decoder_names );
         /* handle cache */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &lwinput_opt.handle_cache ) != 1 )
-            lwinput_opt.handle_cache = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &_lwinput_opt->handle_cache ) != 1 )
+            _lwinput_opt->handle_cache = 0;
         /* use cache dir */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &reader_opt->use_cache_dir ) != 1 )
-            reader_opt->use_cache_dir = 0;
+        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &_reader_opt->use_cache_dir ) != 1 )
+            _reader_opt->use_cache_dir = 0;
             
         char user_index_dir[_MAX_PATH * 2] = { 0 };
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_dir_path=%s", user_index_dir ) != 1 )
-            set_cache_dir( reader_opt, "" );
+            set_cache_dir( _reader_opt, "" );
         else {
             // "sscanf" abort loading with a space character.
             buf[strlen(buf) - 1] = '\0';
-            set_cache_dir( reader_opt, buf + 15 );
+            set_cache_dir( _reader_opt, buf + 15 );
         }
         fclose( ini );
     }
     else
     {
         /* Set up defalut values. */
-        clean_preferred_decoder_names();
-        reader_opt->threads                = 0;
-        reader_opt->av_sync                = 1;
-        reader_opt->no_create_index        = 0;
-        reader_opt->force_video            = 0;
-        reader_opt->force_video_index      = -1;
-        reader_opt->force_audio            = 0;
-        reader_opt->force_audio_index      = -1;
-        lwinput_opt.handle_cache           = 0;
-        reader_opt->use_cache_dir          = 0;
-        reader_opt->cache_dir_name         = NULL;
-        lwinput_opt.reader_disabled[0]    = 0;
-        lwinput_opt.reader_disabled[1]    = 0;
-        lwinput_opt.reader_disabled[2]    = 0;
-        lwinput_opt.reader_disabled[3]    = 0;
-        video_opt->seek_mode              = 0;
-        video_opt->forward_seek_threshold = 10;
-        video_opt->scaler                 = 0;
-        video_opt->apply_repeat_flag      = 1;
-        video_opt->field_dominance        = 0;
-        video_opt->vfr2cfr.active         = 0;
-        video_opt->vfr2cfr.framerate_num  = 60000;
-        video_opt->vfr2cfr.framerate_den  = 1001;
-        video_opt->colorspace             = 0;
-        video_opt->dummy.width            = 720;
-        video_opt->dummy.height           = 480;
-        video_opt->dummy.framerate_num    = 24;
-        video_opt->dummy.framerate_den    = 1;
-        video_opt->dummy.colorspace       = OUTPUT_YUY2;
-        video_opt->avs.bit_depth          = 8;
-        lwinput_opt.audio_delay           = 0;
-        audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
-        audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
-        audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
+        clean_preferred_decoder_names( _reader_opt );
+        _reader_opt->threads                = 0;
+        _reader_opt->av_sync                = 1;
+        _reader_opt->no_create_index        = 0;
+        _reader_opt->force_video            = 0;
+        _reader_opt->force_video_index      = -1;
+        _reader_opt->force_audio            = 0;
+        _reader_opt->force_audio_index      = -1;
+        _lwinput_opt->handle_cache          = 0;
+        _reader_opt->use_cache_dir          = 0;
+        _reader_opt->cache_dir_name         = NULL;
+        _lwinput_opt->reader_disabled[0]    = 0;
+        _lwinput_opt->reader_disabled[1]    = 0;
+        _lwinput_opt->reader_disabled[2]    = 0;
+        _lwinput_opt->reader_disabled[3]    = 0;
+        _video_opt->seek_mode              = 0;
+        _video_opt->forward_seek_threshold = 10;
+        _video_opt->scaler                 = 0;
+        _video_opt->apply_repeat_flag      = 1;
+        _video_opt->field_dominance        = 0;
+        _video_opt->vfr2cfr.active         = 0;
+        _video_opt->vfr2cfr.framerate_num  = 60000;
+        _video_opt->vfr2cfr.framerate_den  = 1001;
+        _video_opt->colorspace             = 0;
+        _video_opt->dummy.width            = 720;
+        _video_opt->dummy.height           = 480;
+        _video_opt->dummy.framerate_num    = 24;
+        _video_opt->dummy.framerate_den    = 1;
+        _video_opt->dummy.colorspace       = OUTPUT_YUY2;
+        _video_opt->avs.bit_depth          = 8;
+        _lwinput_opt->audio_delay          = 0;
+        _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
+        _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
+        _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
     }
-    lwinput_opt_config = lwinput_opt;
 }
 
 BOOL func_init( void ) {
-    get_settings();
+    get_settings( &lwinput_opt );
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
     return (input_cache_mutex != NULL);
 }
 
 BOOL func_exit( void ) {
-    clean_preferred_decoder_names();
+    clean_preferred_decoder_names( reader_opt );
+    clean_preferred_decoder_names( reader_opt_config );
     return CloseHandle( input_cache_mutex );
 }
 
@@ -797,6 +802,7 @@ static BOOL CALLBACK dialog_proc
     {
         case WM_INITDIALOG :
             InitCommonControls();
+            get_settings( &lwinput_opt_config );
             /* threads */
             set_int_to_dlg( hwnd, IDC_EDIT_THREADS, reader_opt_config->threads );
             set_buddy_window_for_updown_control( hwnd, IDC_SPIN_THREADS, IDC_EDIT_THREADS );
@@ -1073,7 +1079,7 @@ static BOOL CALLBACK dialog_proc
                     {
                         char edit_buf[512];
                         GetDlgItemText( hwnd, IDC_EDIT_PREFERRED_DECODERS, (LPTSTR)edit_buf, sizeof(edit_buf) );
-                        set_preferred_decoder_names_on_buf( edit_buf );
+                        set_preferred_decoder_names_on_buf( reader_opt_config, edit_buf );
                         fprintf( ini, "preferred_decoders=%s\n", edit_buf );
                     }
                     /* handle cache */
