@@ -442,12 +442,14 @@ BOOL func_init( void ) {
 BOOL func_exit( void ) {
     clean_preferred_decoder_names( reader_opt );
     clean_preferred_decoder_names( reader_opt_config );
-    return CloseHandle( input_cache_mutex );
+    BOOL ret = CloseHandle( input_cache_mutex );
+    input_cache_mutex = NULL;
+    return ret;
 }
 
 INPUT_HANDLE func_open( LPSTR file )
 {
-    if( lwinput_opt.handle_cache && first_input_cache ) {
+    if( lwinput_opt.handle_cache && first_input_cache && input_cache_mutex ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         for( input_cache* tmp_cache = first_input_cache; tmp_cache ; tmp_cache = tmp_cache->next_cache ) {
             if( strcmp( tmp_cache->file_path, file ) == 0 ) {
@@ -568,7 +570,7 @@ INPUT_HANDLE func_open( LPSTR file )
         return NULL;
     }
 
-    if( lwinput_opt.handle_cache ) {
+    if( lwinput_opt.handle_cache && input_cache_mutex ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         char* file_name = lw_malloc_zero( ( strlen( file ) + 1 ) * sizeof( char ));
         if( file_name ) {
@@ -592,7 +594,7 @@ INPUT_HANDLE func_open( LPSTR file )
 
 BOOL func_close( INPUT_HANDLE ih )
 {
-    if( lwinput_opt.handle_cache && first_input_cache ) {
+    if( lwinput_opt.handle_cache && first_input_cache && input_cache_mutex ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         input_cache* tmp_cache, * prev_cache = NULL;
         for( tmp_cache = first_input_cache; tmp_cache; prev_cache = tmp_cache, tmp_cache = tmp_cache->next_cache ) {
