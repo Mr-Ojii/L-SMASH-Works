@@ -28,7 +28,7 @@
 #include "../common/utils.h"
 
 typedef struct {
-    uint32_t length;
+    uint32_t handle_size;
     BYTE* handle;
     BITMAPINFOHEADER* format;
     WAVEFORMATEX* audio_format;

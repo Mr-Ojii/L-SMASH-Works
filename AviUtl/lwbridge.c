@@ -162,11 +162,11 @@ INPUT_HANDLE func_open( LPSTR file )
         lw_free(hp);
         return NULL;
     }
-    hp->length = received_header.data_size;
+    hp->handle_size = received_header.data_size;
     pipe_read(pipe_handle, hp->handle, received_header.data_size);
 
     BOOL is_NULL = TRUE;
-    for(int i = 0; i < received_header.data_size; i++) {
+    for(int i = 0; i < hp->handle_size; i++) {
         if( hp->handle[i] != 0 ) {
             is_NULL = FALSE;
             break;
@@ -194,9 +194,9 @@ BOOL func_close( INPUT_HANDLE ih )
 
     pipe_header header;
     header.call_func = CALL_CLOSE;
-    header.data_size = hp->length;
+    header.data_size = hp->handle_size;
     pipe_write(pipe_handle, (BYTE*)(&header), sizeof(header));
-    pipe_write(pipe_handle,  hp->handle, hp->length);
+    pipe_write(pipe_handle,  hp->handle, hp->handle_size);
 
     pipe_header received_header;
     pipe_read(pipe_handle, (BYTE*)(&received_header), sizeof(received_header));
@@ -223,10 +223,10 @@ BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
 
     pipe_header header;
     header.call_func = CALL_INFO_GET;
-    header.data_size = hp->length;
+    header.data_size = hp->handle_size;
 
     pipe_write(pipe_handle, (BYTE*)(&header), sizeof(header));
-    pipe_write(pipe_handle, hp->handle, hp->length);
+    pipe_write(pipe_handle, hp->handle, hp->handle_size);
 
     pipe_header received_header;
     pipe_read(pipe_handle, (BYTE*)(&received_header), sizeof(received_header));
@@ -286,11 +286,11 @@ int func_read_video( INPUT_HANDLE ih, int sample_number, void *buf )
     
     pipe_header header;
     header.call_func = CALL_READ_VIDEO;
-    header.data_size = sizeof(int) + hp->length;
+    header.data_size = sizeof(int) + hp->handle_size;
 
     pipe_write(pipe_handle, (BYTE*)(&header), sizeof(header));
     pipe_write(pipe_handle, (BYTE*)(&sample_number), sizeof(sample_number));
-    pipe_write(pipe_handle, hp->handle, hp->length);
+    pipe_write(pipe_handle, hp->handle, hp->handle_size);
 
     pipe_header received_header;
     pipe_read(pipe_handle, (BYTE*)(&received_header), sizeof(received_header));
@@ -311,11 +311,11 @@ int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf )
     
     pipe_header header;
     header.call_func = CALL_READ_AUDIO;
-    header.data_size = sizeof(int) * 2 + hp->length;
+    header.data_size = sizeof(int) * 2 + hp->handle_size;
     pipe_write(pipe_handle, (BYTE*)(&header), sizeof(header));
     pipe_write(pipe_handle, (BYTE*)(&start), sizeof(start));
     pipe_write(pipe_handle, (BYTE*)(&length), sizeof(length));
-    pipe_write(pipe_handle, hp->handle, hp->length);
+    pipe_write(pipe_handle, hp->handle, hp->handle_size);
 
     pipe_header received_header;
     pipe_read(pipe_handle, (BYTE*)(&received_header), sizeof(received_header));
@@ -338,11 +338,11 @@ BOOL func_is_keyframe( INPUT_HANDLE ih, int sample_number )
 
     pipe_header header;
     header.call_func = CALL_IS_KEY_FRAME;
-    header.data_size = hp->length + sizeof(sample_number);
+    header.data_size = hp->handle_size + sizeof(sample_number);
 
     pipe_write(pipe_handle, (BYTE*)(&header), sizeof(header));
     pipe_write(pipe_handle, (BYTE*)(&sample_number), sizeof(sample_number));
-    pipe_write(pipe_handle,  hp->handle, hp->length);
+    pipe_write(pipe_handle,  hp->handle, hp->handle_size);
 
     pipe_header received_header;
     pipe_read(pipe_handle, (BYTE*)(&received_header), sizeof(received_header));
