@@ -80,7 +80,7 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     "MPEG-4 File (" MPEG4_FILE_EXT ")\0" MPEG4_FILE_EXT "\0"        /* Filter for Input file */
     "LW-Libav Index File (" INDEX_FILE_EXT ")\0" INDEX_FILE_EXT "\0"
     "Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
-    "L-SMASH Works File Reader r" LSMASHWORKS_REV "\0",             /* Information of plugin */
+    "L-SMASH Works File Reader r" LSMASHWORKS_REV " by Mr-Ojii\0",  /* Information of plugin */
     func_init,                                                      /* Pointer to function called when opening DLL (If NULL, won't be called.) */
     func_exit,                                                      /* Pointer to function called when closing DLL (If NULL, won't be called.) */
     func_open,                                                      /* Pointer to function to open input file */

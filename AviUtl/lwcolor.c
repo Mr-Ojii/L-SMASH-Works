@@ -41,7 +41,7 @@ COLOR_PLUGIN_TABLE color_plugin_table =
     0,                                      /* flags */
     "LW ColorSpace",                        /* Name of plugin */
     "L-SMASH Works Color Space Converter"   /* Information of plugin */
-    " r" LSMASHWORKS_REV "\0",
+    " r" LSMASHWORKS_REV " by Mr-Ojii\0",
     func_init,                              /* Pointer to function called when opening DLL (If NULL, won't be called.) */
     NULL,                                   /* Pointer to function called when closing DLL (If NULL, won't be called.) */
     func_pixel2yc,                          /* Convert DIB format image into PIXEL_YC format image (If NULL, won't be called.) */
