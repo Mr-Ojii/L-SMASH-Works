@@ -49,16 +49,16 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     "MPEG-4 File (" MPEG4_FILE_EXT ")\0" MPEG4_FILE_EXT "\0"        /* Filter for Input file */
     "LW-Libav Index File (" INDEX_FILE_EXT ")\0" INDEX_FILE_EXT "\0"
     "Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
-    "L-SMASH Works File Reader r" LSMASHWORKS_REV "\0",             /* Information of plugin */
-    func_init,                                                      /* Pointer to function called when opening DLL (If NULL, won't be called.) */
-    func_exit,                                                      /* Pointer to function called when closing DLL (If NULL, won't be called.) */
-    func_open,                                                      /* Pointer to function to open input file */
-    func_close,                                                     /* Pointer to function to close input file */
-    func_info_get,                                                  /* Pointer to function to get information of input file */
-    func_read_video,                                                /* Pointer to function to read image data */
-    func_read_audio,                                                /* Pointer to function to read audio data */
-    func_is_keyframe,                                               /* Pointer to function to check if it is a keyframe or not (If NULL, all is keyframe.) */
-    func_config,                                                    /* Pointer to function called when configuration dialog is required */
+    "L-SMASH Works File Reader (Bridge) r" LSMASHWORKS_REV " by Mr-Ojii\0", /* Information of plugin */
+    func_init,                                                              /* Pointer to function called when opening DLL (If NULL, won't be called.) */
+    func_exit,                                                              /* Pointer to function called when closing DLL (If NULL, won't be called.) */
+    func_open,                                                              /* Pointer to function to open input file */
+    func_close,                                                             /* Pointer to function to close input file */
+    func_info_get,                                                          /* Pointer to function to get information of input file */
+    func_read_video,                                                        /* Pointer to function to read image data */
+    func_read_audio,                                                        /* Pointer to function to read audio data */
+    func_is_keyframe,                                                       /* Pointer to function to check if it is a keyframe or not (If NULL, all is keyframe.) */
+    func_config,                                                            /* Pointer to function called when configuration dialog is required */
 };
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
