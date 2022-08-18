@@ -112,6 +112,7 @@ BOOL func_init( void )
     }
     ShellExecute(NULL, NULL, exe_path, random_string, NULL, SW_HIDE);
     if ( !ConnectNamedPipe(pipe_handle, NULL) ) {
+        MessageBox( HWND_DESKTOP, "Failed to connect to named pipe.\n'L-SMASH Works File Reader' will be disabled.", "lwbridge", MB_ICONERROR | MB_OK );
         return FALSE;
     }
     return TRUE;
