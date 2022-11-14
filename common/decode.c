@@ -33,6 +33,30 @@ extern "C"
 #include "decode.h"
 #include "qsv.h"
 
+static int is_decoder_available
+(
+    const AVCodec           *codec,
+    const AVCodecParameters *codecpar
+)
+{
+    if( !codec || !codecpar )
+        return 0;
+
+    AVCodecContext *ctx = avcodec_alloc_context3( codec );
+    if( !ctx )
+        return 0;
+
+    if( (avcodec_parameters_to_context( ctx, codecpar )) < 0
+     || (avcodec_open2( ctx, codec, NULL )) < 0
+     || (avcodec_send_packet( ctx, NULL )) < 0 )
+    {
+        avcodec_free_context( &ctx );
+        return 0;
+    }
+    avcodec_free_context( &ctx );
+    return 1;
+}
+
 static AVCodec *select_hw_decoder
 (
     const char              *codec_name,
@@ -48,17 +72,8 @@ static AVCodec *select_hw_decoder
     AVCodec *hw_decoder = avcodec_find_decoder_by_name( hw_decoder_name );
     if( !hw_decoder )
         return NULL;
-    AVCodecContext *ctx = avcodec_alloc_context3( hw_decoder );
-    if( !ctx )
+    if( !is_decoder_available( hw_decoder, codecpar ) )
         return NULL;
-    if( (codecpar && avcodec_parameters_to_context( ctx, codecpar ) < 0)
-     || avcodec_open2( ctx, hw_decoder, NULL ) < 0
-     || avcodec_send_packet( ctx, NULL ) < 0 )
-    {
-        avcodec_free_context( &ctx );
-        return NULL;
-    }
-    avcodec_free_context( &ctx );
     return hw_decoder;
 }
 
@@ -80,7 +95,8 @@ const AVCodec *find_decoder
         {
             AVCodec *preferred_decoder = avcodec_find_decoder_by_name( *decoder_name );
             if( preferred_decoder
-             && preferred_decoder->id == codec->id )
+             && preferred_decoder->id == codec->id
+             && is_decoder_available( preferred_decoder, codecpar ) )
             {
                 codec = preferred_decoder;
                 break;
