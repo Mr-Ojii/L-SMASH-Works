@@ -614,7 +614,6 @@ BOOL func_close( INPUT_HANDLE ih )
         ReleaseMutex( input_cache_mutex );
     }
 
-    lw_freep( &reader_opt->preferred_decoder_names );
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     if( !hp )
         return TRUE;
