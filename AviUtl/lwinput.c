@@ -1171,7 +1171,7 @@ INT WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         pipe_handle = CreateFile(pipe_name, GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
     }
     if (pipe_handle == INVALID_HANDLE_VALUE || pipe_handle == NULL) {
-        MessageBox( NULL, "Failed to connect to named pipe.", "lwinput", MB_ICONERROR | MB_OK);
+        MessageBox( HWND_DESKTOP, "Failed to connect to named pipe.", "lwinput", MB_ICONERROR | MB_OK);
         pipe_handle = NULL;
         return 1;
     }
