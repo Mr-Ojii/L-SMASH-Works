@@ -110,7 +110,20 @@ BOOL func_init( void )
         MessageBox( HWND_DESKTOP, "Failed to create a named pipe.\n'L-SMASH Works File Reader' will be disabled.", "lwbridge", MB_ICONERROR | MB_OK );
         return FALSE;
     }
-    ShellExecute(NULL, NULL, exe_path, random_string, NULL, SW_HIDE);
+
+    char cmd_line[_MAX_PATH * 2 + 256] = {0};
+    strcpy(cmd_line, " ");
+    strcat(cmd_line, random_string);
+    STARTUPINFO si = { 0 };
+    si.cb = sizeof(STARTUPINFO);
+    PROCESS_INFORMATION pi = { 0 };
+    if( !CreateProcess(exe_path, cmd_line, NULL, NULL, FALSE, 0, NULL, NULL, &si, &pi) ) {
+        MessageBox( HWND_DESKTOP, "Failed to execute 'lwinput.exe'.\n'L-SMASH Works File Reader' will be disabled.", "lwbridge", MB_ICONERROR | MB_OK );
+        return FALSE;
+    }
+    CloseHandle(pi.hProcess);
+    CloseHandle(pi.hThread);
+
     if ( !ConnectNamedPipe(pipe_handle, NULL) ) {
         MessageBox( HWND_DESKTOP, "Failed to connect to named pipe.\n'L-SMASH Works File Reader' will be disabled.", "lwbridge", MB_ICONERROR | MB_OK );
         return FALSE;
