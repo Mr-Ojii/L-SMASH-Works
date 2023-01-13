@@ -443,6 +443,9 @@ BOOL func_exit( void ) {
 
 INPUT_HANDLE func_open( LPSTR file )
 {
+    if( !file )
+        return NULL;
+
     if( lwinput_opt.handle_cache && first_input_cache && input_cache_mutex ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
         for( input_cache* tmp_cache = first_input_cache; tmp_cache ; tmp_cache = tmp_cache->next_cache ) {
@@ -636,6 +639,9 @@ BOOL func_close( INPUT_HANDLE ih )
 
 BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
 {
+    if( !ih || !iip )
+        return FALSE;
+
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     memset( iip, 0, sizeof(INPUT_INFO) );
     if( hp->video_reader != READER_NONE )
@@ -660,12 +666,18 @@ BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
 
 int func_read_video( INPUT_HANDLE ih, int sample_number, void *buf )
 {
+    if( !ih || !buf )
+        return 0;
+
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     return hp->read_video ? hp->read_video( hp, sample_number, buf ) : 0;
 }
 
 int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf )
 {
+    if( !ih || !buf )
+        return 0;
+
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     if( hp->read_audio && hp->delay_audio( hp, &start, length, lwinput_opt.audio_delay ) )
         return hp->read_audio( hp, start, length, buf );
@@ -676,6 +688,9 @@ int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf )
 
 BOOL func_is_keyframe( INPUT_HANDLE ih, int sample_number )
 {
+    if( !ih )
+        return TRUE;
+
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     if( sample_number >= hp->video_sample_count )
         return FALSE;   /* In reading as double framerate, keyframe detection doesn't work at all
