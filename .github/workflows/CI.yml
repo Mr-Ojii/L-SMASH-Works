@@ -12,7 +12,7 @@ jobs:
 
     steps:
     - name: Checkout
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Install automake
       if: ${{ matrix.os == 'macos-latest' }}
@@ -21,7 +21,7 @@ jobs:
         brew install automake
 
     - name: Setup Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: 3.x # Version range or exact version of a Python version to use, using SemVer's version range syntax
 
@@ -31,9 +31,7 @@ jobs:
         pip install meson
 
     - name: Install ninja-build tool
-      uses: seanmiddleditch/gha-setup-ninja@v3
-      with:
-        version: 1.10.2
+      uses: seanmiddleditch/gha-setup-ninja@v4
 
     - name: Install FFmpeg
       run: |
