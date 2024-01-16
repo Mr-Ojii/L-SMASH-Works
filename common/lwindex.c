@@ -2423,6 +2423,8 @@ static int create_index
                         }
                         audio_info = temp;
                     }
+                    if( pkt_ctx->channel_layout == 0 )
+                        pkt_ctx->channel_layout = av_get_default_channel_layout( pkt_ctx->channels );
                     if( av_get_channel_layout_nb_channels( pkt_ctx->channel_layout )
                       > av_get_channel_layout_nb_channels( aohp->output_channel_layout ) )
                         aohp->output_channel_layout = pkt_ctx->channel_layout;
