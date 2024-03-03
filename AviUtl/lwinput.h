@@ -142,6 +142,8 @@ typedef struct
     int reader_disabled[5];
     int audio_delay;
     int handle_cache;
+    int delete_old_cache;
+    int delete_old_cache_days;
     reader_option_t reader_opt;
 } lwinput_option_t;
 

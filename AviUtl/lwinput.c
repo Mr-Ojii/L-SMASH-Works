@@ -213,6 +213,62 @@ static inline void set_cache_dir( reader_option_t *_reader_opt, char *user_index
     }
 }
 
+static void delete_old_cache( void )
+{
+    if ( !reader_opt->use_cache_dir || !lwinput_opt.delete_old_cache )
+        return;
+
+    char search_path[MAX_PATH * 2], file_path_buf[MAX_PATH * 2];
+    strcpy( search_path, reader_opt->cache_dir_name );
+    strcat( search_path, "*" );
+
+    HWND hFind = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATA win32fd;
+    if ( ( hFind = FindFirstFile( search_path, &win32fd) ) == INVALID_HANDLE_VALUE )
+        return;
+
+    SYSTEMTIME s_st;
+    FILETIME f_st;
+    ULARGE_INTEGER u_st, u_ft;
+    uint64_t diff;
+    const uint64_t to_day_ratio = 864000000000;
+    GetSystemTime(&s_st);
+    if ( !SystemTimeToFileTime(&s_st, &f_st) )
+        return;
+    u_st.HighPart = f_st.dwHighDateTime;
+    u_st.LowPart = f_st.dwLowDateTime;
+    u_st.QuadPart /= to_day_ratio;
+
+    do
+    {
+        if ( win32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
+            continue;
+
+        char* p = win32fd.cFileName;
+        while( *p != '\0' )
+                p++;
+        while( *p != '.' )
+                p--;
+        if ( strcmp( p, ".lwi" ) )
+            continue;
+
+        u_ft.HighPart = win32fd.ftLastAccessTime.dwHighDateTime;
+        u_ft.LowPart = win32fd.ftLastAccessTime.dwLowDateTime;
+        u_ft.QuadPart /= to_day_ratio;
+        diff = u_st.QuadPart - u_ft.QuadPart;
+
+        if ( diff >= lwinput_opt.delete_old_cache_days )
+        {
+            strcpy( file_path_buf, reader_opt->cache_dir_name );
+            strcat( file_path_buf, win32fd.cFileName );
+            if ( !DeleteFile( file_path_buf ) )
+                break;
+        }
+    } while ( FindNextFile( hFind, &win32fd ) );
+
+    FindClose( hFind );
+}
+
 static void get_settings( lwinput_option_t *_lwinput_opt )
 {
     reader_option_t *_reader_opt = &_lwinput_opt->reader_opt;
@@ -387,6 +443,15 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
             buf[strlen(buf) - 1] = '\0';
             set_cache_dir( _reader_opt, buf + 15 );
         }
+        /* delete old cache */
+        if ( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "delete_old_cache=%d", &_lwinput_opt->delete_old_cache ) != 1 )
+            _lwinput_opt->delete_old_cache = 0;
+        /* delete old cache days */
+        if ( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "delete_old_cache_days=%d", &_lwinput_opt->delete_old_cache_days ) != 1 )
+            _lwinput_opt->delete_old_cache_days = 30;
+        else
+            _lwinput_opt->delete_old_cache_days = MAX(_lwinput_opt->delete_old_cache_days, 2);
+
         fclose( ini );
     }
     else
@@ -407,22 +472,24 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _lwinput_opt->reader_disabled[1]    = 0;
         _lwinput_opt->reader_disabled[2]    = 0;
         _lwinput_opt->reader_disabled[3]    = 0;
-        _video_opt->seek_mode              = 0;
-        _video_opt->forward_seek_threshold = 10;
-        _video_opt->scaler                 = 0;
-        _video_opt->apply_repeat_flag      = 1;
-        _video_opt->field_dominance        = 0;
-        _video_opt->vfr2cfr.active         = 0;
-        _video_opt->vfr2cfr.framerate_num  = 60000;
-        _video_opt->vfr2cfr.framerate_den  = 1001;
-        _video_opt->colorspace             = 0;
-        _video_opt->dummy.width            = 720;
-        _video_opt->dummy.height           = 480;
-        _video_opt->dummy.framerate_num    = 24;
-        _video_opt->dummy.framerate_den    = 1;
-        _video_opt->dummy.colorspace       = OUTPUT_YUY2;
-        _video_opt->avs.bit_depth          = 8;
-        _lwinput_opt->audio_delay          = 0;
+        _video_opt->seek_mode               = 0;
+        _video_opt->forward_seek_threshold  = 10;
+        _video_opt->scaler                  = 0;
+        _video_opt->apply_repeat_flag       = 1;
+        _video_opt->field_dominance         = 0;
+        _video_opt->vfr2cfr.active          = 0;
+        _video_opt->vfr2cfr.framerate_num   = 60000;
+        _video_opt->vfr2cfr.framerate_den   = 1001;
+        _video_opt->colorspace              = 0;
+        _video_opt->dummy.width             = 720;
+        _video_opt->dummy.height            = 480;
+        _video_opt->dummy.framerate_num     = 24;
+        _video_opt->dummy.framerate_den     = 1;
+        _video_opt->dummy.colorspace        = OUTPUT_YUY2;
+        _video_opt->avs.bit_depth           = 8;
+        _lwinput_opt->audio_delay           = 0;
+        _lwinput_opt->delete_old_cache      = 0;
+        _lwinput_opt->delete_old_cache_days = 30;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
@@ -432,6 +499,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
 
 BOOL func_init( void ) {
     get_settings( &lwinput_opt );
+    delete_old_cache();
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
     return (input_cache_mutex != NULL);
 }
@@ -961,6 +1029,10 @@ static BOOL CALLBACK dialog_proc
             set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, lwinput_opt_config.handle_cache );
             /* use cache dir */
             set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt_config->use_cache_dir );
+            /* delete old cache */
+            set_check_state( hwnd, IDC_CHECK_DELETE_OLD_CACHE, lwinput_opt_config.delete_old_cache );
+            /* delete old cache days */
+            set_int_to_dlg( hwnd, IDC_EDIT_DELETE_OLD_CACHE_DAYS, lwinput_opt_config.delete_old_cache_days );
             return TRUE;
         case WM_NOTIFY :
             if( wparam == IDC_SPIN_THREADS )
@@ -1122,6 +1194,13 @@ static BOOL CALLBACK dialog_proc
                         set_cache_dir(reader_opt_config, edit_buf);
                         fprintf( ini, "cache_dir_path=%s\n", edit_buf );
                     }
+                    /* delete old cache */
+                    lwinput_opt_config.delete_old_cache = get_check_state( hwnd, IDC_CHECK_DELETE_OLD_CACHE );
+                    fprintf( ini, "delete_old_cache=%d\n", lwinput_opt_config.delete_old_cache );
+                    /* delete old cache days */
+                    lwinput_opt_config.delete_old_cache_days = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DELETE_OLD_CACHE_DAYS, 2 );
+                    fprintf( ini, "delete_old_cache_days=%d\n", lwinput_opt_config.delete_old_cache_days );
+
                     /* Close */
                     fclose( ini );
                     EndDialog( hwnd, IDOK );
