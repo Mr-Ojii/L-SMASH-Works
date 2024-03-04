@@ -190,7 +190,7 @@
                 Create the index file in a certain directory based on the contents of the "Cache directory path".
             + Delete old cache : check box (default : checked) / edit box (default : 30)
                 This settings is enabled only if the "Use cache dir" checkbox is checked.
-                When AviUtl starts up, search in the index file directory and deletes index files older than the specified number of days.
+                When AviUtl starts and exits, search in the index file directory and deletes index files older than the specified number of days.
             + Cache directory path : edit box (default : empty)
                 This settings is enabled only if the "Use cache dir" checkbox is checked.
                 Specify the directory where you want to create the index file by absolute path.
