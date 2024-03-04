@@ -514,6 +514,7 @@ BOOL func_init( void ) {
 }
 
 BOOL func_exit( void ) {
+    delete_old_cache();
     clean_preferred_decoder_names( reader_opt );
     clean_preferred_decoder_names( reader_opt_config );
     BOOL ret = CloseHandle( input_cache_mutex );
