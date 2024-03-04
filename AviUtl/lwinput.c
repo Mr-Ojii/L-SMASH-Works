@@ -276,7 +276,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
     audio_option_t *_audio_opt = &_reader_opt->audio_opt;
 
     FILE *ini = open_settings( "rb" );
-    char buf[512];
+    char buf[1024];
     if( ini )
     {
         /* threads */
