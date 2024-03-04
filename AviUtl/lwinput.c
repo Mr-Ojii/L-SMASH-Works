@@ -192,10 +192,19 @@ static inline void set_preferred_decoder_names_on_buf
     _reader_opt->preferred_decoder_names = lw_tokenize_string( _reader_opt->preferred_decoder_names_buf, ',', NULL );
 }
 
-static inline void set_cache_dir( reader_option_t *_reader_opt, char *user_index_dir )
+static inline void set_cache_dir( reader_option_t *_reader_opt, const char *user_index_dir )
 {
-    strcpy(_reader_opt->cache_dir_name_buf, user_index_dir);
     _reader_opt->cache_dir_name = NULL;
+    memset( _reader_opt->cache_dir_name_buf, 0, CACHE_DIR_NAME_BUFSIZE);
+    memcpy( _reader_opt->cache_dir_name_buf, user_index_dir,
+            MIN( CACHE_DIR_NAME_BUFSIZE - 1, strlen(user_index_dir) ) );
+    if( _reader_opt->cache_dir_name_buf[0] != '\0' ) {
+        size_t edit_len = MIN( CACHE_DIR_NAME_BUFSIZE - 2, strlen(_reader_opt->cache_dir_name_buf) );
+        if( _reader_opt->cache_dir_name_buf[edit_len - 1] != '\\' ) {
+            _reader_opt->cache_dir_name_buf[edit_len] = '\\';
+            _reader_opt->cache_dir_name_buf[edit_len + 1] = '\0';
+        }
+    }
     if( _reader_opt->use_cache_dir ) {
         DWORD dwAttrib = GetFileAttributes( _reader_opt->cache_dir_name_buf );
         if((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
@@ -1184,13 +1193,6 @@ static BOOL CALLBACK dialog_proc
                     {
                         char edit_buf[_MAX_PATH * 2];
                         GetDlgItemText( hwnd, IDC_EDIT_CACHE_DIR_PATH, (LPTSTR)edit_buf, sizeof(edit_buf) );
-                        if( edit_buf[0] != '\0' ) {
-                            size_t edit_len = strlen(edit_buf);
-                            if( edit_buf[edit_len - 1] != '\\' ) {
-                                edit_buf[edit_len] = '\\';
-                                edit_buf[edit_len + 1] = '\0';
-                            }
-                        }
                         set_cache_dir(reader_opt_config, edit_buf);
                         fprintf( ini, "cache_dir_path=%s\n", edit_buf );
                     }
