@@ -406,6 +406,9 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
             _lwinput_opt->delete_old_cache_days = 30;
         else
             _lwinput_opt->delete_old_cache_days = MAX(_lwinput_opt->delete_old_cache_days, 2);
+        /* cache last check date */
+        if ( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_last_check_date=%"SCNu64, &_lwinput_opt->cache_last_check_date ) != 1 )
+            _lwinput_opt->cache_last_check_date = 0;
 
         fclose( ini );
     }
@@ -445,6 +448,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _lwinput_opt->audio_delay           = 0;
         _lwinput_opt->delete_old_cache      = 0;
         _lwinput_opt->delete_old_cache_days = 30;
+        _lwinput_opt->cache_last_check_date = 0;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
@@ -524,6 +528,8 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
     fprintf( ini, "delete_old_cache=%d\n", _lwinput_opt->delete_old_cache );
     /* delete old cache days */
     fprintf( ini, "delete_old_cache_days=%d\n", _lwinput_opt->delete_old_cache_days );
+    /* cache last check date */
+    fprintf( ini, "cache_last_check_date=%"PRIu64"\n", _lwinput_opt->cache_last_check_date );
 
     /* Close */
     fclose( ini );
@@ -531,11 +537,16 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
 
 static void delete_old_cache( void )
 {
-    if ( !reader_opt->use_cache_dir || !lwinput_opt.delete_old_cache )
+    lwinput_option_t _lwinput_opt = { 0 };
+    reader_option_t *_reader_opt = &_lwinput_opt.reader_opt;
+
+    get_settings( &_lwinput_opt );
+
+    if ( !_reader_opt->use_cache_dir || !_lwinput_opt.delete_old_cache )
         return;
 
     char search_path[MAX_PATH * 2], file_path_buf[MAX_PATH * 2];
-    strcpy( search_path, reader_opt->cache_dir_name );
+    strcpy( search_path, _reader_opt->cache_dir_name );
     strcat( search_path, "*" );
 
     HWND hFind = INVALID_HANDLE_VALUE;
@@ -555,6 +566,11 @@ static void delete_old_cache( void )
     u_st.LowPart = f_st.dwLowDateTime;
     u_st.QuadPart /= to_day_ratio;
 
+    if ( u_st.QuadPart == _lwinput_opt.cache_last_check_date )
+        return;
+
+    _lwinput_opt.cache_last_check_date = u_st.QuadPart;
+
     do
     {
         if ( win32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
@@ -573,9 +589,9 @@ static void delete_old_cache( void )
         u_ft.QuadPart /= to_day_ratio;
         diff = u_st.QuadPart - u_ft.QuadPart;
 
-        if ( diff >= lwinput_opt.delete_old_cache_days )
+        if ( diff >= _lwinput_opt.delete_old_cache_days )
         {
-            strcpy( file_path_buf, reader_opt->cache_dir_name );
+            strcpy( file_path_buf, _reader_opt->cache_dir_name );
             strcat( file_path_buf, win32fd.cFileName );
             if ( !DeleteFile( file_path_buf ) )
                 break;
@@ -583,6 +599,8 @@ static void delete_old_cache( void )
     } while ( FindNextFile( hFind, &win32fd ) );
 
     FindClose( hFind );
+
+    save_settings( &_lwinput_opt );
 }
 
 BOOL func_init( void ) {

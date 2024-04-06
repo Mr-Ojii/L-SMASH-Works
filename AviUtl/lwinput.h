@@ -145,6 +145,7 @@ typedef struct
     int handle_cache;
     int delete_old_cache;
     int delete_old_cache_days;
+    uint64_t cache_last_check_date;
     reader_option_t reader_opt;
 } lwinput_option_t;
 
