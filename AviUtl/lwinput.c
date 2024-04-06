@@ -224,62 +224,6 @@ static inline void set_cache_dir( reader_option_t *_reader_opt, const char *user
     }
 }
 
-static void delete_old_cache( void )
-{
-    if ( !reader_opt->use_cache_dir || !lwinput_opt.delete_old_cache )
-        return;
-
-    char search_path[MAX_PATH * 2], file_path_buf[MAX_PATH * 2];
-    strcpy( search_path, reader_opt->cache_dir_name );
-    strcat( search_path, "*" );
-
-    HWND hFind = INVALID_HANDLE_VALUE;
-	WIN32_FIND_DATA win32fd;
-    if ( ( hFind = FindFirstFile( search_path, &win32fd) ) == INVALID_HANDLE_VALUE )
-        return;
-
-    SYSTEMTIME s_st;
-    FILETIME f_st;
-    ULARGE_INTEGER u_st, u_ft;
-    uint64_t diff;
-    const uint64_t to_day_ratio = 864000000000;
-    GetSystemTime(&s_st);
-    if ( !SystemTimeToFileTime(&s_st, &f_st) )
-        return;
-    u_st.HighPart = f_st.dwHighDateTime;
-    u_st.LowPart = f_st.dwLowDateTime;
-    u_st.QuadPart /= to_day_ratio;
-
-    do
-    {
-        if ( win32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
-            continue;
-
-        char* p = win32fd.cFileName;
-        while( *p != '\0' )
-                p++;
-        while( *p != '.' )
-                p--;
-        if ( strcmp( p, ".lwi" ) )
-            continue;
-
-        u_ft.HighPart = win32fd.ftLastAccessTime.dwHighDateTime;
-        u_ft.LowPart = win32fd.ftLastAccessTime.dwLowDateTime;
-        u_ft.QuadPart /= to_day_ratio;
-        diff = u_st.QuadPart - u_ft.QuadPart;
-
-        if ( diff >= lwinput_opt.delete_old_cache_days )
-        {
-            strcpy( file_path_buf, reader_opt->cache_dir_name );
-            strcat( file_path_buf, win32fd.cFileName );
-            if ( !DeleteFile( file_path_buf ) )
-                break;
-        }
-    } while ( FindNextFile( hFind, &win32fd ) );
-
-    FindClose( hFind );
-}
-
 static void get_settings( lwinput_option_t *_lwinput_opt )
 {
     reader_option_t *_reader_opt = &_lwinput_opt->reader_opt;
@@ -583,6 +527,62 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
 
     /* Close */
     fclose( ini );
+}
+
+static void delete_old_cache( void )
+{
+    if ( !reader_opt->use_cache_dir || !lwinput_opt.delete_old_cache )
+        return;
+
+    char search_path[MAX_PATH * 2], file_path_buf[MAX_PATH * 2];
+    strcpy( search_path, reader_opt->cache_dir_name );
+    strcat( search_path, "*" );
+
+    HWND hFind = INVALID_HANDLE_VALUE;
+	WIN32_FIND_DATA win32fd;
+    if ( ( hFind = FindFirstFile( search_path, &win32fd) ) == INVALID_HANDLE_VALUE )
+        return;
+
+    SYSTEMTIME s_st;
+    FILETIME f_st;
+    ULARGE_INTEGER u_st, u_ft;
+    uint64_t diff;
+    const uint64_t to_day_ratio = 864000000000;
+    GetSystemTime(&s_st);
+    if ( !SystemTimeToFileTime(&s_st, &f_st) )
+        return;
+    u_st.HighPart = f_st.dwHighDateTime;
+    u_st.LowPart = f_st.dwLowDateTime;
+    u_st.QuadPart /= to_day_ratio;
+
+    do
+    {
+        if ( win32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
+            continue;
+
+        char* p = win32fd.cFileName;
+        while( *p != '\0' )
+                p++;
+        while( *p != '.' )
+                p--;
+        if ( strcmp( p, ".lwi" ) )
+            continue;
+
+        u_ft.HighPart = win32fd.ftLastAccessTime.dwHighDateTime;
+        u_ft.LowPart = win32fd.ftLastAccessTime.dwLowDateTime;
+        u_ft.QuadPart /= to_day_ratio;
+        diff = u_st.QuadPart - u_ft.QuadPart;
+
+        if ( diff >= lwinput_opt.delete_old_cache_days )
+        {
+            strcpy( file_path_buf, reader_opt->cache_dir_name );
+            strcat( file_path_buf, win32fd.cFileName );
+            if ( !DeleteFile( file_path_buf ) )
+                break;
+        }
+    } while ( FindNextFile( hFind, &win32fd ) );
+
+    FindClose( hFind );
 }
 
 BOOL func_init( void ) {
