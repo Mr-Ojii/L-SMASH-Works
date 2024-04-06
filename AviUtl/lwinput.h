@@ -120,6 +120,7 @@ typedef struct
 {
     int threads;
     int av_sync;
+    char         preferred_decoder_names_original_buf[PREFERRED_DECODER_NAMES_BUFSIZE];
     char         preferred_decoder_names_buf[PREFERRED_DECODER_NAMES_BUFSIZE];
     const char **preferred_decoder_names;
     /* for libav reader */

@@ -177,6 +177,7 @@ static int get_auto_threads( void )
 static inline void clean_preferred_decoder_names( reader_option_t *_reader_opt )
 {
     lw_freep( &_reader_opt->preferred_decoder_names );
+    memset( _reader_opt->preferred_decoder_names_original_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE );
     memset( _reader_opt->preferred_decoder_names_buf, 0, PREFERRED_DECODER_NAMES_BUFSIZE );
 }
 
@@ -187,8 +188,9 @@ static inline void set_preferred_decoder_names_on_buf
 )
 {
     clean_preferred_decoder_names( _reader_opt );
-    memcpy( _reader_opt->preferred_decoder_names_buf, preferred_decoder_names,
+    memcpy( _reader_opt->preferred_decoder_names_original_buf, preferred_decoder_names,
             MIN( PREFERRED_DECODER_NAMES_BUFSIZE - 1, strlen(preferred_decoder_names) ) );
+    memcpy(_reader_opt->preferred_decoder_names_buf, _reader_opt->preferred_decoder_names_original_buf, PREFERRED_DECODER_NAMES_BUFSIZE);
     _reader_opt->preferred_decoder_names = lw_tokenize_string( _reader_opt->preferred_decoder_names_buf, ',', NULL );
 }
 
@@ -504,6 +506,83 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
         set_cache_dir( _reader_opt, "" );
     }
+}
+
+static void save_settings( lwinput_option_t *_lwinput_opt ) {
+    reader_option_t *_reader_opt = &_lwinput_opt->reader_opt;
+    video_option_t *_video_opt = &_reader_opt->video_opt;
+    audio_option_t *_audio_opt = &_reader_opt->audio_opt;
+
+    /* Open */
+    FILE *ini = open_settings( "wb" );
+    if( !ini )
+    {
+        MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to update configuration file" );
+        return;
+    }
+    /* threads */
+    if( _reader_opt->threads > 0 )
+        fprintf( ini, "threads=%d\n", _reader_opt->threads );
+    else
+        fprintf( ini, "threads=0 (auto)\n" );
+    /* av_sync */
+    fprintf( ini, "av_sync=%d\n", _reader_opt->av_sync );
+    /* no_create_index */
+    fprintf( ini, "no_create_index=%d\n", _reader_opt->no_create_index );
+    /* force stream index */
+    fprintf( ini, "force_video_index=%d:%d\n", _reader_opt->force_video, _reader_opt->force_video_index );
+    fprintf( ini, "force_audio_index=%d:%d\n", _reader_opt->force_audio, _reader_opt->force_audio_index );
+    /* seek_mode */
+    fprintf( ini, "seek_mode=%d\n", _video_opt->seek_mode );
+    /* forward_seek_threshold */
+    fprintf( ini, "forward_threshold=%d\n", _video_opt->forward_seek_threshold );
+    /* scaler */
+    fprintf( ini, "scaler=%d\n", _video_opt->scaler );
+    /* apply_repeat_flag */
+    fprintf( ini, "apply_repeat_flag=%d\n", _video_opt->apply_repeat_flag );
+    /* field_dominance */
+    fprintf( ini, "field_dominance=%d\n", _video_opt->field_dominance );
+    /* VFR->CFR */
+    fprintf( ini, "vfr2cfr=%d:%d:%d\n", _video_opt->vfr2cfr.active, _video_opt->vfr2cfr.framerate_num, _video_opt->vfr2cfr.framerate_den );
+    /* LW48 output */
+    fprintf( ini, "colorspace=%d\n", _video_opt->colorspace );
+    /* AVS bit-depth */
+    fprintf( ini, "avs_bit_depth=%d\n", _video_opt->avs.bit_depth );
+    /* audio_delay */
+    fprintf( ini, "audio_delay=%d\n", _lwinput_opt->audio_delay );
+    /* channel_layout */
+    fprintf( ini, "channel_layout=0x%"PRIx64"\n", _audio_opt->channel_layout );
+    /* sample_rate */
+    fprintf( ini, "sample_rate=%d\n", _audio_opt->sample_rate );
+    /* mix_level */
+    fprintf( ini, "mix_level=%d:%d:%d\n",
+                             _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ],
+                             _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND],
+                             _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] );
+    /* readers */
+    fprintf( ini, "libavsmash_disabled=%d\n", _lwinput_opt->reader_disabled[0] );
+    fprintf( ini, "avs_disabled=%d\n",        _lwinput_opt->reader_disabled[1] );
+    fprintf( ini, "vpy_disabled=%d\n",        _lwinput_opt->reader_disabled[2] );
+    fprintf( ini, "libav_disabled=%d\n",      _lwinput_opt->reader_disabled[3] );
+    /* dummy reader */
+    fprintf( ini, "dummy_resolution=%dx%d\n", _video_opt->dummy.width, _video_opt->dummy.height );
+    fprintf( ini, "dummy_framerate=%d/%d\n",  _video_opt->dummy.framerate_num, _video_opt->dummy.framerate_den );
+    fprintf( ini, "dummy_colorspace=%d\n",    _video_opt->dummy.colorspace );
+    /* preferred decoders */
+    fprintf( ini, "preferred_decoders=%s\n", _reader_opt->preferred_decoder_names_original_buf );
+    /* handle cache */
+    fprintf( ini, "handle_cache=%d\n", _lwinput_opt->handle_cache );
+    /* use cache dir */
+    fprintf( ini, "use_cache_dir=%d\n", _reader_opt->use_cache_dir );
+    /* cache dir path */
+    fprintf( ini, "cache_dir_path=%s\n", _reader_opt->cache_dir_name_buf );
+    /* delete old cache */
+    fprintf( ini, "delete_old_cache=%d\n", _lwinput_opt->delete_old_cache );
+    /* delete old cache days */
+    fprintf( ini, "delete_old_cache_days=%d\n", _lwinput_opt->delete_old_cache_days );
+
+    /* Close */
+    fclose( ini );
 }
 
 BOOL func_init( void ) {
@@ -1087,125 +1166,83 @@ static BOOL CALLBACK dialog_proc
                     return TRUE;
                 case IDOK :
                 {
-                    /* Open */
-                    FILE *ini = open_settings( "wb" );
-                    if( !ini )
-                    {
-                        MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to update configuration file" );
-                        return FALSE;
-                    }
                     /* threads */
                     reader_opt_config->threads = get_int_from_dlg_with_min( hwnd, IDC_EDIT_THREADS, 0 );
-                    if( reader_opt_config->threads > 0 )
-                        fprintf( ini, "threads=%d\n", reader_opt_config->threads );
-                    else
-                        fprintf( ini, "threads=0 (auto)\n" );
                     /* av_sync */
                     reader_opt_config->av_sync = get_check_state( hwnd, IDC_CHECK_AV_SYNC );
-                    fprintf( ini, "av_sync=%d\n", reader_opt_config->av_sync );
                     /* no_create_index */
                     reader_opt_config->no_create_index = !get_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE );
-                    fprintf( ini, "no_create_index=%d\n", reader_opt_config->no_create_index );
                     /* force stream index */
                     reader_opt_config->force_video = get_check_state( hwnd, IDC_CHECK_FORCE_VIDEO );
                     reader_opt_config->force_audio = get_check_state( hwnd, IDC_CHECK_FORCE_AUDIO );
                     reader_opt_config->force_video_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, -1 );
                     reader_opt_config->force_audio_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, -1 );
-                    fprintf( ini, "force_video_index=%d:%d\n", reader_opt_config->force_video, reader_opt_config->force_video_index );
-                    fprintf( ini, "force_audio_index=%d:%d\n", reader_opt_config->force_audio, reader_opt_config->force_audio_index );
                     /* seek_mode */
                     video_opt_config->seek_mode = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "seek_mode=%d\n", video_opt_config->seek_mode );
                     /* forward_seek_threshold */
                     video_opt_config->forward_seek_threshold = get_int_from_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD );
                     video_opt_config->forward_seek_threshold = CLIP_VALUE( video_opt_config->forward_seek_threshold, 1, 999 );
-                    fprintf( ini, "forward_threshold=%d\n", video_opt_config->forward_seek_threshold );
                     /* scaler */
                     video_opt_config->scaler = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SCALER ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "scaler=%d\n", video_opt_config->scaler );
                     /* apply_repeat_flag */
                     video_opt_config->apply_repeat_flag = get_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG );
-                    fprintf( ini, "apply_repeat_flag=%d\n", video_opt_config->apply_repeat_flag );
                     /* field_dominance */
                     video_opt_config->field_dominance = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "field_dominance=%d\n", video_opt_config->field_dominance );
                     /* VFR->CFR */
                     video_opt_config->vfr2cfr.active = get_check_state( hwnd, IDC_CHECK_VFR_TO_CFR );
                     video_opt_config->vfr2cfr.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, 1 );
                     video_opt_config->vfr2cfr.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, 1 );
-                    fprintf( ini, "vfr2cfr=%d:%d:%d\n", video_opt_config->vfr2cfr.active, video_opt_config->vfr2cfr.framerate_num, video_opt_config->vfr2cfr.framerate_den );
                     /* LW48 output */
                     video_opt_config->colorspace = (get_check_state( hwnd, IDC_CHECK_LW48_OUTPUT ) ? OUTPUT_LW48 : 0);
-                    fprintf( ini, "colorspace=%d\n", video_opt_config->colorspace );
                     /* AVS bit-depth */
                     video_opt_config->avs.bit_depth = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_AVS_BITDEPTH ), CB_GETCURSEL, 0, 0 );
                     video_opt_config->avs.bit_depth = atoi( avs_bit_depth_list[ video_opt_config->avs.bit_depth ] );
-                    fprintf( ini, "avs_bit_depth=%d\n", video_opt_config->avs.bit_depth );
                     /* audio_delay */
                     lwinput_opt_config.audio_delay = get_int_from_dlg( hwnd, IDC_EDIT_AUDIO_DELAY );
-                    fprintf( ini, "audio_delay=%d\n", lwinput_opt_config.audio_delay );
                     /* channel_layout */
                     {
                         char edit_buf[512];
                         GetDlgItemText( hwnd, IDC_EDIT_CHANNEL_LAYOUT, (LPTSTR)edit_buf, sizeof(edit_buf) );
                         audio_opt_config->channel_layout = av_get_channel_layout( edit_buf );
                     }
-                    fprintf( ini, "channel_layout=0x%"PRIx64"\n", audio_opt_config->channel_layout );
                     /* sample_rate */
                     audio_opt_config->sample_rate = get_int_from_dlg_with_min( hwnd, IDC_EDIT_SAMPLE_RATE, 0 );
-                    fprintf( ini, "sample_rate=%d\n", audio_opt_config->sample_rate );
                     /* mix_level */
-                    fprintf( ini, "mix_level=%d:%d:%d\n",
-                             audio_opt_config->mix_level[MIX_LEVEL_INDEX_CENTER  ],
-                             audio_opt_config->mix_level[MIX_LEVEL_INDEX_SURROUND],
-                             audio_opt_config->mix_level[MIX_LEVEL_INDEX_LFE     ] );
+                    // changed on WM_HSCROLL
                     /* readers */
                     lwinput_opt_config.reader_disabled[0] = !get_check_state( hwnd, IDC_CHECK_LIBAVSMASH_INPUT );
                     lwinput_opt_config.reader_disabled[1] = !get_check_state( hwnd, IDC_CHECK_AVS_INPUT        );
                     lwinput_opt_config.reader_disabled[2] = !get_check_state( hwnd, IDC_CHECK_VPY_INPUT        );
                     lwinput_opt_config.reader_disabled[3] = !get_check_state( hwnd, IDC_CHECK_LIBAV_INPUT      );
-                    fprintf( ini, "libavsmash_disabled=%d\n", lwinput_opt_config.reader_disabled[0] );
-                    fprintf( ini, "avs_disabled=%d\n",        lwinput_opt_config.reader_disabled[1] );
-                    fprintf( ini, "vpy_disabled=%d\n",        lwinput_opt_config.reader_disabled[2] );
-                    fprintf( ini, "libav_disabled=%d\n",      lwinput_opt_config.reader_disabled[3] );
                     /* dummy reader */
                     video_opt_config->dummy.width         = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_WIDTH,  32 );
                     video_opt_config->dummy.height        = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_HEIGHT, 32 );
                     video_opt_config->dummy.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, 1 );
                     video_opt_config->dummy.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, 1 );
                     video_opt_config->dummy.colorspace    = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE ), CB_GETCURSEL, 0, 0 );
-                    fprintf( ini, "dummy_resolution=%dx%d\n", video_opt_config->dummy.width, video_opt_config->dummy.height );
-                    fprintf( ini, "dummy_framerate=%d/%d\n",  video_opt_config->dummy.framerate_num, video_opt_config->dummy.framerate_den );
-                    fprintf( ini, "dummy_colorspace=%d\n",    video_opt_config->dummy.colorspace );
                     /* preferred decoders */
                     {
                         char edit_buf[512];
                         GetDlgItemText( hwnd, IDC_EDIT_PREFERRED_DECODERS, (LPTSTR)edit_buf, sizeof(edit_buf) );
                         set_preferred_decoder_names_on_buf( reader_opt_config, edit_buf );
-                        fprintf( ini, "preferred_decoders=%s\n", edit_buf );
                     }
                     /* handle cache */
                     lwinput_opt_config.handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
-                    fprintf( ini, "handle_cache=%d\n", lwinput_opt_config.handle_cache );
                     /* use cache dir */
                     reader_opt_config->use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
-                    fprintf( ini, "use_cache_dir=%d\n", reader_opt_config->use_cache_dir );
                     /* cache dir path */
                     {
                         char edit_buf[_MAX_PATH * 2];
                         GetDlgItemText( hwnd, IDC_EDIT_CACHE_DIR_PATH, (LPTSTR)edit_buf, sizeof(edit_buf) );
                         set_cache_dir(reader_opt_config, edit_buf);
-                        fprintf( ini, "cache_dir_path=%s\n", edit_buf );
                     }
                     /* delete old cache */
                     lwinput_opt_config.delete_old_cache = get_check_state( hwnd, IDC_CHECK_DELETE_OLD_CACHE );
-                    fprintf( ini, "delete_old_cache=%d\n", lwinput_opt_config.delete_old_cache );
                     /* delete old cache days */
                     lwinput_opt_config.delete_old_cache_days = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DELETE_OLD_CACHE_DAYS, 2 );
-                    fprintf( ini, "delete_old_cache_days=%d\n", lwinput_opt_config.delete_old_cache_days );
 
-                    /* Close */
-                    fclose( ini );
+                    save_settings( &lwinput_opt_config );
+
                     EndDialog( hwnd, IDOK );
                     MESSAGE_BOX_DESKTOP( MB_OK, "Please relaunch AviUtl for updating settings!" );
                     return TRUE;
