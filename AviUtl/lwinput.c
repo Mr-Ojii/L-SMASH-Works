@@ -985,7 +985,7 @@ static void get_mix_level
     SetWindowText( GetDlgItem( hwnd, text_idc ), (LPCTSTR)edit_buf );
 }
 
-static BOOL CALLBACK dialog_proc
+static INT_PTR CALLBACK dialog_proc
 (
     HWND   hwnd,
     UINT   message,
