@@ -2105,12 +2105,13 @@ static int create_index
         fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
         fprintf( index, "<InputFilePath>%s</InputFilePath>\n", lwhp->file_path );
 #ifdef _WIN32
-        wchar_t *wname;
+        wchar_t *wname = NULL;
         struct _stat64 file_stat;
         if( lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname ) )
             _wstat64( wname, &file_stat );
         else
             _stat64( lwhp->file_path, &file_stat );
+        lw_free( wname );
 #else
         struct stat file_stat;
         stat( lwhp->file_path, &file_stat );
@@ -2805,18 +2806,22 @@ static int parse_index
     int active_video_index;
     int active_audio_index;
 #ifdef _WIN32
-    wchar_t *wname;
+    wchar_t *wname = NULL;
     struct _stat64 file_stat;
     if( lw_string_to_wchar( CP_UTF8, lwhp->file_path, &wname ) )
     {
         if( _wstat64( wname, &file_stat ) )
+        {
+            lw_free(wname);
             return -1;
+        }
     }
     else
     {
         if( _stat64( lwhp->file_path, &file_stat ) )
             return -1;
     }
+    lw_free( wname );
 #else
     struct stat file_stat;
     if( stat( lwhp->file_path, &file_stat ) )
