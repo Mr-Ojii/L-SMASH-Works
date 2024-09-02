@@ -55,6 +55,19 @@ int lw_string_from_wchar( int cp, const wchar_t *from, char **to )
     return nc;
 }
 
+int lw_convert_mb_string( int cp_from, int cp_to, const char* from, char** to )
+{
+    wchar_t* w;
+    int ncw = lw_string_to_wchar( cp_from, from, &w );
+    if( ncw == 0 )
+        return 0;
+    int nc = lw_string_from_wchar( cp_to, w, to );
+    lw_free( w );
+    if( nc == 0 )
+        return 0;
+    return nc;
+}
+
 FILE *lw_win32_fopen( const char *name, const char *mode )
 {
     wchar_t *wname = 0, *wmode = 0;

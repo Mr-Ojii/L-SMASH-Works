@@ -37,6 +37,7 @@
 #  include <wchar.h>
    int lw_string_to_wchar( int cp, const char *from, wchar_t **to );
    int lw_string_from_wchar( int cp, const wchar_t *from, char **to );
+   int lw_convert_mb_string( int cp_from, int cp_to, const char* from, char** to );
 #endif
 
 #endif
