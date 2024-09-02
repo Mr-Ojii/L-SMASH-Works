@@ -20,6 +20,11 @@
 
 /* This file is available under an ISC license. */
 
+#ifdef _WIN32
+#include <windows.h>
+#include "osdep.h"
+#endif
+
 #define SEEK_DTS_BASED      0x00000001
 #define SEEK_PTS_BASED      0x00000002
 #define SEEK_POS_BASED      0x00000004
@@ -96,8 +101,24 @@ static inline int lavf_open_file
 {
     if( avformat_open_input( format_ctx, file_path, NULL, NULL ) )
     {
-        lw_log_show( lhp, LW_LOG_FATAL, "Failed to avformat_open_input." );
-        return -1;
+#ifdef _WIN32
+        char* file_path_utf8 = NULL;
+        if( lw_convert_mb_string( CP_ACP, CP_UTF8, file_path, &file_path_utf8 ) )
+        {
+            const int open_failed = avformat_open_input( format_ctx, file_path_utf8, NULL, NULL );
+            lw_free( file_path_utf8 );
+            if( open_failed )
+            {
+                lw_log_show( lhp, LW_LOG_FATAL, "Failed to avformat_open_input." );
+                return -1;
+            }
+        }
+        else
+#endif
+        {
+            lw_log_show( lhp, LW_LOG_FATAL, "Failed to avformat_open_input." );
+            return -1;
+        }
     }
     if( avformat_find_stream_info( *format_ctx, NULL ) < 0 )
     {
