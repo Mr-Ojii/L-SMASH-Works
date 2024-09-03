@@ -41,8 +41,6 @@ sources = [
   '../common/lwlibav_video.c',
   '../common/lwlibav_video.h',
   '../common/lwlibav_video_internal.h',
-  '../common/lwsimd.c',
-  '../common/lwsimd.h',
   '../common/osdep.c',
   '../common/osdep.h',
   '../common/progress.h',
@@ -69,6 +67,10 @@ deps = [
 ]
 
 if host_machine.cpu_family().startswith('x86')
+  sources += [
+    '../common/lwsimd.c',
+    '../common/lwsimd.h',
+  ]
   add_project_arguments('-mfpmath=sse', '-msse2', language: ['c', 'cpp'])
 endif
 
