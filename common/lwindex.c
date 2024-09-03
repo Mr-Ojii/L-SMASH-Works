@@ -1783,7 +1783,7 @@ static int get_audio_frame_length
                 ret = helper->decode( ctx, helper->picture, &output_audio, &temp );
                 if( ret < 0 )
                 {
-                    ctx->channels    = av_get_channel_layout_nb_channels( helper->picture->channel_layout );
+                    av_channel_layout_copy( &ctx->ch_layout, &helper->picture->ch_layout );
                     ctx->sample_rate = helper->picture->sample_rate;
                 }
                 if( output_audio )
@@ -2426,11 +2426,10 @@ static int create_index
                         }
                         audio_info = temp;
                     }
-                    if( pkt_ctx->channel_layout == 0 )
-                        pkt_ctx->channel_layout = av_get_default_channel_layout( pkt_ctx->channels );
-                    if( av_get_channel_layout_nb_channels( pkt_ctx->channel_layout )
-                      > av_get_channel_layout_nb_channels( aohp->output_channel_layout ) )
-                        aohp->output_channel_layout = pkt_ctx->channel_layout;
+                    if( pkt_ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC )
+                        av_channel_layout_default( &pkt_ctx->ch_layout, pkt_ctx->ch_layout.nb_channels );
+                    if ( pkt_ctx->ch_layout.nb_channels > aohp->output_ch_layout.nb_channels )
+                        av_channel_layout_copy( &aohp->output_ch_layout, &pkt_ctx->ch_layout );
                     aohp->output_sample_format   = select_better_sample_format( aohp->output_sample_format, pkt_ctx->sample_fmt );
                     aohp->output_sample_rate     = MAX( aohp->output_sample_rate, audio_sample_rate );
                     aohp->output_bits_per_sample = MAX( aohp->output_bits_per_sample, bits_per_sample );
@@ -2447,7 +2446,7 @@ static int create_index
                 lwlibav_extradata_handler_t *list = &helper->exh;
                 lwlibav_extradata_t *entry = &list->entries[ list->current_index ];
                 if( entry->channel_layout == 0 )
-                    entry->channel_layout = pkt_ctx->channel_layout;
+                    entry->channel_layout = pkt_ctx->ch_layout.u.mask;
                 if( entry->sample_rate == 0 )
                     entry->sample_rate = pkt_ctx->sample_rate;
                 if( entry->sample_format == AV_SAMPLE_FMT_NONE )
@@ -2467,7 +2466,7 @@ static int create_index
                          pkt.stream_index, AVMEDIA_TYPE_AUDIO, pkt_ctx->codec_id,
                          stream->time_base.num, stream->time_base.den,
                          pkt.pos, pkt.pts, pkt.dts, extradata_index,
-                         pkt_ctx->channels, pkt_ctx->channel_layout, pkt_ctx->sample_rate,
+                         pkt_ctx->ch_layout.nb_channels, pkt_ctx->ch_layout.u.mask, pkt_ctx->sample_rate,
                          av_get_sample_fmt_name( pkt_ctx->sample_fmt ) ? av_get_sample_fmt_name( pkt_ctx->sample_fmt ) : "none",
                          bits_per_sample, frame_length );
         }
@@ -3014,10 +3013,14 @@ static int parse_index
                         adhp->time_base.den = time_base.den;
                     }
                     if( layout == 0 )
-                        layout = av_get_default_channel_layout( channels );
-                    if( av_get_channel_layout_nb_channels( layout )
-                      > av_get_channel_layout_nb_channels( aohp->output_channel_layout ) )
-                        aohp->output_channel_layout = layout;
+                    {
+                        AVChannelLayout ch_layout;
+                        av_channel_layout_default( &ch_layout, channels );
+                        layout = ch_layout.u.mask;
+                        av_channel_layout_uninit( &ch_layout );
+                    }
+                    if ( channels > aohp->output_ch_layout.nb_channels )
+                        av_channel_layout_from_mask( &aohp->output_ch_layout, layout );
                     aohp->output_sample_format   = select_better_sample_format( aohp->output_sample_format,
                                                                                 av_get_sample_fmt( (const char *)sample_fmt ) );
                     aohp->output_sample_rate     = MAX( aohp->output_sample_rate, audio_sample_rate );

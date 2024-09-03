@@ -226,7 +226,7 @@ static void prepare_audio_decoding
 (
     lwlibav_audio_decode_handler_t *adhp,
     lwlibav_audio_output_handler_t *aohp,
-    uint64_t                        channel_layout,
+    const char                     *layout_string,
     int                             sample_rate,
     lwlibav_file_handler_t         &lwh,
     VideoInfo                      &vi,
@@ -240,7 +240,7 @@ static void prepare_audio_decoding
         env->ThrowError( "LWLibavAudioSource: failed to import AVIndexEntrys for audio." );
     /* */
     AVCodecContext *ctx = lwlibav_audio_get_codec_context( adhp );
-    as_setup_audio_rendering( aohp, ctx, &vi, env, "LWLibavAudioSource", channel_layout, sample_rate );
+    as_setup_audio_rendering( aohp, ctx, &vi, env, "LWLibavAudioSource", layout_string, sample_rate );
     /* Count the number of PCM audio samples. */
     vi.num_audio_samples = lwlibav_audio_count_overall_pcm_samples( adhp, aohp->output_sample_rate );
     if( vi.num_audio_samples == 0 )
@@ -255,7 +255,7 @@ static void prepare_audio_decoding
 LWLibavAudioSource::LWLibavAudioSource
 (
     lwlibav_option_t   *opt,
-    uint64_t            channel_layout,
+    const char         *layout_string,
     int                 sample_rate,
     const char         *preferred_decoder_names,
     IScriptEnvironment *env
@@ -285,7 +285,7 @@ LWLibavAudioSource::LWLibavAudioSource
     /* Get the desired video track. */
     if( lwlibav_audio_get_desired_track( lwh.file_path, adhp, lwh.threads ) < 0 )
         env->ThrowError( "LWLibavAudioSource: failed to get the audio track." );
-    prepare_audio_decoding( adhp, aohp, channel_layout, sample_rate, lwh, vi, env );
+    prepare_audio_decoding( adhp, aohp, layout_string, sample_rate, lwh, vi, env );
 }
 
 LWLibavAudioSource::~LWLibavAudioSource()
@@ -417,7 +417,6 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.vfr2cfr.active    = 0;
     opt.vfr2cfr.fps_num   = 0;
     opt.vfr2cfr.fps_den   = 0;
-    uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
     set_av_log_level( ff_loglevel );
-    return new LWLibavAudioSource( &opt, channel_layout, sample_rate, preferred_decoder_names, env );
+    return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, env );
 }

@@ -1051,21 +1051,21 @@ static INT_PTR CALLBACK dialog_proc
             {
                 char edit_buf[512] = { 0 };
                 char *buf = edit_buf;
+                AVChannelLayout ch_layout;
+                av_channel_layout_from_mask( &ch_layout, audio_opt_config->channel_layout );
                 for( int i = 0; i < 64; i++ )
                 {
-                    uint64_t audio_channel = audio_opt_config->channel_layout & (1ULL << i);
-                    if( audio_channel )
+                    enum AVChannel ch = av_channel_layout_channel_from_index( &ch_layout, i );
+                    if( ch == AV_CHAN_NONE )
+                        continue;
+                    int name_length = av_channel_name( buf, 512 - (buf - edit_buf), ch ) - 1;
+                    if ( name_length > 0 )
                     {
-                        const char *channel_name = av_get_channel_name( audio_channel );
-                        if( channel_name )
-                        {
-                            int name_length = strlen( channel_name );
-                            memcpy( buf, channel_name, name_length );
-                            buf += name_length;
-                            *(buf++) = '+';
-                        }
+                        buf += name_length;
+                        *(buf++) = '+';
                     }
                 }
+                av_channel_layout_uninit( &ch_layout );
                 if( buf > edit_buf )
                 {
                     *(buf - 1) = '\0';  /* Replace the last '+' with NULL terminator. */
@@ -1219,9 +1219,16 @@ static INT_PTR CALLBACK dialog_proc
                     lwinput_opt_config.audio_delay = get_int_from_dlg( hwnd, IDC_EDIT_AUDIO_DELAY );
                     /* channel_layout */
                     {
-                        char edit_buf[512];
+                        char edit_buf[512] = { 0 };
                         GetDlgItemText( hwnd, IDC_EDIT_CHANNEL_LAYOUT, (LPTSTR)edit_buf, sizeof(edit_buf) );
-                        audio_opt_config->channel_layout = av_get_channel_layout( edit_buf );
+                        AVChannelLayout ch_layout;
+                        if( !av_channel_layout_from_string( &ch_layout, edit_buf ) )
+                        {
+                            audio_opt_config->channel_layout = ch_layout.u.mask;
+                            av_channel_layout_uninit( &ch_layout );
+                        }
+                        else
+                            audio_opt_config->channel_layout = 0;
                     }
                     /* sample_rate */
                     audio_opt_config->sample_rate = get_int_from_dlg_with_min( hwnd, IDC_EDIT_SAMPLE_RATE, 0 );

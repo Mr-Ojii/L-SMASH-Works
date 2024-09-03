@@ -194,7 +194,7 @@ uint64_t libavsmash_audio_get_best_used_channel_layout
     libavsmash_audio_decode_handler_t *adhp
 )
 {
-    return adhp ? adhp->config.prefer.channel_layout : 0;
+    return adhp ? adhp->config.prefer.ch_layout.u.mask : 0;
 }
 
 enum AVSampleFormat libavsmash_audio_get_best_used_sample_format

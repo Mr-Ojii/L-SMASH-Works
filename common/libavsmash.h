@@ -24,7 +24,7 @@ typedef struct
 {
     int                 width;      /* the maximum visual presentation width */
     int                 height;     /* the maximum visual presentation height */
-    uint64_t            channel_layout;
+    AVChannelLayout     ch_layout;
     enum AVSampleFormat sample_format;
     int                 sample_rate;
     int                 bits_per_sample;

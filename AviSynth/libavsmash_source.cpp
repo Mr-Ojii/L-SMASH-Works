@@ -409,7 +409,7 @@ static void prepare_audio_decoding
     libavsmash_audio_decode_handler_t *adhp,
     libavsmash_audio_output_handler_t *aohp,
     AVFormatContext                   *format_ctx,
-    uint64_t                           channel_layout,
+    const char                        *layout_string,
     int                                sample_rate,
     bool                               skip_priming,
     VideoInfo                         &vi,
@@ -419,12 +419,12 @@ static void prepare_audio_decoding
     /* Initialize the audio decoder configuration. */
     if( libavsmash_audio_initialize_decoder_configuration( adhp, format_ctx, 0 ) < 0 )
         env->ThrowError( "LSMASHAudioSource: failed to initialize the decoder configuration." );
-    aohp->output_channel_layout  = libavsmash_audio_get_best_used_channel_layout ( adhp );
+    av_channel_layout_from_mask( &aohp->output_ch_layout, libavsmash_audio_get_best_used_channel_layout( adhp ) );
     aohp->output_sample_format   = libavsmash_audio_get_best_used_sample_format  ( adhp );
     aohp->output_sample_rate     = libavsmash_audio_get_best_used_sample_rate    ( adhp );
     aohp->output_bits_per_sample = libavsmash_audio_get_best_used_bits_per_sample( adhp );
     AVCodecContext *ctx = libavsmash_audio_get_codec_context( adhp );
-    as_setup_audio_rendering( aohp, ctx, &vi, env, "LSMASHAudioSource", channel_layout, sample_rate );
+    as_setup_audio_rendering( aohp, ctx, &vi, env, "LSMASHAudioSource", layout_string, sample_rate );
     count_output_audio_samples( adhp, aohp, skip_priming, vi, env );
     /* Force seeking at the first reading. */
     libavsmash_audio_force_seek( adhp );
@@ -435,7 +435,7 @@ LSMASHAudioSource::LSMASHAudioSource
     const char         *source,
     uint32_t            track_number,
     bool                skip_priming,
-    uint64_t            channel_layout,
+    const char         *layout_string,
     int                 sample_rate,
     const char         *preferred_decoder_names,
     IScriptEnvironment *env
@@ -447,7 +447,7 @@ LSMASHAudioSource::LSMASHAudioSource
     set_preferred_decoder_names( preferred_decoder_names );
     libavsmash_audio_set_preferred_decoder_names( adhp, tokenize_preferred_decoder_names() );
     get_audio_track( source, track_number, env );
-    prepare_audio_decoding( adhp, aohp, format_ctx.get(), channel_layout, sample_rate, skip_priming, vi, env );
+    prepare_audio_decoding( adhp, aohp, format_ctx.get(), layout_string, sample_rate, skip_priming, vi, env );
     lsmash_discard_boxes( libavsmash_audio_get_root( adhp ) );
 }
 
@@ -524,8 +524,7 @@ AVSValue __cdecl CreateLSMASHAudioSource( AVSValue args, void *user_data, IScrip
     int         sample_rate             = args[4].AsInt( 0 );
     const char *preferred_decoder_names = args[5].AsString( nullptr );
     int         ff_loglevel             = args[6].AsInt( 0 );
-    uint64_t channel_layout = layout_string ? av_get_channel_layout( layout_string ) : 0;
     set_av_log_level( ff_loglevel );
     return new LSMASHAudioSource( source, track_number, skip_priming,
-                                  channel_layout, sample_rate, preferred_decoder_names, env );
+                                  layout_string, sample_rate, preferred_decoder_names, env );
 }

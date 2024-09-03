@@ -913,7 +913,7 @@ void update_configuration
             lsmash_audio_summary_t *audio = (lsmash_audio_summary_t *)summary;
             codecpar->sample_rate           = config->queue.sample_rate     ? config->queue.sample_rate     : audio->frequency;
             codecpar->bits_per_coded_sample = config->queue.bits_per_sample ? config->queue.bits_per_sample : audio->sample_size;
-            codecpar->channels              = config->queue.channels        ? config->queue.channels        : audio->channels;
+            av_channel_layout_default( &codecpar->ch_layout, config->queue.channels ? config->queue.channels : audio->channels );
         }
         if( codec->id == AV_CODEC_ID_DTS )
         {
@@ -990,7 +990,7 @@ void update_configuration
             {
                 if( ctx->sample_rate == 0 )
                     strcpy( error_string, "Failed to set up sample rate.\n" );
-                else if( ctx->channel_layout == 0 && ctx->channels == 0 )
+                else if( ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC && ctx->ch_layout.nb_channels == 0 )
                     strcpy( error_string, "Failed to set up channels.\n" );
                 else
                     strcpy( error_string, "Failed to set up sample format.\n" );
@@ -999,8 +999,11 @@ void update_configuration
             }
             int dummy;
             decode_audio_packet( ctx, picture, &dummy, &pkt );
-        } while( ctx->sample_rate == 0 || (ctx->channel_layout == 0 && ctx->channels == 0) || ctx->sample_fmt == AV_SAMPLE_FMT_NONE );
-        extended->channel_layout = ctx->channel_layout ? ctx->channel_layout : av_get_default_channel_layout( ctx->channels );
+        } while( ctx->sample_rate == 0 || (ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC && ctx->ch_layout.nb_channels == 0) || ctx->sample_fmt == AV_SAMPLE_FMT_NONE );;
+        if ( ctx->ch_layout.u.mask )
+            av_channel_layout_copy( &extended->ch_layout, &ctx->ch_layout );
+        else
+            av_channel_layout_default( &extended->ch_layout, ctx->ch_layout.nb_channels );
         extended->sample_rate    = ctx->sample_rate;
         extended->sample_format  = ctx->sample_fmt;
         extended->frame_length   = ctx->frame_size;
@@ -1057,9 +1060,10 @@ int initialize_decoder_configuration
     config->prefer.bits_per_sample = config->ctx->bits_per_raw_sample   > 0 ? config->ctx->bits_per_raw_sample
                                    : config->ctx->bits_per_coded_sample > 0 ? config->ctx->bits_per_coded_sample
                                    : av_get_bytes_per_sample( config->ctx->sample_fmt ) << 3;
-    config->prefer.channel_layout  = config->ctx->channel_layout
-                                   ? config->ctx->channel_layout
-                                   : av_get_default_channel_layout( config->ctx->channels );
+    AVChannelLayout prefer_ch_layout;
+    av_channel_layout_default( &prefer_ch_layout, config->ctx->ch_layout.nb_channels );
+    av_channel_layout_copy( &config->prefer.ch_layout, config->ctx->ch_layout.u.mask ? &config->ctx->ch_layout : &prefer_ch_layout );
+    av_channel_layout_uninit( &prefer_ch_layout );
     if( config->count <= 1 )
         return config->error ? -1 : 0;
     /* Investigate other decoder configurations and pick preferred settings from them. */
@@ -1089,9 +1093,8 @@ int initialize_decoder_configuration
                 config->prefer.width = config->ctx->width;
             if( config->ctx->height > config->prefer.height )
                 config->prefer.height = config->ctx->height;
-            if( av_get_channel_layout_nb_channels( config->ctx->channel_layout )
-              > av_get_channel_layout_nb_channels( config->prefer.channel_layout ) )
-                config->prefer.channel_layout = config->ctx->channel_layout;
+            if( config->ctx->ch_layout.nb_channels > config->prefer.ch_layout.nb_channels )
+                av_channel_layout_copy( &config->prefer.ch_layout, &config->ctx->ch_layout );
             if( config->ctx->sample_rate > config->prefer.sample_rate )
                 config->prefer.sample_rate = config->ctx->sample_rate;
             switch( config->prefer.sample_format )
@@ -1152,6 +1155,7 @@ void cleanup_configuration
             lsmash_cleanup_summary( config->entries[i].summary );
         free( config->entries );
     }
+    av_channel_layout_uninit( &config->prefer.ch_layout );
     av_freep( &config->queue.extradata );
     av_freep( &config->input_buffer );
     avcodec_free_context( &config->ctx );

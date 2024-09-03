@@ -84,7 +84,7 @@ public:
     LWLibavAudioSource
     (
         lwlibav_option_t   *opt,
-        uint64_t            channel_layout,
+        const char         *layout_string,
         int                 sample_rate,
         const char         *preferred_decoder_names,
         IScriptEnvironment *env
