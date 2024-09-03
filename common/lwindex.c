@@ -1740,7 +1740,8 @@ static int get_ticks_per_frame
         return 2;
     else if( ctx->codec_id == AV_CODEC_ID_MPEG1VIDEO )
         return 1;
-    return ctx->ticks_per_frame;
+    const AVCodecDescriptor* desc = avcodec_descriptor_get( ctx->codec_id );
+    return ( desc && ( desc->props & AV_CODEC_PROP_FIELDS ) ) ? 2 : 1;
 }
 
 static int get_audio_frame_length

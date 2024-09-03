@@ -1026,8 +1026,8 @@ void vs_set_frame_properties
     vsapi->propSetData( props, "_PictType", &pict_type, 1, paReplace );
     /* BFF or TFF */
     int field_based = 0;
-    if( av_frame->interlaced_frame )
-        field_based = av_frame->top_field_first ? 2 : 1;
+    if( av_frame->flags & AV_FRAME_FLAG_INTERLACED )
+        field_based = (av_frame->flags & AV_FRAME_FLAG_TOP_FIELD_FIRST) ? 2 : 1;
     vsapi->propSetInt( props, "_FieldBased", field_based, paReplace );
     /* Mastering display color volume */
     int frame_has_primaries = 0, frame_has_luminance = 0;

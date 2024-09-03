@@ -232,14 +232,22 @@ static inline void get_interlaced_info
     if( hp->vsapi->propNumElements( props, "_FieldBased" ) > 0 )
     {
         int64_t value = hp->vsapi->propGetInt( props, "_FieldBased", 0, NULL );
-        hp->av_frame->interlaced_frame = (value == 2 || value == 1 ? 1 : 0);
-        if( hp->av_frame->interlaced_frame )
-            hp->av_frame->top_field_first = (value == 2 ? 1 : 0);
+        if( value == 2 || value == 1 )
+            hp->av_frame->flags |= AV_FRAME_FLAG_INTERLACED;
+        else
+            hp->av_frame->flags &= ~AV_FRAME_FLAG_INTERLACED;
+        if( hp->av_frame->flags & AV_FRAME_FLAG_INTERLACED )
+        {
+            if( value == 2 )
+                hp->av_frame->flags |= AV_FRAME_FLAG_TOP_FIELD_FIRST;
+            else
+                hp->av_frame->flags &= ~AV_FRAME_FLAG_TOP_FIELD_FIRST;
+        }
     }
     else
     {
-        hp->av_frame->interlaced_frame = 0;
-        hp->av_frame->top_field_first  = 0;
+        hp->av_frame->flags &= ~AV_FRAME_FLAG_INTERLACED;
+        hp->av_frame->flags &= ~AV_FRAME_FLAG_TOP_FIELD_FIRST;
     }
 }
 

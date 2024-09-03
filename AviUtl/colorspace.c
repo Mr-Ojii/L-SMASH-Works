@@ -376,7 +376,7 @@ static int to_yuv16le
         { AV_PIX_FMT_YUV420P16LE, { convert_yuv420p16le_i_to_yuv444p16le, convert_yuv420p16le_i_to_yuv444p16le_sse41 } },
     };
     int yuv420_index = -1;
-    if( picture->interlaced_frame )
+    if( picture->flags & AV_FRAME_FLAG_INTERLACED )
         for( int idx = 0; idx < _countof(yuv420_list); idx++ )
             if( picture->format == yuv420_list[idx].px_fmt )
             {
@@ -481,7 +481,7 @@ int to_yuy2
     lw_video_scaler_handler_t *vshp    = &vohp->scaler;
     au_video_output_handler_t *au_vohp = (au_video_output_handler_t *)vohp->private_handler;
     int output_rowsize = 0;
-    if( picture->interlaced_frame
+    if( (picture->flags & AV_FRAME_FLAG_INTERLACED)
      && ((picture->format == AV_PIX_FMT_YUV420P)
      ||  (picture->format == AV_PIX_FMT_YUVJ420P)
      ||  (picture->format == AV_PIX_FMT_NV12)
