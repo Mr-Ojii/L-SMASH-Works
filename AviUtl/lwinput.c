@@ -1058,7 +1058,7 @@ static INT_PTR CALLBACK dialog_proc
                     enum AVChannel ch = av_channel_layout_channel_from_index( &ch_layout, i );
                     if( ch == AV_CHAN_NONE )
                         continue;
-                    int name_length = av_channel_name( buf, 512 - (buf - edit_buf), ch ) - 1;
+                    int name_length = av_channel_name( buf, sizeof(edit_buf) - (buf - edit_buf), ch ) - 1;
                     if ( name_length > 0 )
                     {
                         buf += name_length;
