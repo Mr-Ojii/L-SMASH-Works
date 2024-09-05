@@ -2085,7 +2085,7 @@ static int create_index
     }
     lwhp->format_name  = (char *)format_ctx->iformat->name;
     lwhp->format_flags = format_ctx->iformat->flags;
-    lwhp->raw_demuxer  = !!format_ctx->iformat->raw_codec_id;
+    lwhp->raw_demuxer  = format_ctx->iformat->long_name && !strncmp( format_ctx->iformat->long_name, "raw", 3 );
     vdhp->format       = format_ctx;
     adhp->format       = format_ctx;
     adhp->dv_in_avi    = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
