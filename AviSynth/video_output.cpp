@@ -900,10 +900,10 @@ void avs_set_frame_properties
     }
     if (stream && (!frame_has_primaries || !frame_has_luminance))
     {
-        const AVPacketSideData* mastering_display_side_data = av_packet_side_data_get(stream->codecpar->coded_side_data, stream->codecpar->nb_coded_side_data, AV_PKT_DATA_MASTERING_DISPLAY_METADATA);
-        if (mastering_display_side_data)
+        const AVPacketSideData* packet_side_data = av_packet_side_data_get(stream->codecpar->coded_side_data, stream->codecpar->nb_coded_side_data, AV_PKT_DATA_MASTERING_DISPLAY_METADATA);
+        if (packet_side_data)
         {
-            const AVMasteringDisplayMetadata* mastering_display = (const AVMasteringDisplayMetadata*)mastering_display_side_data->data;
+            const AVMasteringDisplayMetadata* mastering_display = (const AVMasteringDisplayMetadata*)packet_side_data->data;
             if (mastering_display->has_primaries && !frame_has_primaries)
             {
                 double display_primaries_x[3], display_primaries_y[3];
@@ -937,10 +937,10 @@ void avs_set_frame_properties
     }
     if (stream && !frame_has_light_level)
     {
-        const AVPacketSideData* side_data = av_packet_side_data_get(stream->codecpar->coded_side_data, stream->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL);
-        if (content_light_side_data)
+        const AVPacketSideData* packet_side_data = av_packet_side_data_get(stream->codecpar->coded_side_data, stream->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL);
+        if (packet_side_data)
         {
-            const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)content_light_side_data->data;
+            const AVContentLightMetadata* content_light = (const AVContentLightMetadata*)packet_side_data->data;
             if (content_light->MaxCLL || content_light->MaxFALL)
             {
                 env->propSetInt(props, "ContentLightLevelMax", content_light->MaxCLL, 0);
