@@ -1056,30 +1056,27 @@ void vs_set_frame_properties
     }
     if( stream && (!frame_has_primaries || !frame_has_luminance) )
     {
-        for( int i = 0; i < stream->nb_side_data; i++ )
+        const AVPacketSideData* packet_side_data = av_packet_side_data_get(stream->codecpar->coded_side_data, stream->codecpar->nb_coded_side_data, AV_PKT_DATA_MASTERING_DISPLAY_METADATA);
+        if (packet_side_data)
         {
-            if( stream->side_data[i].type == AV_PKT_DATA_MASTERING_DISPLAY_METADATA )
+            const AVMasteringDisplayMetadata *mastering_display = (const AVMasteringDisplayMetadata *)packet_side_data->data;
+            if( mastering_display->has_primaries && !frame_has_primaries )
             {
-                const AVMasteringDisplayMetadata *mastering_display = (const AVMasteringDisplayMetadata *)stream->side_data[i].data;
-                if( mastering_display->has_primaries && !frame_has_primaries )
+                double display_primaries_x[3], display_primaries_y[3];
+                for( int i = 0; i < 3; i++ )
                 {
-                    double display_primaries_x[3], display_primaries_y[3];
-                    for( int i = 0; i < 3; i++ )
-                    {
-                        display_primaries_x[i] = av_q2d( mastering_display->display_primaries[i][0] );
-                        display_primaries_y[i] = av_q2d( mastering_display->display_primaries[i][1] );
-                    }
-                    vsapi->propSetFloatArray( props, "MasteringDisplayPrimariesX", display_primaries_x, 3 );
-                    vsapi->propSetFloatArray( props, "MasteringDisplayPrimariesY", display_primaries_y, 3 );
-                    vsapi->propSetFloat( props, "MasteringDisplayWhitePointX", av_q2d( mastering_display->white_point[0] ), paReplace );
-                    vsapi->propSetFloat( props, "MasteringDisplayWhitePointY", av_q2d( mastering_display->white_point[1] ), paReplace );
+                    display_primaries_x[i] = av_q2d( mastering_display->display_primaries[i][0] );
+                    display_primaries_y[i] = av_q2d( mastering_display->display_primaries[i][1] );
                 }
-                if( mastering_display->has_luminance && !frame_has_luminance )
-                {
-                    vsapi->propSetFloat( props, "MasteringDisplayMinLuminance", av_q2d( mastering_display->min_luminance ), paReplace );
-                    vsapi->propSetFloat( props, "MasteringDisplayMaxLuminance", av_q2d( mastering_display->max_luminance ), paReplace );
-                }
-                break;
+                vsapi->propSetFloatArray( props, "MasteringDisplayPrimariesX", display_primaries_x, 3 );
+                vsapi->propSetFloatArray( props, "MasteringDisplayPrimariesY", display_primaries_y, 3 );
+                vsapi->propSetFloat( props, "MasteringDisplayWhitePointX", av_q2d( mastering_display->white_point[0] ), paReplace );
+                vsapi->propSetFloat( props, "MasteringDisplayWhitePointY", av_q2d( mastering_display->white_point[1] ), paReplace );
+            }
+            if( mastering_display->has_luminance && !frame_has_luminance )
+            {
+                vsapi->propSetFloat( props, "MasteringDisplayMinLuminance", av_q2d( mastering_display->min_luminance ), paReplace );
+                vsapi->propSetFloat( props, "MasteringDisplayMaxLuminance", av_q2d( mastering_display->max_luminance ), paReplace );
             }
         }
     }
@@ -1097,17 +1094,14 @@ void vs_set_frame_properties
     }
     if( stream && !frame_has_light_level )
     {
-        for( int i = 0; i < stream->nb_side_data; i++ )
+        const AVPacketSideData* packet_side_data = av_packet_side_data_get(stream->codecpar->coded_side_data, stream->codecpar->nb_coded_side_data, AV_PKT_DATA_CONTENT_LIGHT_LEVEL);
+        if (packet_side_data)
         {
-            if( stream->side_data[i].type == AV_PKT_DATA_CONTENT_LIGHT_LEVEL )
+            const AVContentLightMetadata *content_light = (const AVContentLightMetadata *)packet_side_data->data;
+            if( content_light->MaxCLL || content_light->MaxFALL )
             {
-                const AVContentLightMetadata *content_light = (const AVContentLightMetadata *)stream->side_data[i].data;
-                if( content_light->MaxCLL || content_light->MaxFALL )
-                {
-                    vsapi->propSetInt( props, "ContentLightLevelMax", content_light->MaxCLL, paReplace );
-                    vsapi->propSetInt( props, "ContentLightLevelAverage", content_light->MaxFALL, paReplace );
-                }
-                break;
+                vsapi->propSetInt( props, "ContentLightLevelMax", content_light->MaxCLL, paReplace );
+                vsapi->propSetInt( props, "ContentLightLevelAverage", content_light->MaxFALL, paReplace );
             }
         }
     }
