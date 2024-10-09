@@ -561,10 +561,9 @@ static int queue_extradata
         if( !temp )
         {
             config->error = 1;
-            if( config->lh.show_log )
-                config->lh.show_log( &config->lh, LW_LOG_FATAL,
-                                     "Failed to allocate memory for new extradata.\n"
-                                     "It is recommended you reopen the file." );
+            lw_log_show( &config->lh, LW_LOG_FATAL,
+                         "Failed to allocate memory for new extradata.\n"
+                         "It is recommended you reopen the file." );
             return -1;
         }
         memcpy( temp, extradata, extradata_size );
@@ -829,10 +828,9 @@ void libavsmash_flush_buffers
     {
         avcodec_flush_buffers( config->ctx );
         config->error = 1;
-        if( config->lh.show_log )
-            config->lh.show_log( &config->lh, LW_LOG_FATAL,
-                                 "Failed to flush buffers by a reliable way.\n"
-                                 "It is recommended you reopen the file." );
+        lw_log_show( &config->lh, LW_LOG_FATAL,
+                     "Failed to flush buffers by a reliable way.\n"
+                     "It is recommended you reopen the file." );
     }
     else
     {
