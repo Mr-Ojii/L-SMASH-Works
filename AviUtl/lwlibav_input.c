@@ -41,6 +41,8 @@
 #include "../common/lwlibav_audio.h"
 #include "../common/lwindex.h"
 
+static const char reader_name[] = "LW-Libav";
+
 typedef struct libav_handler_tag
 {
     UINT                           uType;
@@ -192,6 +194,7 @@ static void *open_file( char *file_path, reader_option_t *opt )
     /* Set up error handler. */
     lw_log_handler_t *vlhp = lwlibav_video_get_log_handler( hp->vdhp );
     lw_log_handler_t *alhp = lwlibav_audio_get_log_handler( hp->adhp );
+    vlhp->name     = reader_name;
     vlhp->level    = LW_LOG_FATAL;
     vlhp->priv     = &hp->uType;
     vlhp->show_log = NULL;
@@ -239,6 +242,7 @@ static int get_video_track( lsmash_handler_t *h, video_option_t *opt )
     if( lwlibav_video_get_desired_track( hp->lwh.file_path, hp->vdhp, hp->lwh.threads ) < 0 )
         return -1;
     lw_log_handler_t *lhp = lwlibav_video_get_log_handler( hp->vdhp );
+    lhp->name     = reader_name;
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
@@ -251,6 +255,7 @@ static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt )
     if( lwlibav_audio_get_desired_track( hp->lwh.file_path, hp->adhp, hp->lwh.threads ) < 0 )
         return -1;
     lw_log_handler_t *lhp = lwlibav_audio_get_log_handler( hp->adhp );
+    lhp->name     = reader_name;
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;

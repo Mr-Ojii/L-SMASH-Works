@@ -41,6 +41,8 @@
 #include "../common/libavsmash_video.h"
 #include "../common/libavsmash_audio.h"
 
+static const char reader_name[] = "Libav+L-SMASH";
+
 typedef struct
 {
     uint32_t media_timescale;
@@ -335,6 +337,7 @@ static void *open_file( char *file_name, reader_option_t *opt )
     hp->uType = MB_ICONERROR | MB_OK;
     lw_log_handler_t *vlhp = libavsmash_video_get_log_handler( hp->vdhp );
     lw_log_handler_t *alhp = libavsmash_audio_get_log_handler( hp->adhp );
+    vlhp->name     = reader_name;
     vlhp->priv     = &hp->uType;
     vlhp->level    = LW_LOG_QUIET;
     vlhp->show_log = au_message_box_desktop;
