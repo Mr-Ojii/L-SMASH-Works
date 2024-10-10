@@ -99,7 +99,7 @@ static void lw_log_write_message
     char temp[512];
     vsprintf( temp, format, args );
     if( lhp->name )
-        sprintf( message, "%s [%s]: %s", lhp->name, prefix, temp );
+        sprintf( message, "[%s]: %s (%s)", prefix, temp, lhp->name );
     else
         sprintf( message, "[%s]: %s", prefix, temp );
 }
