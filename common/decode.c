@@ -159,8 +159,12 @@ int open_decoder
      && c->has_b_frames < 8 )
         c->has_b_frames = 8;
     if( codec->wrapper_name
-     && !strcmp( codec->wrapper_name, "cuvid" ) )
+     && !strcmp( codec->wrapper_name, "cuvid" ) ) {
         c->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
+
+        if( ( ret = av_opt_set_int( c->priv_data, "surfaces", 25, 0 ) ) < 0 ) // Fix incorrect frame order in FFmpeg 6.1 or later
+            goto fail;
+    }
     if( (ret = avcodec_open2( c, codec, NULL )) < 0 )
         goto fail;
     if( is_qsv_decoder( c->codec ) )
