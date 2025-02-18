@@ -77,6 +77,7 @@
 #define IDC_EDIT_CACHE_DIR_PATH        1211
 #define IDC_CHECK_DELETE_OLD_CACHE     1220
 #define IDC_EDIT_DELETE_OLD_CACHE_DAYS 1221
+#define IDC_CHECK_WIDE_DIALOG          1230
 
 /* Muxer dialog */
 #define IDD_MUXER_OPTIONS               103

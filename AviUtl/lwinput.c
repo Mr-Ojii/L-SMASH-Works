@@ -409,6 +409,9 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         /* cache last check date */
         if ( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_last_check_date=%"SCNu64, &_lwinput_opt->cache_last_check_date ) != 1 )
             _lwinput_opt->cache_last_check_date = 0;
+        /* wide dialog */
+        if ( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "wide_dialog=%d", &_lwinput_opt->wide_dialog ) != 1 )
+            _lwinput_opt->wide_dialog = 0;
 
         fclose( ini );
     }
@@ -449,6 +452,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _lwinput_opt->delete_old_cache      = 0;
         _lwinput_opt->delete_old_cache_days = 30;
         _lwinput_opt->cache_last_check_date = 0;
+        _lwinput_opt->wide_dialog           = 0;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_CENTER  ] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_SURROUND] = 71;
         _audio_opt->mix_level[MIX_LEVEL_INDEX_LFE     ] = 0;
@@ -530,6 +534,8 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
     fprintf( ini, "delete_old_cache_days=%d\n", _lwinput_opt->delete_old_cache_days );
     /* cache last check date */
     fprintf( ini, "cache_last_check_date=%"PRIu64"\n", _lwinput_opt->cache_last_check_date );
+    /* wide dialog */
+    fprintf( ini, "wide_dialog=%d\n", _lwinput_opt->wide_dialog );
 
     /* Close */
     fclose( ini );
@@ -1140,6 +1146,8 @@ static INT_PTR CALLBACK dialog_proc
             set_check_state( hwnd, IDC_CHECK_DELETE_OLD_CACHE, lwinput_opt_config.delete_old_cache );
             /* delete old cache days */
             set_int_to_dlg( hwnd, IDC_EDIT_DELETE_OLD_CACHE_DAYS, lwinput_opt_config.delete_old_cache_days );
+            /* wide dialog */
+            set_check_state( hwnd, IDC_CHECK_WIDE_DIALOG, lwinput_opt_config.wide_dialog );
             return TRUE;
         case WM_NOTIFY :
             if( wparam == IDC_SPIN_THREADS )
@@ -1265,6 +1273,8 @@ static INT_PTR CALLBACK dialog_proc
                     lwinput_opt_config.delete_old_cache = get_check_state( hwnd, IDC_CHECK_DELETE_OLD_CACHE );
                     /* delete old cache days */
                     lwinput_opt_config.delete_old_cache_days = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DELETE_OLD_CACHE_DAYS, 2 );
+                    /* wide dialog */
+                    lwinput_opt_config.wide_dialog = get_check_state( hwnd, IDC_CHECK_WIDE_DIALOG );
 
                     save_settings( &lwinput_opt_config );
 
@@ -1285,7 +1295,23 @@ static INT_PTR CALLBACK dialog_proc
 
 BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
 {
-    DialogBox( dll_hinst, "LWINPUT_CONFIG", hwnd, dialog_proc );
+    const char* template = "LWINPUT_CONFIG";
+    /* Get Display Height ( Scaled ) */
+    int height = GetSystemMetrics( SM_CYSCREEN );
+    /* Get Dialog Height */
+    HRSRC hresource = FindResource( dll_hinst, template, RT_DIALOG );
+    HGLOBAL htemplate = LoadResource( dll_hinst, hresource );
+    DLGTEMPLATE* ptemplate = (DLGTEMPLATE*)LockResource( htemplate );
+    LONG dlg_baseunits = GetDialogBaseUnits();
+    int baseunit_y = HIWORD( dlg_baseunits );
+    int dlg_height = MulDiv( ptemplate->cy, baseunit_y, 8 );
+    UnlockResource(htemplate);
+    FreeResource(htemplate);
+
+    if ( dlg_height > height || lwinput_opt.wide_dialog )
+        template = "LWINPUT_CONFIG_WIDE";
+
+    DialogBox( dll_hinst, template, hwnd, dialog_proc );
     return TRUE;
 }
 

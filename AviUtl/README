@@ -209,6 +209,9 @@
                 Larger framerate helps more sample accurate editing.
             + Dummy colorspace : combo box (default : YUY2)
                 A colorspace of dummy video stream.
+        [Settings Dialog]
+            + Wide Dialog : check box (default : unchecked)
+                The layout of the settings dialog becomes two columns.
 [lwmuxer.auf: L-SMASH Works Muxer]
     This plugin supports only file formats derived from ISO Base Media (ISO/IEC 14496-12) and QuickTime (MOV) currently.
     [Settings]
