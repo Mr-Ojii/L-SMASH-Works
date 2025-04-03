@@ -156,6 +156,7 @@ int lwlibav_get_av_frame
 (
     AVFormatContext *format_ctx,
     int              stream_index,
+    uint32_t         frame_number,
     AVPacket        *pkt
 )
 {
