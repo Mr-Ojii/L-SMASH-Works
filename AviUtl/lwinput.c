@@ -24,6 +24,9 @@
 
 #include "lwinput.h"
 #include "resource.h"
+#ifdef AVIUTL2
+#include "../common/osdep.h"
+#endif
 
 #include "config.h"
 
@@ -71,6 +74,8 @@ static void get_plugin_information( void )
              AV_STRINGIFY( LIBSWRESAMPLE_VERSION ), swresample_license() );
 }
 
+#ifndef AVIUTL2
+
 INPUT_PLUGIN_TABLE input_plugin_table =
 {
     INPUT_PLUGIN_FLAG_VIDEO | INPUT_PLUGIN_FLAG_AUDIO,              /* INPUT_PLUGIN_FLAG_VIDEO : support images
@@ -91,9 +96,38 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     func_config,                                                    /* Pointer to function called when configuration dialog is required */
 };
 
+#else
+
+BOOL func_init( void );
+BOOL func_exit( void );
+INPUT_HANDLE func_open( LPCWSTR file );
+bool func_close( INPUT_HANDLE ih );
+bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip );
+int func_read_video( INPUT_HANDLE ih, int sample_number, void *buf );
+int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf );
+bool func_config( HWND hwnd, HINSTANCE dll_hinst );
+
+INPUT_PLUGIN_TABLE input_plugin_table =
+{
+    FLAG_VIDEO | FLAG_AUDIO,
+    L"L-SMASH Works File Reader for AviUtl2",
+    L"MPEG-4 File (" MPEG4_FILE_EXT L")\0" MPEG4_FILE_EXT L"\0"
+    L"LW-Libav Index File (" INDEX_FILE_EXT L")\0" INDEX_FILE_EXT L"\0"
+    L"Any File (" ANY_FILE_EXT L")\0" ANY_FILE_EXT L"\0",
+    L"L-SMASH Works File Reader for AviUtl2 r" LSMASHWORKS_REV L" by Mr-Ojii\0",
+    func_open,
+    func_close,
+    func_info_get,
+    func_read_video,
+    func_read_audio,
+    func_config,
+};
+
+#endif
+
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
-    if( GetModuleFileName( hModuleDLL, plugin_dir, MAX_PATH * 2) ) {
+    if( GetModuleFileName( hModuleDLL, plugin_dir, MAX_PATH * 2 ) ) {
         char* p = plugin_dir;
         while(*p != '\0')
                 p++;
@@ -104,6 +138,12 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
         strcpy(default_index_dir, plugin_dir);
         strcat(default_index_dir, "lwi\\");
     }
+#ifdef AVIUTL2
+    // In AviUtl ExEdit2, func_init is obsolete.
+    // In the sample code, it is called in DLL_PROCESS_ATTACH, but since the program freezes, it is called here.
+    func_init();
+#endif
+
     return &input_plugin_table;
 }
 
@@ -556,7 +596,7 @@ static void delete_old_cache( void )
     strcat( search_path, "*" );
 
     HWND hFind = INVALID_HANDLE_VALUE;
-	WIN32_FIND_DATA win32fd;
+    WIN32_FIND_DATA win32fd;
     if ( ( hFind = FindFirstFile( search_path, &win32fd) ) == INVALID_HANDLE_VALUE )
         return;
 
@@ -625,8 +665,16 @@ BOOL func_exit( void ) {
     return ret;
 }
 
+#ifndef AVIUTL2
 INPUT_HANDLE func_open( LPSTR file )
+#else
+INPUT_HANDLE func_open( LPCWSTR filew )
+#endif
 {
+#ifdef AVIUTL2
+    char* file = NULL;
+    lw_string_from_wchar( CP_UTF8, filew, &file );
+#endif
     if( !file )
         return NULL;
 
@@ -637,6 +685,9 @@ INPUT_HANDLE func_open( LPSTR file )
                 tmp_cache->ref_count++;
                 INPUT_HANDLE tmp_handle = tmp_cache->input_handle;
                 ReleaseMutex( input_cache_mutex );
+#ifdef AVIUTL2
+                lw_free( file );
+#endif
                 return tmp_handle;
             }
         }
@@ -644,8 +695,12 @@ INPUT_HANDLE func_open( LPSTR file )
     }
 
     lsmash_handler_t *hp = (lsmash_handler_t *)lw_malloc_zero( sizeof(lsmash_handler_t) );
-    if( !hp )
+    if( !hp ) {
+#ifdef AVIUTL2
+        lw_free( file );
+#endif
         return NULL;
+    }
     hp->video_reader = READER_NONE;
     hp->audio_reader = READER_NONE;
     if( reader_opt->threads <= 0 )
@@ -748,6 +803,9 @@ INPUT_HANDLE func_open( LPSTR file )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_OK, "No readable video and/or audio stream" );
         func_close( hp );
+#ifdef AVIUTL2
+        lw_free( file );
+#endif
         return NULL;
     }
 
@@ -770,10 +828,19 @@ INPUT_HANDLE func_open( LPSTR file )
         }
         ReleaseMutex( input_cache_mutex );
     }
+
+#ifdef AVIUTL2
+    lw_free( file );
+#endif
+
     return hp;
 }
 
+#ifndef AVIUTL2
 BOOL func_close( INPUT_HANDLE ih )
+#else
+bool func_close( INPUT_HANDLE ih )
+#endif
 {
     if( lwinput_opt.handle_cache && first_input_cache && input_cache_mutex ) {
         WaitForSingleObject( input_cache_mutex, INFINITE );
@@ -821,7 +888,11 @@ BOOL func_close( INPUT_HANDLE ih )
     return TRUE;
 }
 
+#ifndef AVIUTL2
 BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
+#else
+bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
+#endif
 {
     if( !ih || !iip )
         return FALSE;
@@ -830,17 +901,27 @@ BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
     memset( iip, 0, sizeof(INPUT_INFO) );
     if( hp->video_reader != READER_NONE )
     {
+#ifndef AVIUTL2
         iip->flag             |= INPUT_INFO_FLAG_VIDEO | INPUT_INFO_FLAG_VIDEO_RANDOM_ACCESS;
+#else
+        iip->flag             |= FLAG_VIDEO;
+#endif
         iip->rate              = hp->framerate_num;
         iip->scale             = hp->framerate_den;
         iip->n                 = hp->video_sample_count;
         iip->format            = &hp->video_format;
         iip->format_size       = hp->video_format.biSize;
+#ifndef AVIUTL2
         iip->handler           = 0;
+#endif
     }
     if( hp->audio_reader != READER_NONE )
     {
+#ifndef AVIUTL2
         iip->flag             |= INPUT_INFO_FLAG_AUDIO;
+#else
+        iip->flag             |= FLAG_AUDIO | FLAG_CONCURRENT;
+#endif
         iip->audio_n           = hp->audio_pcm_sample_count + lwinput_opt.audio_delay;
         iip->audio_format      = &hp->audio_format.Format;
         iip->audio_format_size = sizeof( WAVEFORMATEX ) + hp->audio_format.Format.cbSize;
@@ -1279,7 +1360,13 @@ static INT_PTR CALLBACK dialog_proc
                     save_settings( &lwinput_opt_config );
 
                     EndDialog( hwnd, IDOK );
+                    
+#ifdef AVIUTL2
+                    MESSAGE_BOX_DESKTOP( MB_OK, "Please relaunch AviUtl ExEdit2 for updating settings!" );
+#else
                     MESSAGE_BOX_DESKTOP( MB_OK, "Please relaunch AviUtl for updating settings!" );
+#endif
+                    
                     return TRUE;
                 }
                 default :
@@ -1293,7 +1380,11 @@ static INT_PTR CALLBACK dialog_proc
     }
 }
 
+#ifndef AVIUTL2
 BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
+#else
+bool func_config( HWND hwnd, HINSTANCE dll_hinst )
+#endif
 {
     const char* template = "LWINPUT_CONFIG";
     /* Get Display Height ( Scaled ) */
@@ -1321,6 +1412,12 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
     { 
         case DLL_PROCESS_ATTACH:
             hModuleDLL = hinstDLL;
+            break;
+#ifdef AVIUTL2
+        case DLL_PROCESS_DETACH:
+            if (lpReserved != NULL) break;
+            func_exit();
+#endif
             break;
     }
     return TRUE;

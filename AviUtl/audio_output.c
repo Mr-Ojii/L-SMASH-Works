@@ -39,6 +39,30 @@ static inline enum AVSampleFormat au_decide_audio_output_sample_format
     int                 input_bits_per_sample
 )
 {
+#ifdef AVIUTL2
+    /* AviUtl2 supports IEEE floating point format. */
+    switch ( input_sample_format )
+    {
+        case AV_SAMPLE_FMT_U8  :
+        case AV_SAMPLE_FMT_U8P :
+        case AV_SAMPLE_FMT_S16 :
+        case AV_SAMPLE_FMT_S16P:
+            return AV_SAMPLE_FMT_S16;
+        case AV_SAMPLE_FMT_S32 :
+        case AV_SAMPLE_FMT_S32P:
+        case AV_SAMPLE_FMT_FLT :
+        case AV_SAMPLE_FMT_FLTP:
+            return AV_SAMPLE_FMT_FLT;
+        default :
+            if( input_bits_per_sample == 0 )
+                return AV_SAMPLE_FMT_FLT;
+            else if( input_bits_per_sample <= 16 )
+                return AV_SAMPLE_FMT_S16;
+            else
+                return AV_SAMPLE_FMT_FLT;
+    }
+#endif
+
     /* AviUtl doesn't support IEEE floating point format. */
     switch ( input_sample_format )
     {
@@ -60,6 +84,23 @@ static inline enum AVSampleFormat au_decide_audio_output_sample_format
                 return AV_SAMPLE_FMT_S16;
             else
                 return AV_SAMPLE_FMT_S32;
+    }
+}
+
+static inline WORD au_get_format_tag
+(
+    enum AVSampleFormat sample_format
+)
+{
+    switch( sample_format )
+    {
+        case AV_SAMPLE_FMT_FLT :
+        case AV_SAMPLE_FMT_FLTP :
+        case AV_SAMPLE_FMT_DBL :
+        case AV_SAMPLE_FMT_DBLP :
+            return WAVE_FORMAT_IEEE_FLOAT;
+        default :
+            return WAVE_FORMAT_PCM;
     }
 }
 
@@ -144,7 +185,7 @@ int au_setup_audio_rendering
     format->wBitsPerSample  = aohp->output_bits_per_sample;
     format->nBlockAlign     = aohp->output_block_align;
     format->nAvgBytesPerSec = format->nSamplesPerSec * format->nBlockAlign;
-    format->wFormatTag      = WAVE_FORMAT_PCM;
+    format->wFormatTag      = au_get_format_tag( aohp->output_sample_format );
     format->cbSize          = 0;
     return 0;
 }

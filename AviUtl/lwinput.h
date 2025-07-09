@@ -28,7 +28,12 @@
 #include <windows.h>
 #include <mmreg.h>
 
+#ifndef AVIUTL2
 #include "input.h"
+#else
+#include <stdbool.h>
+#include "input2.h"
+#endif
 
 #include "lwcolor.h"
 #include "../common/utils.h"

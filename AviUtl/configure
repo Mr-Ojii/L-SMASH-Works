@@ -18,6 +18,8 @@ options:
   --debug-video            debug video (-DDEBUG_VIDEO)
   --debug-audio            debug audio (-DDEBUG_AUDIO)
 
+  --aviutl2                build for AviUtl ExEdit2 (-DAVIUTL2)
+
   --extra-cflags=XCFLAGS   add XCFLAGS to CFLAGS
   --extra-ldflags=XLDFLAGS add XLDFLAGS to LDFLAGS
   --extra-libs=XLIBS       add XLIBS to LIBS
@@ -116,6 +118,9 @@ for opt; do
             ;;
         --debug-audio)
             CFLAGS="$CFLAGS -DDEBUG_AUDIO"
+            ;;
+        --aviutl2)
+            CFLAGS="$CFLAGS -DAVIUTL2"
             ;;
         --extra-cflags=*)
             XCFLAGS="$optarg"
