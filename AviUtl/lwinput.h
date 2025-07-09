@@ -214,3 +214,16 @@ typedef struct i_cache {
     int ref_count;
     struct i_cache* next_cache;
 } input_cache;
+
+#ifdef AVIUTL2
+
+BOOL func_init( void );
+BOOL func_exit( void );
+INPUT_HANDLE func_open( LPCWSTR file );
+bool func_close( INPUT_HANDLE ih );
+bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip );
+int func_read_video( INPUT_HANDLE ih, int sample_number, void *buf );
+int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf );
+bool func_config( HWND hwnd, HINSTANCE dll_hinst );
+
+#endif
