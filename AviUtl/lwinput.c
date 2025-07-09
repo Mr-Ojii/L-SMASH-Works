@@ -52,6 +52,13 @@
 #define INDEX_FILE_EXT      "*.lwi"
 #define ANY_FILE_EXT        "*.*"
 
+/* It looks like "AviUtl ExEdit2 beta1" has a parsing bug about filefilter? */
+/* Note: It is not always possible to load the following */
+#define VIDEO_FILE_EXT      "*.avi;*.mpg;*.mpeg;*.m1v;*.mts;*.m2t;*.m2ts;*.ts;*.vob;*.dv;*.flv;*.mkv;*.webm;*.wmv;*.asf;*.apng;*.gif"
+#define AUDIO_FILE_EXT      "*.wav;*.aiff;*.flac;*.wv;*.alac;*.aac;*.mp3;*.ogg;*.opus"
+#define SUPPORTED_FILE_EXT  MPEG4_FILE_EXT ";" VIDEO_FILE_EXT ";" AUDIO_FILE_EXT ";" INDEX_FILE_EXT
+
+
 static char plugin_information[512] = { 0 };
 static char plugin_dir[_MAX_PATH * 2];
 static char default_index_dir[_MAX_PATH * 2];
@@ -102,9 +109,8 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 {
     FLAG_VIDEO | FLAG_AUDIO,
     L"L-SMASH Works File Reader for AviUtl2",
-    L"MPEG-4 File (" MPEG4_FILE_EXT L")\0" MPEG4_FILE_EXT L"\0"
-    L"LW-Libav Index File (" INDEX_FILE_EXT L")\0" INDEX_FILE_EXT L"\0"
-    L"Any File (" ANY_FILE_EXT L")\0" ANY_FILE_EXT L"\0",
+    L"Supported File (" SUPPORTED_FILE_EXT ")\0" SUPPORTED_FILE_EXT "\0"
+    L"Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
     L"L-SMASH Works File Reader for AviUtl2 r" LSMASHWORKS_REV L" by Mr-Ojii\0",
     func_open,
     func_close,
