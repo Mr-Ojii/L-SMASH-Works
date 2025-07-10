@@ -55,7 +55,7 @@
 /* It looks like "AviUtl ExEdit2 beta1" has a parsing bug about filefilter? */
 /* Note: It is not always possible to load the following */
 #define VIDEO_FILE_EXT      "*.avi;*.mpg;*.mpeg;*.m1v;*.mts;*.m2t;*.m2ts;*.ts;*.vob;*.dv;*.flv;*.mkv;*.webm;*.wmv;*.asf;*.apng;*.gif"
-#define AUDIO_FILE_EXT      "*.wav;*.aiff;*.flac;*.wv;*.alac;*.aac;*.mp3;*.ogg;*.opus"
+#define AUDIO_FILE_EXT      "*.wav;*.aiff;*.flac;*.wv;*.alac;*.aac;*.mp3;*.ogg;*.opus;*.ac3;*.wma"
 #define SUPPORTED_FILE_EXT  MPEG4_FILE_EXT ";" VIDEO_FILE_EXT ";" AUDIO_FILE_EXT ";" INDEX_FILE_EXT
 
 
