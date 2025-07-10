@@ -40,7 +40,10 @@ static inline enum AVSampleFormat au_decide_audio_output_sample_format
 )
 {
 #ifdef AVIUTL2
-    /* AviUtl2 supports IEEE floating point format. */
+    /* AviUtl2 beta1 only supports following format? */
+    /* - PCM signed 16bit int (stereo)               */
+    /* - PCM 32bit float      (stereo)               */
+    /* - PCM 32bit float      (mono)                 */
     switch ( input_sample_format )
     {
         case AV_SAMPLE_FMT_U8  :
