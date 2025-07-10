@@ -97,8 +97,13 @@ static output_colorspace_index determine_colorspace_conversion
         case AV_PIX_FMT_GRAY10LE :
         case AV_PIX_FMT_GRAY10BE :
 #endif
+#ifndef AVIUTL2
             *output_pixel_format = AV_PIX_FMT_YUV444P16LE;  /* planar YUV 4:4:4, 48bpp little-endian -> YC48 */
             return OUTPUT_YC48;
+#else
+            *output_pixel_format = AV_PIX_FMT_BGR24;        /* packed RGB 8:8:8, 24bpp, BGRBGR... */
+            return OUTPUT_RGB24;
+#endif
         case AV_PIX_FMT_YUVA420P :
         case AV_PIX_FMT_YUVA422P :
         case AV_PIX_FMT_YUVA444P :
@@ -171,8 +176,13 @@ static output_colorspace_index determine_colorspace_conversion
             *output_pixel_format = AV_PIX_FMT_BGR24;        /* packed RGB 8:8:8, 24bpp, BGRBGR... */
             return OUTPUT_RGB24;
         default :
+#ifndef AVIUTL2
             *output_pixel_format = AV_PIX_FMT_YUYV422;      /* packed YUV 4:2:2, 16bpp */
             return OUTPUT_YUY2;
+#else
+            *output_pixel_format = AV_PIX_FMT_BGR24;        /* packed RGB 8:8:8, 24bpp, BGRBGR... */
+            return OUTPUT_RGB24;
+#endif
     }
 }
 
