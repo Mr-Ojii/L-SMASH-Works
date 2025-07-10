@@ -723,7 +723,9 @@ INPUT_HANDLE func_open( LPCWSTR filew )
             { &avs_reader       , AU_SCRIPT_READER },
             { &vpy_reader       , AU_SCRIPT_READER },
             { &libav_reader     , AU_VIDEO_READER  },
+#ifndef AVIUTL2
             { &dummy_reader     , AU_DUMMY_READER  },
+#endif
             { NULL              , 0                }
         };
     for( int i = 0; lsmash_reader_table[i].reader; i++ )
