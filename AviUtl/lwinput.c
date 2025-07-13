@@ -437,7 +437,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         }
         /* delete old cache */
         if ( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "delete_old_cache=%d", &_lwinput_opt->delete_old_cache ) != 1 )
-            _lwinput_opt->delete_old_cache = 0;
+            _lwinput_opt->delete_old_cache = 1;
         /* delete old cache days */
         if ( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "delete_old_cache_days=%d", &_lwinput_opt->delete_old_cache_days ) != 1 )
             _lwinput_opt->delete_old_cache_days = 30;
@@ -486,7 +486,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _video_opt->dummy.colorspace        = OUTPUT_YUY2;
         _video_opt->avs.bit_depth           = 8;
         _lwinput_opt->audio_delay           = 0;
-        _lwinput_opt->delete_old_cache      = 0;
+        _lwinput_opt->delete_old_cache      = 1;
         _lwinput_opt->delete_old_cache_days = 30;
         _lwinput_opt->cache_last_check_date = 0;
         _lwinput_opt->wide_dialog           = 0;
