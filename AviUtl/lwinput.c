@@ -107,7 +107,7 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 
 INPUT_PLUGIN_TABLE input_plugin_table =
 {
-    FLAG_VIDEO | FLAG_AUDIO,
+    INPUT_PLUGIN_FLAG_VIDEO | INPUT_PLUGIN_FLAG_AUDIO | INPUT_PLUGIN_FLAG_CONCURRENT,
     L"L-SMASH Works File Reader for AviUtl2",
     L"Supported File (" SUPPORTED_FILE_EXT ")\0" SUPPORTED_FILE_EXT "\0"
     L"Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
@@ -916,7 +916,7 @@ bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
 #ifndef AVIUTL2
         iip->flag             |= INPUT_INFO_FLAG_VIDEO | INPUT_INFO_FLAG_VIDEO_RANDOM_ACCESS;
 #else
-        iip->flag             |= FLAG_VIDEO;
+        iip->flag             |= INPUT_INFO_FLAG_VIDEO;
 #endif
         iip->rate              = hp->framerate_num;
         iip->scale             = hp->framerate_den;
@@ -932,7 +932,7 @@ bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
 #ifndef AVIUTL2
         iip->flag             |= INPUT_INFO_FLAG_AUDIO;
 #else
-        iip->flag             |= FLAG_AUDIO | FLAG_CONCURRENT;
+        iip->flag             |= INPUT_INFO_FLAG_AUDIO;
 #endif
         iip->audio_n           = hp->audio_pcm_sample_count + lwinput_opt.audio_delay;
         iip->audio_format      = &hp->audio_format.Format;
