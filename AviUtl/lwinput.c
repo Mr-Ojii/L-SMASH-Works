@@ -139,6 +139,19 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
     // In AviUtl ExEdit2, func_init is obsolete.
     // In the sample code, it is called in DLL_PROCESS_ATTACH, but since the program freezes, it is called here.
     func_init();
+#else
+    char exe_path[ MAX_PATH * 2 ];
+    if ( GetModuleFileName( NULL, exe_path, MAX_PATH * 2 ) ) {
+        char* p = exe_path;
+        while(*p != '\0')
+                p++;
+        while(*p != '\\')
+                p--;
+        p++;
+        if ( strcmp( p, "pipe32aui.exe" ) == 0 ) {
+            MessageBox( HWND_DESKTOP, "Use lwinput.aui with AviUtl ExEdit2 is deprecated.\nUse lwinput.aui2 instead.", "lwinput", MB_OK );
+        }
+    }
 #endif
 
     return &input_plugin_table;
