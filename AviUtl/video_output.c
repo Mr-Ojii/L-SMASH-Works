@@ -45,6 +45,46 @@ static output_colorspace_index determine_colorspace_conversion
 {
     DEBUG_VIDEO_MESSAGE_BOX_DESKTOP( MB_OK, "input_pixel_format = %s", (av_pix_fmt_desc_get( input_pixel_format ))->name );
     avoid_yuv_scale_conversion( &input_pixel_format );
+#ifdef AVIUTL2
+    switch( input_pixel_format )
+    {
+        case AV_PIX_FMT_RGB24 :
+        case AV_PIX_FMT_BGR24 :
+        case AV_PIX_FMT_BGR8 :
+        case AV_PIX_FMT_BGR4 :
+        case AV_PIX_FMT_BGR4_BYTE :
+        case AV_PIX_FMT_RGB8 :
+        case AV_PIX_FMT_RGB4 :
+        case AV_PIX_FMT_RGB4_BYTE :
+        case AV_PIX_FMT_RGB565LE :
+        case AV_PIX_FMT_RGB565BE :
+        case AV_PIX_FMT_RGB555LE :
+        case AV_PIX_FMT_RGB555BE :
+        case AV_PIX_FMT_BGR565LE :
+        case AV_PIX_FMT_BGR565BE :
+        case AV_PIX_FMT_BGR555LE :
+        case AV_PIX_FMT_BGR555BE :
+        case AV_PIX_FMT_RGB444LE :
+        case AV_PIX_FMT_RGB444BE :
+        case AV_PIX_FMT_BGR444LE :
+        case AV_PIX_FMT_BGR444BE :
+        case AV_PIX_FMT_GBRP :
+        case AV_PIX_FMT_PAL8 :
+            *output_pixel_format = AV_PIX_FMT_BGR24; /* packed RGB 8:8:8, 24bpp, BGRBGR... */
+            return OUTPUT_RGB24;
+        case AV_PIX_FMT_YA8 :
+        case AV_PIX_FMT_ARGB :
+        case AV_PIX_FMT_RGBA :
+        case AV_PIX_FMT_ABGR :
+        case AV_PIX_FMT_BGRA :
+        case AV_PIX_FMT_GBRAP :
+            *output_pixel_format = AV_PIX_FMT_BGRA; /* packed RGBA 8:8:8:8, 32bpp, BGRABGRA... */
+            return OUTPUT_RGBA;
+        default :
+            *output_pixel_format = AV_PIX_FMT_RGBA64LE; /* packed RGBA 16:16:16:16, 64bpp, RGBARGBA... little-endian */
+            return OUTPUT_PA64;
+    }
+#else
     switch( input_pixel_format )
     {
         case AV_PIX_FMT_YUV444P :
@@ -97,13 +137,8 @@ static output_colorspace_index determine_colorspace_conversion
         case AV_PIX_FMT_GRAY10LE :
         case AV_PIX_FMT_GRAY10BE :
 #endif
-#ifndef AVIUTL2
             *output_pixel_format = AV_PIX_FMT_YUV444P16LE;  /* planar YUV 4:4:4, 48bpp little-endian -> YC48 */
             return OUTPUT_YC48;
-#else
-            *output_pixel_format = AV_PIX_FMT_BGR24;        /* packed RGB 8:8:8, 24bpp, BGRBGR... */
-            return OUTPUT_RGB24;
-#endif
         case AV_PIX_FMT_YUVA420P :
         case AV_PIX_FMT_YUVA422P :
         case AV_PIX_FMT_YUVA444P :
@@ -176,14 +211,10 @@ static output_colorspace_index determine_colorspace_conversion
             *output_pixel_format = AV_PIX_FMT_BGR24;        /* packed RGB 8:8:8, 24bpp, BGRBGR... */
             return OUTPUT_RGB24;
         default :
-#ifndef AVIUTL2
             *output_pixel_format = AV_PIX_FMT_YUYV422;      /* packed YUV 4:2:2, 16bpp */
             return OUTPUT_YUY2;
-#else
-            *output_pixel_format = AV_PIX_FMT_BGR24;        /* packed RGB 8:8:8, 24bpp, BGRBGR... */
-            return OUTPUT_RGB24;
-#endif
     }
+#endif
 }
 
 static void au_free_video_output_handler
@@ -236,13 +267,14 @@ int au_setup_video_rendering
         func_convert_colorspace *convert_colorspace;
         int                      pixel_size;
         output_colorspace_tag    compression;
-    } colorspace_table[5] =
+    } colorspace_table[6] =
         {
             { to_yuy2,            YUY2_SIZE,  OUTPUT_TAG_YUY2 },
             { to_rgb24,           RGB24_SIZE, OUTPUT_TAG_RGB  },
             { to_rgba,            RGBA_SIZE,  OUTPUT_TAG_RGBA },
             { to_yuv16le_to_yc48, YC48_SIZE,  OUTPUT_TAG_YC48 },
-            { to_yuv16le_to_lw48, LW48_SIZE,  OUTPUT_TAG_LW48 }
+            { to_yuv16le_to_lw48, LW48_SIZE,  OUTPUT_TAG_LW48 },
+            { to_pa64,            PA64_SIZE,  OUTPUT_TAG_PA64 },
         };
     au_vohp->convert_colorspace = colorspace_table[index].convert_colorspace;
     /* BITMAPINFOHEADER */

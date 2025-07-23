@@ -25,6 +25,7 @@
 #define RGBA_SIZE  4
 #define YC48_SIZE  6
 #define LW48_SIZE  6
+#define PA64_SIZE  8
 
 /* LW48 pixel format / LW48 color space.
  * As a pixel format, a LW48 pixel consists of packed YUV 16:16:16, 48bpp 16Y 16Cb 16Cr, and
@@ -48,6 +49,7 @@ typedef enum
     OUTPUT_RGBA  = 2,
     OUTPUT_YC48  = 3,
     OUTPUT_LW48  = 4,
+    OUTPUT_PA64  = 5,
 } output_colorspace_index;
 
 typedef enum
@@ -57,4 +59,5 @@ typedef enum
     OUTPUT_TAG_RGBA = 0x00000000,
     OUTPUT_TAG_YC48 = MAKEFOURCC( 'Y', 'C', '4', '8' ),
     OUTPUT_TAG_LW48 = MAKEFOURCC( 'L', 'W', '4', '8' ),
+    OUTPUT_TAG_PA64 = MAKEFOURCC( 'P', 'A', '6', '4' ),
 } output_colorspace_tag;
