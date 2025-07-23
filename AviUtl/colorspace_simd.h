@@ -65,3 +65,10 @@ typedef void func_convert_yuv420ple_i_to_yuv444p16le
 func_convert_yuv420ple_i_to_yuv444p16le convert_yuv420p9le_i_to_yuv444p16le_sse41;
 func_convert_yuv420ple_i_to_yuv444p16le convert_yuv420p10le_i_to_yuv444p16le_sse41;
 func_convert_yuv420ple_i_to_yuv444p16le convert_yuv420p16le_i_to_yuv444p16le_sse41;
+
+void convert_pa64_premultiply_avx2
+(
+    uint8_t *buf,
+    int      output_rowsize,
+    int      output_height
+);
