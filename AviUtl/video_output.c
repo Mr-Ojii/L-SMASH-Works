@@ -48,6 +48,22 @@ static output_colorspace_index determine_colorspace_conversion
 #ifdef AVIUTL2
     switch( input_pixel_format )
     {
+        case AV_PIX_FMT_YUV420P :
+        case AV_PIX_FMT_YUYV422 :
+        case AV_PIX_FMT_YUV422P :
+        case AV_PIX_FMT_YUV410P :
+        case AV_PIX_FMT_YUV411P :
+        case AV_PIX_FMT_GRAY8 :
+        case AV_PIX_FMT_MONOWHITE :
+        case AV_PIX_FMT_MONOBLACK :
+        case AV_PIX_FMT_UYVY422 :
+        case AV_PIX_FMT_UYYVYY411 :
+        case AV_PIX_FMT_NV12 :
+        case AV_PIX_FMT_NV21 :
+        case AV_PIX_FMT_NV16 :
+        case AV_PIX_FMT_YVYU422 :
+            *output_pixel_format = AV_PIX_FMT_YUYV422;   /* packed YUV 4:2:2, 16bpp */
+            return OUTPUT_YUY2;
         case AV_PIX_FMT_RGB24 :
         case AV_PIX_FMT_BGR24 :
         case AV_PIX_FMT_BGR8 :
@@ -69,19 +85,23 @@ static output_colorspace_index determine_colorspace_conversion
         case AV_PIX_FMT_BGR444LE :
         case AV_PIX_FMT_BGR444BE :
         case AV_PIX_FMT_GBRP :
-        case AV_PIX_FMT_PAL8 :
-            *output_pixel_format = AV_PIX_FMT_BGR24; /* packed RGB 8:8:8, 24bpp, BGRBGR... */
+        case AV_PIX_FMT_0RGB :
+        case AV_PIX_FMT_RGB0 :
+        case AV_PIX_FMT_0BGR :
+        case AV_PIX_FMT_BGR0 :
+        case AV_PIX_FMT_PAL8 : //
+            *output_pixel_format = AV_PIX_FMT_BGR24;     /* packed RGB 8:8:8, 24bpp, BGRBGR... */
             return OUTPUT_RGB24;
-        case AV_PIX_FMT_YA8 :
         case AV_PIX_FMT_ARGB :
         case AV_PIX_FMT_RGBA :
         case AV_PIX_FMT_ABGR :
         case AV_PIX_FMT_BGRA :
+        case AV_PIX_FMT_YA8:
         case AV_PIX_FMT_GBRAP :
-            *output_pixel_format = AV_PIX_FMT_BGRA; /* packed RGBA 8:8:8:8, 32bpp, BGRABGRA... */
+            *output_pixel_format = AV_PIX_FMT_BGRA;      /* packed RGBA 8:8:8:8, 32bpp, BGRABGRA... */
             return OUTPUT_RGBA;
         default :
-            *output_pixel_format = AV_PIX_FMT_RGBA64LE; /* packed RGBA 16:16:16:16, 64bpp, RGBARGBA... little-endian */
+            *output_pixel_format = AV_PIX_FMT_RGBA64LE;  /* packed RGBA 16:16:16:16, 64bpp, RGBARGBA... little-endian */
             return OUTPUT_PA64;
     }
 #else
