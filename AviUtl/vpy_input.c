@@ -94,7 +94,11 @@ static int load_vsscript_dll
         hp->library = LoadLibrary( "vsscript" );
     if( !hp->library )
         return -1;
+#ifdef __x86_64__
+#define SYM( name, size ) LW_STRINGFY( vsscript_##name )
+#else
 #define SYM( name, size ) LW_STRINGFY( _vsscript_##name ) "@" LW_STRINGFY( size )
+#endif
 #define LOAD_VSSCRIPT_FUNC( name, size )                                              \
     do                                                                                \
     {                                                                                 \
