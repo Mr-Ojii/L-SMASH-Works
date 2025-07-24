@@ -128,8 +128,18 @@ static AVS_Value initialize_avisynth( avs_handler_t *hp, char *input )
     hp->env = hp->func.avs_create_script_environment( AVS_INTERFACE_25 );
     if( hp->func.avs_get_error && hp->func.avs_get_error( hp->env ) )
         return avs_void;
-    AVS_Value arg = avs_new_value_string( input );
-    AVS_Value res = hp->func.avs_invoke( hp->env, "Import", arg, NULL );
+
+    AVS_Value args[2];
+    args[0] = avs_new_value_string( input );
+#ifdef AVIUTL2
+    args[1] = avs_new_value_bool( 1 );
+#else
+    args[1] = avs_new_value_bool( 0 );
+#endif
+    const char* arg_names[2] = { NULL, "utf8" };
+
+    AVS_Value arg = avs_new_value_array( args, 2 );
+    AVS_Value res = hp->func.avs_invoke( hp->env, "Import", arg, arg_names );
     if( avs_is_error( res ) )
         return res;
     AVS_Value mt_test = hp->func.avs_invoke( hp->env, "GetMTMode", avs_new_value_bool( 0 ), NULL );
