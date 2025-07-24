@@ -741,6 +741,7 @@ void LW_FUNC_ALIGN convert_yuv16le_to_yc48_sse4_1
     convert_yuv16le_to_yc48_simd( buf, buf_linesize, dst_data, dst_linesize, output_rowsize, output_height, full_range, 1 );
 }
 
+#ifdef AVIUTL2
 #ifdef __GNUC__
 #pragma GCC target ("avx2")
 #endif
@@ -801,3 +802,4 @@ void LW_FUNC_ALIGN convert_pa64_premultiply_avx2
         ptr[2] = (uint16_t)((b * a + 32767) / 65535);
     }
 }
+#endif
