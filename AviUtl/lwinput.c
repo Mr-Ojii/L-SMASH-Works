@@ -48,15 +48,17 @@
 
 #define MAX_AUTO_NUM_THREADS 16
 
-#define MPEG4_FILE_EXT      "*.mp4;*.m4v;*.m4a;*.mov;*.qt;*.3gp;*.3g2;*.f4v;*.ismv;*.isma"
-#define INDEX_FILE_EXT      "*.lwi"
-#define ANY_FILE_EXT        "*.*"
+#define MPEG4_FILE_EXT       "*.mp4;*.m4v;*.m4a;*.mov;*.qt;*.3gp;*.3g2;*.f4v;*.ismv;*.isma"
+#define INDEX_FILE_EXT       "*.lwi"
+#define ANY_FILE_EXT         "*.*"
 
 /* It looks like "AviUtl ExEdit2 beta1" has a parsing bug about filefilter? */
 /* Note: It is not always possible to load the following */
-#define VIDEO_FILE_EXT      "*.avi;*.mpg;*.mpeg;*.m1v;*.mts;*.m2t;*.m2ts;*.ts;*.vob;*.dv;*.flv;*.mkv;*.webm;*.wmv;*.asf;*.apng;*.gif"
-#define AUDIO_FILE_EXT      "*.wav;*.aiff;*.flac;*.wv;*.alac;*.aac;*.mp3;*.ogg;*.opus;*.ac3;*.wma"
-#define SUPPORTED_FILE_EXT  MPEG4_FILE_EXT ";" VIDEO_FILE_EXT ";" AUDIO_FILE_EXT ";" INDEX_FILE_EXT
+#define VIDEO_FILE_EXT       "*.avi;*.mpg;*.mpeg;*.m1v;*.mts;*.m2t;*.m2ts;*.ts;*.vob;*.dv;*.flv;*.mkv;*.webm;*.wmv;*.asf;*.apng;*.gif"
+#define AUDIO_FILE_EXT       "*.wav;*.aiff;*.flac;*.wv;*.alac;*.aac;*.mp3;*.ogg;*.opus;*.ac3;*.wma"
+#define AVISYNTH_FILE_EXT    "*.avs"
+#define VAPOURSYNTH_FILE_EXT "*.vpy"
+#define SUPPORTED_FILE_EXT  MPEG4_FILE_EXT ";" VIDEO_FILE_EXT ";" AUDIO_FILE_EXT ";" INDEX_FILE_EXT ";" AVISYNTH_FILE_EXT ";" VAPOURSYNTH_FILE_EXT
 
 
 static char plugin_information[512] = { 0 };
