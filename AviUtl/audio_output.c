@@ -44,26 +44,7 @@ static inline enum AVSampleFormat au_decide_audio_output_sample_format
     /* - PCM signed 16bit int (stereo)               */
     /* - PCM 32bit float      (stereo)               */
     /* - PCM 32bit float      (mono)                 */
-    switch ( input_sample_format )
-    {
-        case AV_SAMPLE_FMT_U8  :
-        case AV_SAMPLE_FMT_U8P :
-        case AV_SAMPLE_FMT_S16 :
-        case AV_SAMPLE_FMT_S16P:
-            return AV_SAMPLE_FMT_S16;
-        case AV_SAMPLE_FMT_S32 :
-        case AV_SAMPLE_FMT_S32P:
-        case AV_SAMPLE_FMT_FLT :
-        case AV_SAMPLE_FMT_FLTP:
-            return AV_SAMPLE_FMT_FLT;
-        default :
-            if( input_bits_per_sample == 0 )
-                return AV_SAMPLE_FMT_FLT;
-            else if( input_bits_per_sample <= 16 )
-                return AV_SAMPLE_FMT_S16;
-            else
-                return AV_SAMPLE_FMT_FLT;
-    }
+    return AV_SAMPLE_FMT_FLT;
 #endif
 
     /* AviUtl doesn't support IEEE floating point format. */
