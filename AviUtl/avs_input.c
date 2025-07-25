@@ -131,11 +131,7 @@ static AVS_Value initialize_avisynth( avs_handler_t *hp, char *input )
 
     AVS_Value args[2];
     args[0] = avs_new_value_string( input );
-#ifdef AVIUTL2
     args[1] = avs_new_value_bool( 1 );
-#else
-    args[1] = avs_new_value_bool( 0 );
-#endif
     const char* arg_names[2] = { NULL, "utf8" };
 
     AVS_Value arg = avs_new_value_array( args, 2 );

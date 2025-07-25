@@ -24,9 +24,7 @@
 
 #include "lwinput.h"
 #include "resource.h"
-#ifdef AVIUTL2
 #include "../common/osdep.h"
-#endif
 
 #include "config.h"
 
@@ -678,14 +676,16 @@ BOOL func_exit( void ) {
 }
 
 #ifndef AVIUTL2
-INPUT_HANDLE func_open( LPSTR file )
+INPUT_HANDLE func_open( LPSTR filea )
 #else
 INPUT_HANDLE func_open( LPCWSTR filew )
 #endif
 {
-#ifdef AVIUTL2
     char* file = NULL;
+#ifdef AVIUTL2
     lw_string_from_wchar( CP_UTF8, filew, &file );
+#else
+    lw_convert_mb_string( CP_ACP, CP_UTF8, filea, &file );
 #endif
     if( !file )
         return NULL;
@@ -697,9 +697,7 @@ INPUT_HANDLE func_open( LPCWSTR filew )
                 tmp_cache->ref_count++;
                 INPUT_HANDLE tmp_handle = tmp_cache->input_handle;
                 ReleaseMutex( input_cache_mutex );
-#ifdef AVIUTL2
                 lw_free( file );
-#endif
                 return tmp_handle;
             }
         }
@@ -708,9 +706,7 @@ INPUT_HANDLE func_open( LPCWSTR filew )
 
     lsmash_handler_t *hp = (lsmash_handler_t *)lw_malloc_zero( sizeof(lsmash_handler_t) );
     if( !hp ) {
-#ifdef AVIUTL2
         lw_free( file );
-#endif
         return NULL;
     }
     hp->video_reader = READER_NONE;
@@ -817,9 +813,7 @@ INPUT_HANDLE func_open( LPCWSTR filew )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_OK, "No readable video and/or audio stream" );
         func_close( hp );
-#ifdef AVIUTL2
         lw_free( file );
-#endif
         return NULL;
     }
 
@@ -843,10 +837,7 @@ INPUT_HANDLE func_open( LPCWSTR filew )
         ReleaseMutex( input_cache_mutex );
     }
 
-#ifdef AVIUTL2
     lw_free( file );
-#endif
-
     return hp;
 }
 

@@ -91,24 +91,8 @@ lsmash_root_t *libavsmash_open_file
     /* libavformat */
     if( avformat_open_input( p_format_ctx, file_name, NULL, NULL ) )
     {
-#ifdef _WIN32
-        char* file_name_utf8 = NULL;
-        if( lw_convert_mb_string( CP_ACP, CP_UTF8, file_name, &file_name_utf8 ) )
-        {
-            const int open_failed = avformat_open_input( p_format_ctx, file_name_utf8, NULL, NULL );
-            lw_free( file_name_utf8 );
-            if( open_failed )
-            {
-                strcpy( error_string, "Failed to avformat_open_input.\n" );
-                goto open_fail;
-            }
-        }
-        else
-#endif
-        {
-            strcpy( error_string, "Failed to avformat_open_input.\n" );
-            goto open_fail;
-        }
+        strcpy( error_string, "Failed to avformat_open_input.\n" );
+        goto open_fail;
     }
     if( avformat_find_stream_info( *p_format_ctx, NULL ) < 0 )
     {

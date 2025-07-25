@@ -101,24 +101,8 @@ static inline int lavf_open_file
 {
     if( avformat_open_input( format_ctx, file_path, NULL, NULL ) )
     {
-#ifdef _WIN32
-        char* file_path_utf8 = NULL;
-        if( lw_convert_mb_string( CP_ACP, CP_UTF8, file_path, &file_path_utf8 ) )
-        {
-            const int open_failed = avformat_open_input( format_ctx, file_path_utf8, NULL, NULL );
-            lw_free( file_path_utf8 );
-            if( open_failed )
-            {
-                lw_log_show( lhp, LW_LOG_FATAL, "Failed to avformat_open_input." );
-                return -1;
-            }
-        }
-        else
-#endif
-        {
-            lw_log_show( lhp, LW_LOG_FATAL, "Failed to avformat_open_input." );
-            return -1;
-        }
+        lw_log_show( lhp, LW_LOG_FATAL, "Failed to avformat_open_input." );
+        return -1;
     }
     if( avformat_find_stream_info( *format_ctx, NULL ) < 0 )
     {
