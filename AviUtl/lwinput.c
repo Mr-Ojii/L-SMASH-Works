@@ -186,7 +186,7 @@ static FILE *open_settings( const char* mode )
     if( settings_path ) {
         strcpy(ini_file_path, plugin_dir);
         strcat(ini_file_path, settings_path);
-        ini = fopen( ini_file_path, mode );
+        ini = lw_fopen( ini_file_path, mode );
         if( ini )
             return ini;
     }
@@ -195,7 +195,7 @@ static FILE *open_settings( const char* mode )
     {
         strcpy(ini_file_path, plugin_dir);
         strcat(ini_file_path, settings_path_list[i]);
-        ini = fopen( ini_file_path, mode );
+        ini = lw_fopen( ini_file_path, mode );
         if( ini )
         {
             settings_path = (char *)settings_path_list[i];
