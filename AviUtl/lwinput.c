@@ -181,25 +181,35 @@ void au_message_box_desktop
 static FILE *open_settings( const char* mode )
 {
     FILE *ini = NULL;
-    char ini_file_path[_MAX_PATH * 2];
 
     if( settings_path ) {
-        strcpy(ini_file_path, plugin_dir);
-        strcat(ini_file_path, settings_path);
-        ini = lw_fopen( ini_file_path, mode );
-        if( ini )
-            return ini;
+        size_t size = strlen( plugin_dir ) + strlen( settings_path ) + 1;
+        char* ini_file_path = lw_malloc_zero( size );
+        if( ini_file_path ) {
+            strcpy_s( ini_file_path, size, plugin_dir );
+            strcat_s( ini_file_path, size, settings_path );
+            ini = lw_fopen( ini_file_path, mode );
+            lw_free( ini_file_path );
+            if( ini )
+                return ini;
+        }
     }
 
     for( int i = 0; i < 2; i++ )
     {
-        strcpy(ini_file_path, plugin_dir);
-        strcat(ini_file_path, settings_path_list[i]);
-        ini = lw_fopen( ini_file_path, mode );
-        if( ini )
-        {
-            settings_path = (char *)settings_path_list[i];
-            return ini;
+        char* tmp_settings_path = (char *)settings_path_list[i];
+        size_t size = strlen( plugin_dir ) + strlen( tmp_settings_path ) + 1;
+        char* ini_file_path = lw_malloc_zero( size );
+        if( ini_file_path ) {
+            strcpy_s( ini_file_path, size, plugin_dir );
+            strcat_s( ini_file_path, size, tmp_settings_path );
+            ini = lw_fopen( ini_file_path, mode );
+            lw_free( ini_file_path );
+            if( ini )
+            {
+                settings_path = tmp_settings_path;
+                return ini;
+            }
         }
     }
     return NULL;
