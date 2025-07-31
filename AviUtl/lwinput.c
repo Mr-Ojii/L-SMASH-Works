@@ -156,7 +156,7 @@ static reader_option_t *reader_opt_config = &lwinput_opt_config.reader_opt;
 static video_option_t *video_opt_config = &lwinput_opt_config.reader_opt.video_opt;
 static audio_option_t *audio_opt_config = &lwinput_opt_config.reader_opt.audio_opt;
 
-static char *settings_path = NULL;
+static const char *settings_path = NULL;
 static const char *settings_path_list[] = { "lsmash.ini", "plugins/lsmash.ini" };
 static const char *seek_mode_list[] = { "Normal", "Unsafe", "Aggressive" };
 static const char *dummy_colorspace_list[] = { "YUY2", "RGB", "YC48" };
@@ -197,7 +197,7 @@ static FILE *open_settings( const char* mode )
 
     for( int i = 0; i < 2; i++ )
     {
-        char* tmp_settings_path = (char *)settings_path_list[i];
+        const char* tmp_settings_path = settings_path_list[i];
         size_t size = strlen( plugin_dir ) + strlen( tmp_settings_path ) + 1;
         char* ini_file_path = lw_malloc_zero( size );
         if( ini_file_path ) {
