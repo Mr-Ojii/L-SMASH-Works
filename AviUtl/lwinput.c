@@ -124,17 +124,6 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
-    if( GetModuleFileName( hModuleDLL, plugin_dir, MAX_PATH * 2 ) ) {
-        char* p = plugin_dir;
-        while(*p != '\0')
-                p++;
-        while(*p != '\\')
-                p--;
-        p++;
-        *p = '\0';
-        strcpy(default_index_dir, plugin_dir);
-        strcat(default_index_dir, "lwi\\");
-    }
 #ifdef AVIUTL2
     // In AviUtl ExEdit2, func_init is obsolete.
     // In the sample code, it is called in DLL_PROCESS_ATTACH, but since the program freezes, it is called here.
@@ -660,6 +649,18 @@ static void delete_old_cache( void )
 }
 
 BOOL func_init( void ) {
+    if( GetModuleFileName( hModuleDLL, plugin_dir, MAX_PATH * 2 ) ) {
+        char* p = plugin_dir;
+        while(*p != '\0')
+                p++;
+        while(*p != '\\')
+                p--;
+        p++;
+        *p = '\0';
+        strcpy(default_index_dir, plugin_dir);
+        strcat(default_index_dir, "lwi\\");
+    }
+
     get_settings( &lwinput_opt );
     delete_old_cache();
     input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
