@@ -60,8 +60,8 @@
 
 
 static char plugin_information[512] = { 0 };
-static char plugin_dir[_MAX_PATH * 2];
-static char default_index_dir[_MAX_PATH * 2];
+static char* plugin_dir = NULL;
+static char* default_index_dir = NULL;
 static HMODULE hModuleDLL = NULL;
 
 static void get_plugin_information( void )
@@ -129,17 +129,18 @@ EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTabl
     // In the sample code, it is called in DLL_PROCESS_ATTACH, but since the program freezes, it is called here.
     func_init();
 #else
-    char exe_path[ MAX_PATH * 2 ];
-    if ( GetModuleFileName( NULL, exe_path, MAX_PATH * 2 ) ) {
-        char* p = exe_path;
-        while(*p != '\0')
+    wchar_t *exe_path;
+    if ( lw_GetModuleFileNameW( NULL, &exe_path ) ) {
+        wchar_t* p = exe_path;
+        while(*p != L'\0')
                 p++;
-        while(*p != '\\')
+        while(*p != L'\\')
                 p--;
         p++;
-        if ( strcmp( p, "pipe32aui.exe" ) == 0 ) {
-            MessageBox( HWND_DESKTOP, "Use lwinput.aui with AviUtl ExEdit2 is deprecated.\nUse lwinput.aui2 instead.", "lwinput", MB_OK );
+        if ( wcscmp( p, L"pipe32aui.exe" ) == 0 ) {
+            MessageBoxA( HWND_DESKTOP, "Use lwinput.aui with AviUtl ExEdit2 is deprecated.\nUse lwinput.aui2 instead.", "lwinput", MB_OK );
         }
+        lw_free( exe_path );
     }
 #endif
 
@@ -262,12 +263,18 @@ static inline void set_cache_dir( reader_option_t *_reader_opt, const char *user
             _reader_opt->cache_dir_name = _reader_opt->cache_dir_name_buf;
         }
         else {
-            DWORD dwAttrib_default_index_dir = GetFileAttributes( default_index_dir );
-            if(!((dwAttrib_default_index_dir != INVALID_FILE_ATTRIBUTES) && (dwAttrib_default_index_dir & FILE_ATTRIBUTE_DIRECTORY)))
-                if(!CreateDirectory(default_index_dir, NULL)) {
-                    MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
-                    return;
-                }
+            wchar_t* default_index_dir_w = NULL;
+            if( lw_string_to_wchar( CP_UTF8, default_index_dir, &default_index_dir_w ) ) {
+                DWORD dwAttrib_default_index_dir = GetFileAttributesW( default_index_dir_w );
+                if( !( ( dwAttrib_default_index_dir != INVALID_FILE_ATTRIBUTES ) && ( dwAttrib_default_index_dir & FILE_ATTRIBUTE_DIRECTORY ) ) )
+                    if( !CreateDirectoryW( default_index_dir_w, NULL ) ) {
+                        MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create cache dir." );
+                        return;
+                    }
+                lw_free( default_index_dir_w );
+            } else {
+                MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to allocate memory for create cache dir." );
+            }
             _reader_opt->cache_dir_name = default_index_dir;
         }
     }
@@ -668,7 +675,7 @@ fail_delete_old_cache:
 }
 
 BOOL func_init( void ) {
-    if( GetModuleFileName( hModuleDLL, plugin_dir, MAX_PATH * 2 ) ) {
+    if( lw_GetModuleFileNameUTF8( hModuleDLL, &plugin_dir ) ) {
         char* p = plugin_dir;
         while(*p != '\0')
                 p++;
@@ -676,8 +683,13 @@ BOOL func_init( void ) {
                 p--;
         p++;
         *p = '\0';
-        strcpy(default_index_dir, plugin_dir);
-        strcat(default_index_dir, "lwi\\");
+
+        size_t size = strlen( plugin_dir ) + 5;
+        default_index_dir = lw_malloc_zero( size );
+        if ( default_index_dir ) {
+            strcpy_s(default_index_dir, size, plugin_dir );
+            strcat_s(default_index_dir, size, "lwi\\");
+        }
     }
 
     get_settings( &lwinput_opt );
@@ -692,6 +704,8 @@ BOOL func_exit( void ) {
     clean_preferred_decoder_names( reader_opt_config );
     BOOL ret = CloseHandle( input_cache_mutex );
     input_cache_mutex = NULL;
+    lw_freep( &default_index_dir );
+    lw_freep( &plugin_dir );
     return ret;
 }
 
