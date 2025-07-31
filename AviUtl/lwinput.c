@@ -600,14 +600,19 @@ static void delete_old_cache( void )
     if ( !_reader_opt->use_cache_dir || !_lwinput_opt.delete_old_cache )
         return;
 
-    char search_path[MAX_PATH * 2], file_path_buf[MAX_PATH * 2];
-    strcpy( search_path, _reader_opt->cache_dir_name );
-    strcat( search_path, "*" );
+    wchar_t *cache_dir_name_w, *search_path, *file_path_buf;
+    lw_string_to_wchar( CP_UTF8, _reader_opt->cache_dir_name, &cache_dir_name_w );
+    size_t cache_dir_name_w_size = wcslen( cache_dir_name_w ) + 1, search_path_size = cache_dir_name_w_size + 1, file_path_buf_size = cache_dir_name_w_size + 260;
+    search_path = (wchar_t*)lw_malloc_zero( search_path_size * sizeof( wchar_t ) );
+    file_path_buf = (wchar_t*)lw_malloc_zero( file_path_buf_size * sizeof( wchar_t ) );
+
+    wcscpy_s( search_path, search_path_size, cache_dir_name_w );
+    wcscat_s( search_path, search_path_size, L"*" );
 
     HWND hFind = INVALID_HANDLE_VALUE;
-    WIN32_FIND_DATA win32fd;
-    if ( ( hFind = FindFirstFile( search_path, &win32fd) ) == INVALID_HANDLE_VALUE )
-        return;
+    WIN32_FIND_DATAW win32fd;
+    if ( ( hFind = FindFirstFileW( search_path, &win32fd ) ) == INVALID_HANDLE_VALUE )
+        goto fail_delete_old_cache;
 
     SYSTEMTIME s_st;
     FILETIME f_st;
@@ -616,13 +621,13 @@ static void delete_old_cache( void )
     const uint64_t to_day_ratio = 864000000000;
     GetSystemTime(&s_st);
     if ( !SystemTimeToFileTime(&s_st, &f_st) )
-        return;
+        goto fail_delete_old_cache;
     u_st.HighPart = f_st.dwHighDateTime;
     u_st.LowPart = f_st.dwLowDateTime;
     u_st.QuadPart /= to_day_ratio;
 
     if ( u_st.QuadPart == _lwinput_opt.cache_last_check_date )
-        return;
+        goto fail_delete_old_cache;
 
     _lwinput_opt.cache_last_check_date = u_st.QuadPart;
 
@@ -631,12 +636,12 @@ static void delete_old_cache( void )
         if ( win32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
             continue;
 
-        char* p = win32fd.cFileName;
-        while( *p != '\0' )
+        wchar_t* p = win32fd.cFileName;
+        while( *p != L'\0' )
                 p++;
-        while( *p != '.' )
+        while( *p != L'.' )
                 p--;
-        if ( strcmp( p, ".lwi" ) )
+        if ( wcscmp( p, L".lwi" ) )
             continue;
 
         u_ft.HighPart = win32fd.ftLastAccessTime.dwHighDateTime;
@@ -646,16 +651,20 @@ static void delete_old_cache( void )
 
         if ( diff >= _lwinput_opt.delete_old_cache_days )
         {
-            strcpy( file_path_buf, _reader_opt->cache_dir_name );
-            strcat( file_path_buf, win32fd.cFileName );
-            if ( !DeleteFile( file_path_buf ) )
+            wcscpy_s( file_path_buf, file_path_buf_size, cache_dir_name_w );
+            wcscat_s( file_path_buf, file_path_buf_size, win32fd.cFileName );
+            if ( !DeleteFileW( file_path_buf ) )
                 break;
         }
-    } while ( FindNextFile( hFind, &win32fd ) );
+    } while ( FindNextFileW( hFind, &win32fd ) );
 
     FindClose( hFind );
 
     save_settings( &_lwinput_opt );
+fail_delete_old_cache:
+    lw_free( file_path_buf );
+    lw_free( search_path );
+    lw_free( cache_dir_name_w );
 }
 
 BOOL func_init( void ) {
