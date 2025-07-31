@@ -82,16 +82,16 @@ static int load_vsscript_dll
 {
     HKEY  key_handle;
     DWORD data_size;
-    if( RegOpenKeyEx( HKEY_LOCAL_MACHINE, "Software\\VapourSynth", 0, KEY_QUERY_VALUE, &key_handle ) == ERROR_SUCCESS
-     && RegQueryValueEx( key_handle, "VSScriptDLL", NULL, NULL, NULL, &data_size ) == ERROR_SUCCESS )
+    if( RegOpenKeyExA( HKEY_LOCAL_MACHINE, "Software\\VapourSynth", 0, KEY_QUERY_VALUE, &key_handle ) == ERROR_SUCCESS
+     && RegQueryValueExA( key_handle, "VSScriptDLL", NULL, NULL, NULL, &data_size ) == ERROR_SUCCESS )
     {
         char dll_path[data_size];
-        if( RegQueryValueEx( key_handle, "VSScriptDLL", NULL, NULL, (LPBYTE)dll_path, &data_size ) == ERROR_SUCCESS )
-            hp->library = LoadLibrary( dll_path );
+        if( RegQueryValueExA( key_handle, "VSScriptDLL", NULL, NULL, (LPBYTE)dll_path, &data_size ) == ERROR_SUCCESS )
+            hp->library = LoadLibraryA( dll_path );
         RegCloseKey( key_handle );
     }
     if( !hp->library )
-        hp->library = LoadLibrary( "vsscript" );
+        hp->library = LoadLibraryA( "vsscript" );
     if( !hp->library )
         return -1;
 #ifdef __x86_64__
