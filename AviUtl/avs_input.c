@@ -87,7 +87,7 @@ static int load_avisynth_dll( avs_handler_t *hp )
         if( !ignore_fail && !hp->func.name )                               \
             goto fail;                                                     \
     } while( 0 )
-    hp->library = LoadLibrary( "avisynth" );
+    hp->library = LoadLibraryA( "avisynth" );
     if( !hp->library )
         return -1;
     LOAD_AVS_FUNC( avs_clip_get_error,            0 );
