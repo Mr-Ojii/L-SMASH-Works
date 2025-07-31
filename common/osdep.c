@@ -102,4 +102,52 @@ char *lw_realpath( const char *path, char *resolved )
     return ret;
 }
 
+int lw_GetModuleFileNameW( void* module, wchar_t **data )
+{
+    *data = NULL;
+
+    DWORD w_size = _MAX_PATH, result;
+    wchar_t* w_data = NULL;
+    while( 1 )
+    {
+        w_data = lw_malloc_zero( w_size * sizeof(wchar_t) );
+        if( !w_data )
+            return 0;
+
+        if( !( result = GetModuleFileNameW( (HMODULE)module, w_data, w_size ) ) ) {
+            goto failed_W;
+        }
+
+        DWORD err = GetLastError();
+        if ( err == ERROR_SUCCESS ) {
+            break;
+        } else if( err == ERROR_INSUFFICIENT_BUFFER ) {
+            lw_free( w_data );
+            w_size *= 2;
+            continue;
+        } else {
+            goto failed_W;
+        }
+    }
+    *data = w_data;
+    return result;
+
+failed_W:
+    lw_free( w_data );
+    return 0;
+}
+
+int lw_GetModuleFileNameUTF8( void* module, char **data )
+{
+    *data = NULL;
+
+    wchar_t* w_data = NULL;
+    if( !lw_GetModuleFileNameW( module, &w_data ) )
+        return 0;
+    
+    int size = lw_string_from_wchar( CP_UTF8, w_data, data );
+    lw_free( w_data );
+    return size;
+}
+
 #endif
