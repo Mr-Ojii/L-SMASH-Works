@@ -55,7 +55,7 @@ void init_progress_dlg( progress_dlg_t *dlg, const char *module_name, int templa
     dlg->hnd              = NULL;
     dlg->progress_percent = -1;
     dlg->abort            = FALSE;
-    dlg->hnd              = CreateDialogParam( GetModuleHandle( module_name ),
+    dlg->hnd              = CreateDialogParam( GetModuleHandleA( module_name ),
                                                MAKEINTRESOURCE( template_id ),
                                                NULL, dialog_proc, (LPARAM)dlg );
 }
@@ -87,7 +87,7 @@ int update_progress_dlg( progress_dlg_t *dlg, const char *mes, int progress_perc
             if( !IsWindowVisible( dlg->hnd ) )
                 ShowWindow( dlg->hnd, SW_SHOW );
             HWND window_text = GetDlgItem( dlg->hnd, IDC_PERCENT_TEXT );
-            SetWindowText( window_text, window_mes );
+            SetWindowTextA( window_text, window_mes );
             HWND window_prg = GetDlgItem( dlg->hnd, IDC_PROGRESS );
             PostMessage( window_prg, PBM_SETPOS, progress_percent, 0 );
         }

@@ -46,8 +46,8 @@
 do \
 { \
     char temp[256]; \
-    wsprintf( temp, __VA_ARGS__ ); \
-    MessageBox( HWND_DESKTOP, temp, "lwinput", uType ); \
+    wsprintfA( temp, __VA_ARGS__ ); \
+    MessageBoxA( HWND_DESKTOP, temp, "lwinput", uType ); \
 } while( 0 )
 
 /* Macros for debug */

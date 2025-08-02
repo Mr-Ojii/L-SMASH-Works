@@ -176,7 +176,7 @@ void au_message_box_desktop
 )
 {
     UINT uType = *(UINT *)lhp->priv;
-    MessageBox( HWND_DESKTOP, message, "lwinput", uType );
+    MessageBoxA( HWND_DESKTOP, message, "lwinput", uType );
 }
 
 static FILE *open_settings( const char* mode )
@@ -258,7 +258,7 @@ static inline void set_cache_dir( reader_option_t *_reader_opt, const char *user
         }
     }
     if( _reader_opt->use_cache_dir ) {
-        DWORD dwAttrib = GetFileAttributes( _reader_opt->cache_dir_name_buf );
+        DWORD dwAttrib = GetFileAttributesA( _reader_opt->cache_dir_name_buf );
         if((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
             _reader_opt->cache_dir_name = _reader_opt->cache_dir_name_buf;
         }
@@ -1040,7 +1040,7 @@ static void set_int_to_dlg
 {
     char edit_buf[512];
     sprintf( edit_buf, "%d", value );
-    SetDlgItemText( hwnd, idc, (LPCTSTR)edit_buf );
+    SetDlgItemTextA( hwnd, idc, edit_buf );
 }
 
 static int get_int_from_dlg
@@ -1050,7 +1050,7 @@ static int get_int_from_dlg
 )
 {
     char edit_buf[512];
-    GetDlgItemText( hwnd, idc, (LPTSTR)edit_buf, sizeof(edit_buf) );
+    GetDlgItemTextA( hwnd, idc, edit_buf, sizeof(edit_buf) );
     return atoi( edit_buf );
 }
 
@@ -1072,7 +1072,7 @@ static inline void set_string_to_dlg
     char *value /* message value */
 )
 {
-    SetDlgItemText( hwnd, idc, (LPCTSTR)value );
+    SetDlgItemTextA( hwnd, idc, value );
 }
 
 static void send_mix_level
@@ -1093,7 +1093,7 @@ static void send_mix_level
     SendMessage( hslider, TBM_SETLINESIZE, 0,    1 );
     SendMessage( hslider, TBM_SETPAGESIZE, 0,    1 );
     sprintf( edit_buf, "%.2f", mix_level / 100.0 );
-    SetWindowText( GetDlgItem( hwnd, text_idc ), (LPCTSTR)edit_buf );
+    SetWindowTextA( GetDlgItem( hwnd, text_idc ), edit_buf );
 }
 
 static void get_mix_level
@@ -1108,7 +1108,7 @@ static void get_mix_level
     HWND hslider = GetDlgItem( hwnd, slider_idc );
     *mix_level = SendMessage( hslider, TBM_GETPOS, 0, 0 );
     sprintf( edit_buf, "%.2f", *mix_level / 100.0 );
-    SetWindowText( GetDlgItem( hwnd, text_idc ), (LPCTSTR)edit_buf );
+    SetWindowTextA( GetDlgItem( hwnd, text_idc ), edit_buf );
 }
 
 static INT_PTR CALLBACK dialog_proc
@@ -1142,20 +1142,20 @@ static INT_PTR CALLBACK dialog_proc
             /* seek mode */
             HWND hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE );
             for( int i = 0; i < 3; i++ )
-                SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)seek_mode_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->seek_mode, 0 );
+                SendMessageA( hcombo, CB_ADDSTRING, 0, (LPARAM)seek_mode_list[i] );
+            SendMessageA( hcombo, CB_SETCURSEL, video_opt_config->seek_mode, 0 );
             /* scaler */
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_SCALER );
             for( int i = 0; i < 11; i++ )
-                SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)scaler_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->scaler, 0 );
+                SendMessageA( hcombo, CB_ADDSTRING, 0, (LPARAM)scaler_list[i] );
+            SendMessageA( hcombo, CB_SETCURSEL, video_opt_config->scaler, 0 );
             /* apply_repeat_flag */
             set_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG, video_opt_config->apply_repeat_flag );
             /* field_dominance */
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE );
             for( int i = 0; i < 3; i++ )
-                SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)field_dominance_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->field_dominance, 0 );
+                SendMessageA( hcombo, CB_ADDSTRING, 0, (LPARAM)field_dominance_list[i] );
+            SendMessageA( hcombo, CB_SETCURSEL, video_opt_config->field_dominance, 0 );
             /* VFR->CFR */
             set_check_state( hwnd, IDC_CHECK_VFR_TO_CFR, video_opt_config->vfr2cfr.active );
             set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, video_opt_config->vfr2cfr.framerate_num );
@@ -1166,9 +1166,9 @@ static INT_PTR CALLBACK dialog_proc
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_AVS_BITDEPTH );
             for( int i = 0; i < 4; i++ )
             {
-                SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)avs_bit_depth_list[i] );
+                SendMessageA( hcombo, CB_ADDSTRING, 0, (LPARAM)avs_bit_depth_list[i] );
                 if( video_opt_config->avs.bit_depth == atoi( avs_bit_depth_list[i] ) )
-                    SendMessage( hcombo, CB_SETCURSEL, i, 0 );
+                    SendMessageA( hcombo, CB_SETCURSEL, i, 0 );
             }
             /* audio_delay */
             set_int_to_dlg( hwnd, IDC_EDIT_AUDIO_DELAY, lwinput_opt_config.audio_delay );
@@ -1195,7 +1195,7 @@ static INT_PTR CALLBACK dialog_proc
                 if( buf > edit_buf )
                 {
                     *(buf - 1) = '\0';  /* Replace the last '+' with NULL terminator. */
-                    SetDlgItemText( hwnd, IDC_EDIT_CHANNEL_LAYOUT, (LPCTSTR)edit_buf );
+                    SetDlgItemTextA( hwnd, IDC_EDIT_CHANNEL_LAYOUT, edit_buf );
                 }
                 else
                     set_string_to_dlg( hwnd, IDC_EDIT_CHANNEL_LAYOUT, "Unspecified" );
@@ -1226,8 +1226,8 @@ static INT_PTR CALLBACK dialog_proc
             set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, video_opt_config->dummy.framerate_den );
             hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE );
             for( int i = 0; i < 3; i++ )
-                SendMessage( hcombo, CB_ADDSTRING, 0, (LPARAM)dummy_colorspace_list[i] );
-            SendMessage( hcombo, CB_SETCURSEL, video_opt_config->dummy.colorspace, 0 );
+                SendMessageA( hcombo, CB_ADDSTRING, 0, (LPARAM)dummy_colorspace_list[i] );
+            SendMessageA( hcombo, CB_SETCURSEL, video_opt_config->dummy.colorspace, 0 );
             /* preferred decoders */
             if( reader_opt_config->preferred_decoder_names )
             {
@@ -1250,7 +1250,7 @@ static INT_PTR CALLBACK dialog_proc
             /* Library informations */
             if( plugin_information[0] == 0 )
                 get_plugin_information();
-            SetDlgItemText( hwnd, IDC_TEXT_LIBRARY_INFO, (LPCTSTR)plugin_information );
+            SetDlgItemTextA( hwnd, IDC_TEXT_LIBRARY_INFO, plugin_information );
             HFONT hfont = (HFONT)GetStockObject( DEFAULT_GUI_FONT );
             LOGFONT lf = { 0 };
             GetObject( hfont, sizeof(lf), &lf );
@@ -1324,16 +1324,16 @@ static INT_PTR CALLBACK dialog_proc
                     reader_opt_config->force_video_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, -1 );
                     reader_opt_config->force_audio_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, -1 );
                     /* seek_mode */
-                    video_opt_config->seek_mode = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE ), CB_GETCURSEL, 0, 0 );
+                    video_opt_config->seek_mode = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE ), CB_GETCURSEL, 0, 0 );
                     /* forward_seek_threshold */
                     video_opt_config->forward_seek_threshold = get_int_from_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD );
                     video_opt_config->forward_seek_threshold = CLIP_VALUE( video_opt_config->forward_seek_threshold, 1, 999 );
                     /* scaler */
-                    video_opt_config->scaler = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_SCALER ), CB_GETCURSEL, 0, 0 );
+                    video_opt_config->scaler = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_SCALER ), CB_GETCURSEL, 0, 0 );
                     /* apply_repeat_flag */
                     video_opt_config->apply_repeat_flag = get_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG );
                     /* field_dominance */
-                    video_opt_config->field_dominance = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
+                    video_opt_config->field_dominance = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
                     /* VFR->CFR */
                     video_opt_config->vfr2cfr.active = get_check_state( hwnd, IDC_CHECK_VFR_TO_CFR );
                     video_opt_config->vfr2cfr.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, 1 );
@@ -1341,14 +1341,14 @@ static INT_PTR CALLBACK dialog_proc
                     /* LW48 output */
                     video_opt_config->colorspace = (get_check_state( hwnd, IDC_CHECK_LW48_OUTPUT ) ? OUTPUT_LW48 : 0);
                     /* AVS bit-depth */
-                    video_opt_config->avs.bit_depth = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_AVS_BITDEPTH ), CB_GETCURSEL, 0, 0 );
+                    video_opt_config->avs.bit_depth = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_AVS_BITDEPTH ), CB_GETCURSEL, 0, 0 );
                     video_opt_config->avs.bit_depth = atoi( avs_bit_depth_list[ video_opt_config->avs.bit_depth ] );
                     /* audio_delay */
                     lwinput_opt_config.audio_delay = get_int_from_dlg( hwnd, IDC_EDIT_AUDIO_DELAY );
                     /* channel_layout */
                     {
                         char edit_buf[512] = { 0 };
-                        GetDlgItemText( hwnd, IDC_EDIT_CHANNEL_LAYOUT, (LPTSTR)edit_buf, sizeof(edit_buf) );
+                        GetDlgItemTextA( hwnd, IDC_EDIT_CHANNEL_LAYOUT, edit_buf, sizeof(edit_buf) );
                         AVChannelLayout ch_layout;
                         if( !av_channel_layout_from_string( &ch_layout, edit_buf ) )
                         {
@@ -1372,11 +1372,11 @@ static INT_PTR CALLBACK dialog_proc
                     video_opt_config->dummy.height        = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_HEIGHT, 32 );
                     video_opt_config->dummy.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, 1 );
                     video_opt_config->dummy.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, 1 );
-                    video_opt_config->dummy.colorspace    = SendMessage( GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE ), CB_GETCURSEL, 0, 0 );
+                    video_opt_config->dummy.colorspace    = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE ), CB_GETCURSEL, 0, 0 );
                     /* preferred decoders */
                     {
                         char edit_buf[512];
-                        GetDlgItemText( hwnd, IDC_EDIT_PREFERRED_DECODERS, (LPTSTR)edit_buf, sizeof(edit_buf) );
+                        GetDlgItemTextA( hwnd, IDC_EDIT_PREFERRED_DECODERS, edit_buf, sizeof(edit_buf) );
                         set_preferred_decoder_names_on_buf( reader_opt_config, edit_buf );
                     }
                     /* handle cache */
@@ -1386,7 +1386,7 @@ static INT_PTR CALLBACK dialog_proc
                     /* cache dir path */
                     {
                         char edit_buf[_MAX_PATH * 2];
-                        GetDlgItemText( hwnd, IDC_EDIT_CACHE_DIR_PATH, (LPTSTR)edit_buf, sizeof(edit_buf) );
+                        GetDlgItemTextA( hwnd, IDC_EDIT_CACHE_DIR_PATH, edit_buf, sizeof(edit_buf) );
                         set_cache_dir(reader_opt_config, edit_buf);
                     }
                     /* delete old cache */
@@ -1425,11 +1425,11 @@ BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
 bool func_config( HWND hwnd, HINSTANCE dll_hinst )
 #endif
 {
-    const char* template = "LWINPUT_CONFIG";
+    const wchar_t* template = L"LWINPUT_CONFIG";
     /* Get Display Height ( Scaled ) */
     int height = GetSystemMetrics( SM_CYSCREEN );
     /* Get Dialog Height */
-    HRSRC hresource = FindResource( dll_hinst, template, RT_DIALOG );
+    HRSRC hresource = FindResourceW( dll_hinst, template, RT_DIALOG );
     HGLOBAL htemplate = LoadResource( dll_hinst, hresource );
     DLGTEMPLATE* ptemplate = (DLGTEMPLATE*)LockResource( htemplate );
     LONG dlg_baseunits = GetDialogBaseUnits();
@@ -1439,9 +1439,9 @@ bool func_config( HWND hwnd, HINSTANCE dll_hinst )
     FreeResource(htemplate);
 
     if ( dlg_height > height || lwinput_opt.wide_dialog )
-        template = "LWINPUT_CONFIG_WIDE";
+        template = L"LWINPUT_CONFIG_WIDE";
 
-    DialogBox( dll_hinst, template, hwnd, dialog_proc );
+    DialogBoxW( dll_hinst, template, hwnd, dialog_proc );
     return TRUE;
 }
 
