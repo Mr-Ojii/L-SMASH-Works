@@ -258,7 +258,13 @@ static inline void set_cache_dir( reader_option_t *_reader_opt, const char *user
         }
     }
     if( _reader_opt->use_cache_dir ) {
-        DWORD dwAttrib = GetFileAttributesA( _reader_opt->cache_dir_name_buf );
+        DWORD dwAttrib = INVALID_FILE_ATTRIBUTES;
+        wchar_t *cache_dir_name_w = NULL;
+        if ( lw_string_to_wchar( CP_UTF8, _reader_opt->cache_dir_name_buf, &cache_dir_name_w ) ) {
+            dwAttrib = GetFileAttributesW( cache_dir_name_w );
+            lw_freep( &cache_dir_name_w );
+        }
+
         if((dwAttrib != INVALID_FILE_ATTRIBUTES) && (dwAttrib & FILE_ATTRIBUTE_DIRECTORY)) {
             _reader_opt->cache_dir_name = _reader_opt->cache_dir_name_buf;
         }
@@ -446,7 +452,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &_reader_opt->use_cache_dir ) != 1 )
             _reader_opt->use_cache_dir = 1;
             
-        char user_index_dir[_MAX_PATH * 2] = { 0 };
+        char user_index_dir[_MAX_PATH * 4] = { 0 };
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_dir_path=%s", user_index_dir ) != 1 )
             set_cache_dir( _reader_opt, "" );
         else {
@@ -1072,7 +1078,13 @@ static inline void set_string_to_dlg
     char *value /* message value */
 )
 {
-    SetDlgItemTextA( hwnd, idc, value );
+    wchar_t *value_w = NULL;
+    if( lw_string_to_wchar( CP_UTF8, value, &value_w) ) {
+        SetDlgItemTextW( hwnd, idc, value_w );
+        lw_freep( &value_w );
+    } else {
+        SetDlgItemTextA( hwnd, idc, value );
+    }
 }
 
 static void send_mix_level
@@ -1347,16 +1359,20 @@ static INT_PTR CALLBACK dialog_proc
                     lwinput_opt_config.audio_delay = get_int_from_dlg( hwnd, IDC_EDIT_AUDIO_DELAY );
                     /* channel_layout */
                     {
-                        char edit_buf[512] = { 0 };
-                        GetDlgItemTextA( hwnd, IDC_EDIT_CHANNEL_LAYOUT, edit_buf, sizeof(edit_buf) );
-                        AVChannelLayout ch_layout;
-                        if( !av_channel_layout_from_string( &ch_layout, edit_buf ) )
-                        {
-                            audio_opt_config->channel_layout = ch_layout.u.mask;
-                            av_channel_layout_uninit( &ch_layout );
+                        const int buf_size = 512;
+                        char *utf8_buf = NULL;
+                        wchar_t edit_buf[buf_size];
+                        GetDlgItemTextW( hwnd, IDC_EDIT_CHANNEL_LAYOUT, edit_buf, buf_size );
+                        audio_opt_config->channel_layout = 0;
+                        if ( lw_string_from_wchar( CP_UTF8, edit_buf, &utf8_buf ) ) {
+                            AVChannelLayout ch_layout;
+                            if( !av_channel_layout_from_string( &ch_layout, utf8_buf ) )
+                            {
+                                audio_opt_config->channel_layout = ch_layout.u.mask;
+                                av_channel_layout_uninit( &ch_layout );
+                            }
+                            lw_freep( &utf8_buf );
                         }
-                        else
-                            audio_opt_config->channel_layout = 0;
                     }
                     /* sample_rate */
                     audio_opt_config->sample_rate = get_int_from_dlg_with_min( hwnd, IDC_EDIT_SAMPLE_RATE, 0 );
@@ -1375,9 +1391,16 @@ static INT_PTR CALLBACK dialog_proc
                     video_opt_config->dummy.colorspace    = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE ), CB_GETCURSEL, 0, 0 );
                     /* preferred decoders */
                     {
-                        char edit_buf[512];
-                        GetDlgItemTextA( hwnd, IDC_EDIT_PREFERRED_DECODERS, edit_buf, sizeof(edit_buf) );
-                        set_preferred_decoder_names_on_buf( reader_opt_config, edit_buf );
+                        const int buf_size = 512;
+                        char *utf8_buf = NULL;
+                        wchar_t edit_buf[buf_size];
+                        GetDlgItemTextW( hwnd, IDC_EDIT_PREFERRED_DECODERS, edit_buf, buf_size );
+                        if ( lw_string_from_wchar( CP_UTF8, edit_buf, &utf8_buf ) ) {
+                            set_preferred_decoder_names_on_buf( reader_opt_config, utf8_buf );
+                            lw_freep( &utf8_buf );
+                        } else {
+                            clean_preferred_decoder_names( reader_opt_config );
+                        }
                     }
                     /* handle cache */
                     lwinput_opt_config.handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
@@ -1385,9 +1408,16 @@ static INT_PTR CALLBACK dialog_proc
                     reader_opt_config->use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
                     /* cache dir path */
                     {
-                        char edit_buf[_MAX_PATH * 2];
-                        GetDlgItemTextA( hwnd, IDC_EDIT_CACHE_DIR_PATH, edit_buf, sizeof(edit_buf) );
-                        set_cache_dir(reader_opt_config, edit_buf);
+                        const int buf_size = _MAX_PATH * 2;
+                        char *utf8_buf = NULL;
+                        wchar_t edit_buf[buf_size];
+                        GetDlgItemTextW( hwnd, IDC_EDIT_CACHE_DIR_PATH, edit_buf, buf_size );
+                        if ( lw_string_from_wchar( CP_UTF8, edit_buf, &utf8_buf ) ) {
+                            set_cache_dir( reader_opt_config, utf8_buf );
+                            lw_freep( &utf8_buf );
+                        } else {
+                            set_cache_dir( reader_opt_config, "" );
+                        }
                     }
                     /* delete old cache */
                     lwinput_opt_config.delete_old_cache = get_check_state( hwnd, IDC_CHECK_DELETE_OLD_CACHE );

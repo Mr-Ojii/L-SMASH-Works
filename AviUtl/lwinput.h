@@ -40,7 +40,7 @@
 
 #define MAKE_AVIUTL_PITCH( x ) ((((x) + 31) & ~31) >> 3)
 #define PREFERRED_DECODER_NAMES_BUFSIZE 512
-#define CACHE_DIR_NAME_BUFSIZE (_MAX_PATH * 2)
+#define CACHE_DIR_NAME_BUFSIZE (_MAX_PATH * 4)
 
 #define MESSAGE_BOX_DESKTOP( uType, ... ) \
 do \
