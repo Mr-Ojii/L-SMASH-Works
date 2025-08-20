@@ -165,8 +165,6 @@ static const char *scaler_list[] = { "Fast bilinear", "Bilinear", "Bicubic", "Ex
                                      "L-bicubic/C-bilinear", "Gaussian", "Sinc", "Lanczos", "Bicubic spline" };
 static const char *field_dominance_list[] = { "Obey source flags", "Top -> Bottom", "Bottom -> Top" };
 static const char *avs_bit_depth_list[] = { "8", "9", "10", "16" };
-static input_cache *first_input_cache = NULL;
-static HANDLE input_cache_mutex = NULL;
 
 void au_message_box_desktop
 (
@@ -445,9 +443,8 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
             clean_preferred_decoder_names( _reader_opt );
         else
             set_preferred_decoder_names_on_buf( _reader_opt, preferred_decoder_names );
-        /* handle cache */
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "handle_cache=%d", &_lwinput_opt->handle_cache ) != 1 )
-            _lwinput_opt->handle_cache = 0;
+        /* handle cache (deleted, for compatibility) */
+        fgets( buf, sizeof(buf), ini );
         /* use cache dir */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &_reader_opt->use_cache_dir ) != 1 )
             _reader_opt->use_cache_dir = 1;
@@ -488,7 +485,6 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _reader_opt->force_video_index      = -1;
         _reader_opt->force_audio            = 0;
         _reader_opt->force_audio_index      = -1;
-        _lwinput_opt->handle_cache          = 0;
         _reader_opt->use_cache_dir          = 1;
         _reader_opt->cache_dir_name         = NULL;
         _lwinput_opt->reader_disabled[0]    = 0;
@@ -584,8 +580,8 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
     fprintf( ini, "dummy_colorspace=%d\n",    _video_opt->dummy.colorspace );
     /* preferred decoders */
     fprintf( ini, "preferred_decoders=%s\n", _reader_opt->preferred_decoder_names_original_buf );
-    /* handle cache */
-    fprintf( ini, "handle_cache=%d\n", _lwinput_opt->handle_cache );
+    /* handle cache (deleted, for compatibility) */
+    fprintf( ini, "handle_cache=%d\n", 0 );
     /* use cache dir */
     fprintf( ini, "use_cache_dir=%d\n", _reader_opt->use_cache_dir );
     /* cache dir path */
@@ -700,19 +696,16 @@ BOOL func_init( void ) {
 
     get_settings( &lwinput_opt );
     delete_old_cache();
-    input_cache_mutex = CreateMutex( NULL, FALSE, NULL );
-    return (input_cache_mutex != NULL);
+    return TRUE;
 }
 
 BOOL func_exit( void ) {
     delete_old_cache();
     clean_preferred_decoder_names( reader_opt );
     clean_preferred_decoder_names( reader_opt_config );
-    BOOL ret = CloseHandle( input_cache_mutex );
-    input_cache_mutex = NULL;
     lw_freep( &default_index_dir );
     lw_freep( &plugin_dir );
-    return ret;
+    return TRUE;
 }
 
 #ifndef AVIUTL2
@@ -729,20 +722,6 @@ INPUT_HANDLE func_open( LPCWSTR filew )
 #endif
     if( !file )
         return NULL;
-
-    if( lwinput_opt.handle_cache && first_input_cache && input_cache_mutex ) {
-        WaitForSingleObject( input_cache_mutex, INFINITE );
-        for( input_cache* tmp_cache = first_input_cache; tmp_cache ; tmp_cache = tmp_cache->next_cache ) {
-            if( strcmp( tmp_cache->file_path, file ) == 0 ) {
-                tmp_cache->ref_count++;
-                INPUT_HANDLE tmp_handle = tmp_cache->input_handle;
-                ReleaseMutex( input_cache_mutex );
-                lw_free( file );
-                return tmp_handle;
-            }
-        }
-        ReleaseMutex( input_cache_mutex );
-    }
 
     lsmash_handler_t *hp = (lsmash_handler_t *)lw_malloc_zero( sizeof(lsmash_handler_t) );
     if( !hp ) {
@@ -857,26 +836,6 @@ INPUT_HANDLE func_open( LPCWSTR filew )
         return NULL;
     }
 
-    if( lwinput_opt.handle_cache && input_cache_mutex ) {
-        WaitForSingleObject( input_cache_mutex, INFINITE );
-        char* file_name = lw_malloc_zero( ( strlen( file ) + 1 ) * sizeof( char ));
-        if( file_name ) {
-            strcpy( file_name, file );
-            input_cache* tmp_cache = lw_malloc_zero( sizeof(input_cache) );
-
-            if( tmp_cache ) {
-                tmp_cache->next_cache = first_input_cache;
-                first_input_cache = tmp_cache;
-                tmp_cache->file_path = file_name;
-                tmp_cache->input_handle = hp;
-                tmp_cache->ref_count = 1;
-            } else {
-                lw_free( file_name );
-            }
-        }
-        ReleaseMutex( input_cache_mutex );
-    }
-
     lw_free( file );
     return hp;
 }
@@ -887,32 +846,6 @@ BOOL func_close( INPUT_HANDLE ih )
 bool func_close( INPUT_HANDLE ih )
 #endif
 {
-    if( lwinput_opt.handle_cache && first_input_cache && input_cache_mutex ) {
-        WaitForSingleObject( input_cache_mutex, INFINITE );
-        input_cache* tmp_cache, * prev_cache = NULL;
-        for( tmp_cache = first_input_cache; tmp_cache; prev_cache = tmp_cache, tmp_cache = tmp_cache->next_cache ) {
-            if( tmp_cache->input_handle == ih ) {
-                if( --tmp_cache->ref_count > 0 ) {
-                    ReleaseMutex( input_cache_mutex );
-                    return TRUE;
-                } else {
-                    lw_free( tmp_cache->file_path );
-
-                    if( prev_cache ) {
-                        prev_cache->next_cache = tmp_cache->next_cache;
-                    } else {
-                        first_input_cache = tmp_cache->next_cache;
-                    }
-
-                    lw_free( tmp_cache );
-                    break;
-                }
-                
-            }
-        }
-        ReleaseMutex( input_cache_mutex );
-    }
-
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     if( !hp )
         return TRUE;
@@ -1270,8 +1203,6 @@ static INT_PTR CALLBACK dialog_proc
             lf.lfHeight *= 0.90;
             lf.lfQuality = ANTIALIASED_QUALITY;
             SendMessage( GetDlgItem( hwnd, IDC_TEXT_LIBRARY_INFO ), WM_SETFONT, (WPARAM)CreateFontIndirect( &lf ), 1 );
-            /* handle cache */
-            set_check_state( hwnd, IDC_CHECK_HANDLE_CACHE, lwinput_opt_config.handle_cache );
             /* use cache dir */
             set_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR, reader_opt_config->use_cache_dir );
             /* delete old cache */
@@ -1402,8 +1333,6 @@ static INT_PTR CALLBACK dialog_proc
                             clean_preferred_decoder_names( reader_opt_config );
                         }
                     }
-                    /* handle cache */
-                    lwinput_opt_config.handle_cache = get_check_state( hwnd, IDC_CHECK_HANDLE_CACHE );
                     /* use cache dir */
                     reader_opt_config->use_cache_dir = get_check_state( hwnd, IDC_CHECK_USE_CACHE_DIR );
                     /* cache dir path */

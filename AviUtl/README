@@ -51,8 +51,6 @@
                 Names of preferred decoder candidates separated by comma.
                 For instance, if you prefer to use the 'h264_qsv' and 'mpeg2_qsv' decoders instead of the generally used 'h264' and 'mpeg2video'
                 decoder, then specify as h264_qsv,mpeg2_qsv. The evaluations are done in the written order and the first matched decoder is used if any.
-            + Handle cache : check box (default : unchecked)
-                When the same file is requested to be opened multiple times, the same handle will be used.
         [Video postprocessors]
             + Video scaler : combo box (default : Fast bilinear)
                 The scaling algorithm for chroma upsamling.

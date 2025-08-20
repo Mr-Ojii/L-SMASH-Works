@@ -147,7 +147,6 @@ typedef struct
 {
     int reader_disabled[5];
     int audio_delay;
-    int handle_cache;
     int delete_old_cache;
     int delete_old_cache_days;
     int wide_dialog;
@@ -207,13 +206,6 @@ void au_message_box_desktop
     lw_log_level      level,
     const char       *message
 );
-
-typedef struct i_cache {
-    char* file_path;
-    INPUT_HANDLE input_handle;
-    int ref_count;
-    struct i_cache* next_cache;
-} input_cache;
 
 #ifdef AVIUTL2
 
