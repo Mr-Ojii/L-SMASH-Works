@@ -58,6 +58,11 @@
 #define VAPOURSYNTH_FILE_EXT "*.vpy"
 #define SUPPORTED_FILE_EXT  MPEG4_FILE_EXT ";" VIDEO_FILE_EXT ";" AUDIO_FILE_EXT ";" INDEX_FILE_EXT ";" AVISYNTH_FILE_EXT ";" VAPOURSYNTH_FILE_EXT
 
+#ifdef AVIUTL2
+#define LSMASHWORKS_INFORMATION_NAME "L-SMASH Works File Reader for AviUtl2"
+#else
+#define LSMASHWORKS_INFORMATION_NAME "L-SMASH Works File Reader"
+#endif
 
 static char plugin_information[512] = { 0 };
 static char* plugin_dir = NULL;
@@ -67,12 +72,13 @@ static HMODULE hModuleDLL = NULL;
 static void get_plugin_information( void )
 {
     sprintf( plugin_information,
-             "L-SMASH Works File Reader r%s\n"
+             "%s r%s\n"
              "    libavutil %s : %s\n"
              "    libavcodec %s : %s\n"
              "    libavformat %s : %s\n"
              "    libswscale %s : %s\n"
              "    libswresample %s : %s",
+             LSMASHWORKS_INFORMATION_NAME,
              LSMASHWORKS_REV,
              AV_STRINGIFY( LIBAVUTIL_VERSION     ), avutil_license    (),
              AV_STRINGIFY( LIBAVCODEC_VERSION    ), avcodec_license   (),
