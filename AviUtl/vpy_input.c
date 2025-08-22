@@ -387,5 +387,6 @@ lsmash_reader_t vpy_reader =
     NULL,
     video_cleanup,
     NULL,
-    close_file
+    close_file,
+    NULL
 };

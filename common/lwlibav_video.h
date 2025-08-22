@@ -182,6 +182,14 @@ void lwlibav_video_set_initial_input_format
     lwlibav_video_decode_handler_t *vdhp
 );
 
+uint32_t lwlibav_ts_to_frame_number
+(
+    lwlibav_video_decode_handler_t *vdhp,
+    lwlibav_video_output_handler_t *vohp,
+    double                          target_ts
+);
+
+
 int lwlibav_video_get_frame
 (
     lwlibav_video_decode_handler_t *vdhp,

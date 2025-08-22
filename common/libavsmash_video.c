@@ -910,7 +910,7 @@ return_frame:;
     return 0;
 video_fail:
     /* fatal error of decoding */
-    lw_log_show( &config->lh, LW_LOG_WARNING, "Couldn't read video frame." );
+    lw_log_show( &config->lh, LW_LOG_WARNING, "Couldn't read video frame. %d / %d", sample_number, vdhp->sample_count);
     return -1;
 #undef MAX_ERROR_COUNT
 }
@@ -987,6 +987,61 @@ static uint32_t libavsmash_vfr2cfr
             break;
         }
         prev_pts = current_pts;
+    }
+    if( composition_sample_number > vdhp->sample_count )
+        sample_number = vdhp->sample_count;
+    return sample_number;
+}
+
+uint32_t libavsmash_ts_to_sample_number
+(
+    libavsmash_video_decode_handler_t *vdhp,
+    libavsmash_video_output_handler_t *vohp,
+    double                             target_pts
+)
+{
+    uint32_t sample_number = 0;
+    double current_pts = DBL_MAX;
+    lsmash_sample_t sample;
+    if( vdhp->last_sample_number <= vdhp->sample_count )
+    {
+        uint32_t last_decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, vdhp->last_sample_number );
+        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, last_decoding_sample_number, &sample ) < 0 )
+            return 0;
+        current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
+        if( target_pts == current_pts )
+            return vdhp->last_sample_number;
+    }
+    uint32_t composition_sample_number = vdhp->last_sample_number;
+    if( target_pts < current_pts )
+    {
+        for( composition_sample_number--;
+             composition_sample_number;
+             composition_sample_number-- )
+        {
+            uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
+            if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
+                return 0;
+            current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
+            if( current_pts <= target_pts )
+                break;
+        }
+        if( composition_sample_number == 0 )
+            return 0;
+    }
+    for( composition_sample_number++;
+         composition_sample_number <= vdhp->sample_count;
+         composition_sample_number++ )
+    {
+        uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
+        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
+            return 0;
+        current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
+        if( current_pts >= target_pts )
+        {
+            sample_number = composition_sample_number - 1;
+            break;
+        }
     }
     if( composition_sample_number > vdhp->sample_count )
         sample_number = vdhp->sample_count;

@@ -124,6 +124,8 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     func_read_video,
     func_read_audio,
     func_config,
+    NULL,
+    func_time_to_frame,
 };
 
 #endif
@@ -364,6 +366,9 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         }
         else
         {
+#ifdef AVIUTL2
+            _video_opt->vfr2cfr.active = 0;
+#endif
             _video_opt->vfr2cfr.framerate_num = MAX( _video_opt->vfr2cfr.framerate_num, 1 );
             _video_opt->vfr2cfr.framerate_den = MAX( _video_opt->vfr2cfr.framerate_den, 1 );
         }
@@ -786,6 +791,7 @@ INPUT_HANDLE func_open( LPCWSTR filew )
                     hp->is_keyframe      = reader.is_keyframe;
                     hp->video_cleanup    = reader.video_cleanup;
                     hp->close_video_file = reader.close_file;
+                    hp->time_to_frame    = reader.time_to_frame;
                     video_none = 0;
                 }
                 else
@@ -889,6 +895,8 @@ bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
         iip->flag             |= INPUT_INFO_FLAG_VIDEO | INPUT_INFO_FLAG_VIDEO_RANDOM_ACCESS;
 #else
         iip->flag             |= INPUT_INFO_FLAG_VIDEO;
+        if( hp->time_to_frame )
+            iip->flag         |= INPUT_INFO_TIME_TO_FRAME;
 #endif
         iip->rate              = hp->framerate_num;
         iip->scale             = hp->framerate_den;
@@ -946,6 +954,17 @@ BOOL func_is_keyframe( INPUT_HANDLE ih, int sample_number )
                          * since sample_number exceeds the number of video samples. */
     return hp->is_keyframe ? hp->is_keyframe( hp, sample_number ) : TRUE;
 }
+
+#ifdef AVIUTL2
+int func_time_to_frame( INPUT_HANDLE ih, double time )
+{
+    if( !ih )
+        return 0;
+
+    lsmash_handler_t *hp = (lsmash_handler_t *)ih;
+    return hp->time_to_frame ? hp->time_to_frame( hp, time ) : time * hp->framerate_num / hp->framerate_den;
+}
+#endif
 
 static inline void set_buddy_window_for_updown_control
 (
@@ -1111,6 +1130,11 @@ static INT_PTR CALLBACK dialog_proc
             set_check_state( hwnd, IDC_CHECK_VFR_TO_CFR, video_opt_config->vfr2cfr.active );
             set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, video_opt_config->vfr2cfr.framerate_num );
             set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, video_opt_config->vfr2cfr.framerate_den );
+#ifdef AVIUTL2
+            EnableWindow( GetDlgItem( hwnd, IDC_CHECK_VFR_TO_CFR ), FALSE );
+            EnableWindow( GetDlgItem( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM ), FALSE );
+            EnableWindow( GetDlgItem( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN ), FALSE );
+#endif
             /* LW48 output */
             set_check_state( hwnd, IDC_CHECK_LW48_OUTPUT, video_opt_config->colorspace != 0 );
             /* AVS bit-depth */
@@ -1284,7 +1308,11 @@ static INT_PTR CALLBACK dialog_proc
                     /* field_dominance */
                     video_opt_config->field_dominance = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
                     /* VFR->CFR */
+#ifndef AVIUTL2
                     video_opt_config->vfr2cfr.active = get_check_state( hwnd, IDC_CHECK_VFR_TO_CFR );
+#else
+                    video_opt_config->vfr2cfr.active = 0;
+#endif
                     video_opt_config->vfr2cfr.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, 1 );
                     video_opt_config->vfr2cfr.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, 1 );
                     /* LW48 output */

@@ -262,6 +262,13 @@ int libavsmash_video_setup_timestamp_info
     int64_t                           *framerate_den
 );
 
+uint32_t libavsmash_ts_to_sample_number
+(
+    libavsmash_video_decode_handler_t *vdhp,
+    libavsmash_video_output_handler_t *vohp,
+    double                             target_pts
+);
+
 int libavsmash_video_get_frame
 (
     libavsmash_video_decode_handler_t *vdhp,

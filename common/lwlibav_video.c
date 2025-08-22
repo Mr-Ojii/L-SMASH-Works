@@ -1394,6 +1394,69 @@ static int get_video_frame
     return get_requested_picture( vdhp, vdhp->frame_buffer, frame_number );
 }
 
+uint32_t lwlibav_ts_to_frame_number
+(
+    lwlibav_video_decode_handler_t *vdhp,
+    lwlibav_video_output_handler_t *vohp,
+    double                          target_ts
+)
+{
+    uint32_t frame_number = 0;
+    double current_ts = DBL_MAX;
+    AVRational time_base = vdhp->format->streams[ vdhp->stream_index ]->time_base;
+    int64_t ts = lwlibav_get_ts( vdhp, vdhp->last_ts_frame_number );
+    if( ts != AV_NOPTS_VALUE )
+    {
+        current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+        if( target_ts == current_ts )
+            return vdhp->last_ts_frame_number;
+    }
+    uint32_t composition_frame_number = vdhp->last_ts_frame_number;
+    if( target_ts < current_ts )
+    {
+        for( composition_frame_number--;
+             composition_frame_number;
+             composition_frame_number-- )
+        {
+            ts = lwlibav_get_ts( vdhp, composition_frame_number );
+            if( ts != AV_NOPTS_VALUE )
+            {
+                current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+                if( current_ts <= target_ts )
+                    break;
+            }
+        }
+        if( composition_frame_number == 0 )
+            return 0;
+    }
+    for( composition_frame_number++;
+         composition_frame_number <= vdhp->frame_count;
+         composition_frame_number++ )
+    {
+        ts = lwlibav_get_ts( vdhp, composition_frame_number );
+        if( ts != AV_NOPTS_VALUE )
+        {
+            current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+            if( current_ts >= target_ts )
+            {
+                uint32_t prev_composition_frame_number = composition_frame_number;
+                while( lwlibav_get_ts( vdhp, --prev_composition_frame_number ) == AV_NOPTS_VALUE );
+                if( prev_composition_frame_number == 0 )
+                    frame_number = 1;
+                else
+                {
+                    frame_number = prev_composition_frame_number;
+                }
+                break;
+            }
+        }
+    }
+    if( composition_frame_number > vdhp->frame_count )
+        frame_number = vdhp->frame_count;
+    vdhp->last_ts_frame_number = frame_number;
+    return frame_number;
+}
+
 /* Return 0 if successful.
  * Return 1 if the same frame was requested at the last call.
  * Return a negative value otherwise. */

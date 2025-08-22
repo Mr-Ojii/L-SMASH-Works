@@ -60,6 +60,7 @@
                 Output frame rate (numerator / denominator at frames per second) for VFR->CFR (Variable Frame Rate to Constant Frame Rate) conversion.
                 If checked and set to a valid value, the conversion is achieved by padding and/or dropping frames at the specified frame rate.
                 Otherwise, output frame rate is set to a computed average frame rate and the output process is performed by actual frame-by-frame.
+                In AviUtl ExEdit2, this checkbox is disabled, and VFR->CFR conversion is performed automatically.
             + LW48 output : check box (default : unchecked)
                 LW48 is a pixel format and a color space defined in L-SMASH Works.
                 The difference between LW48 and YC48 is the usual ranges of each component; Y/Cb/Cr.
