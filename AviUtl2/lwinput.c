@@ -304,23 +304,8 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
             _video_opt->field_dominance = 0;
         else
             _video_opt->field_dominance = CLIP_VALUE( _video_opt->field_dominance, 0, 2 );
-        /* VFR->CFR (for compatibility ) */
-        if( !fgets( buf, sizeof(buf), ini )
-         || sscanf( buf, "vfr2cfr=%d:%d:%d",
-                    &_video_opt->vfr2cfr.active,
-                    &_video_opt->vfr2cfr.framerate_num,
-                    &_video_opt->vfr2cfr.framerate_den ) != 3 )
-        {
-            _video_opt->vfr2cfr.active        = 0;
-            _video_opt->vfr2cfr.framerate_num = 60000;
-            _video_opt->vfr2cfr.framerate_den = 1001;
-        }
-        else
-        {
-            _video_opt->vfr2cfr.active = 0;
-            _video_opt->vfr2cfr.framerate_num = MAX( _video_opt->vfr2cfr.framerate_num, 1 );
-            _video_opt->vfr2cfr.framerate_den = MAX( _video_opt->vfr2cfr.framerate_den, 1 );
-        }
+        /* VFR->CFR (deleted, for compatibility ) */
+        fgets( buf, sizeof(buf), ini );
         /* LW48 output */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "colorspace=%d", (int *)&_video_opt->colorspace ) != 1 )
             _video_opt->colorspace = 0;
@@ -433,9 +418,6 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _video_opt->scaler                  = 0;
         _video_opt->apply_repeat_flag       = 1;
         _video_opt->field_dominance         = 0;
-        _video_opt->vfr2cfr.active          = 0;
-        _video_opt->vfr2cfr.framerate_num   = 60000;
-        _video_opt->vfr2cfr.framerate_den   = 1001;
         _video_opt->colorspace              = 0;
         _video_opt->avs.bit_depth           = 8;
         _lwinput_opt->audio_delay           = 0;
@@ -484,8 +466,8 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
     fprintf( ini, "apply_repeat_flag=%d\n", _video_opt->apply_repeat_flag );
     /* field_dominance */
     fprintf( ini, "field_dominance=%d\n", _video_opt->field_dominance );
-    /* VFR->CFR */
-    fprintf( ini, "vfr2cfr=%d:%d:%d\n", _video_opt->vfr2cfr.active, _video_opt->vfr2cfr.framerate_num, _video_opt->vfr2cfr.framerate_den );
+    /* VFR->CFR (deleted, for compatibility) */
+    fprintf( ini, "vfr2cfr=%d:%d:%d\n", 0, 60000, 1001 );
     /* LW48 output */
     fprintf( ini, "colorspace=%d\n", _video_opt->colorspace );
     /* AVS bit-depth */
@@ -1001,13 +983,6 @@ static INT_PTR CALLBACK dialog_proc
             for( int i = 0; i < 3; i++ )
                 SendMessageA( hcombo, CB_ADDSTRING, 0, (LPARAM)field_dominance_list[i] );
             SendMessageA( hcombo, CB_SETCURSEL, video_opt_config->field_dominance, 0 );
-            /* VFR->CFR */
-            set_check_state( hwnd, IDC_CHECK_VFR_TO_CFR, video_opt_config->vfr2cfr.active );
-            set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, video_opt_config->vfr2cfr.framerate_num );
-            set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, video_opt_config->vfr2cfr.framerate_den );
-            EnableWindow( GetDlgItem( hwnd, IDC_CHECK_VFR_TO_CFR ), FALSE );
-            EnableWindow( GetDlgItem( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM ), FALSE );
-            EnableWindow( GetDlgItem( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN ), FALSE );
             /* LW48 output */
             set_check_state( hwnd, IDC_CHECK_LW48_OUTPUT, video_opt_config->colorspace != 0 );
             /* AVS bit-depth */
@@ -1171,10 +1146,6 @@ static INT_PTR CALLBACK dialog_proc
                     video_opt_config->apply_repeat_flag = get_check_state( hwnd, IDC_CHECK_APPLY_REPEAT_FLAG );
                     /* field_dominance */
                     video_opt_config->field_dominance = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
-                    /* VFR->CFR */
-                    video_opt_config->vfr2cfr.active = 0;
-                    video_opt_config->vfr2cfr.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, 1 );
-                    video_opt_config->vfr2cfr.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, 1 );
                     /* LW48 output */
                     video_opt_config->colorspace = (get_check_state( hwnd, IDC_CHECK_LW48_OUTPUT ) ? OUTPUT_LW48 : 0);
                     /* AVS bit-depth */

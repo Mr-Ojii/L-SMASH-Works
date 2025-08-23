@@ -373,9 +373,9 @@ static int get_first_video_track( lsmash_handler_t *h, video_option_t *opt )
     libavsmash_video_output_handler_t *vohp = hp->vohp;
     libavsmash_video_set_seek_mode             ( vdhp, opt->seek_mode );
     libavsmash_video_set_forward_seek_threshold( vdhp, opt->forward_seek_threshold );
-    vohp->vfr2cfr = opt->vfr2cfr.active;
-    vohp->cfr_num = opt->vfr2cfr.framerate_num;
-    vohp->cfr_den = opt->vfr2cfr.framerate_den;
+    vohp->vfr2cfr = 0;
+    vohp->cfr_num = 60000;
+    vohp->cfr_den = 1001;
     /* TODO: Maybe, the number of output frames should be set up here. */
     return prepare_video_decoding( h, opt );
 }

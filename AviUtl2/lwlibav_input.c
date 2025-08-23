@@ -214,9 +214,9 @@ static void *open_file( char *file_path, reader_option_t *opt )
     lwlibav_opt.force_audio_index = opt->force_audio_index;
     lwlibav_opt.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
     lwlibav_opt.field_dominance   = opt->video_opt.field_dominance;
-    lwlibav_opt.vfr2cfr.active    = opt->video_opt.vfr2cfr.active;
-    lwlibav_opt.vfr2cfr.fps_num   = opt->video_opt.vfr2cfr.framerate_num;
-    lwlibav_opt.vfr2cfr.fps_den   = opt->video_opt.vfr2cfr.framerate_den;
+    lwlibav_opt.vfr2cfr.active    = 0;
+    lwlibav_opt.vfr2cfr.fps_num   = 60000;
+    lwlibav_opt.vfr2cfr.fps_den   = 1001;
     lwlibav_video_set_preferred_decoder_names( hp->vdhp, opt->preferred_decoder_names );
     lwlibav_audio_set_preferred_decoder_names( hp->adhp, opt->preferred_decoder_names );
     /* Set up progress indicator. */
