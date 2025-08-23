@@ -198,16 +198,6 @@
                 Specify the directory where you want to create the index file by absolute path.
                 If the path entered in the edit box is valid, create the index file in the specified directory.
                 If the path entered in the edit box is invalid, create an "lwi" directory in the same directory as lwinput.aui and create the index file in that directory.
-        [Dummy reader]
-            Dummy reader is used when deactivating video stream or the input file has no video stream
-            since AviUtl can't handle any input file without video stream.
-            + Dummy resolution : edit box (default : 720 x 480 )
-                A resolution (width x height) of dummy video stream.
-            + Dummy framerate  : edit box (default : 24 / 1 )
-                A framerate (numerator / denominator at frames per second) of dummy video stream.
-                Larger framerate helps more sample accurate editing.
-            + Dummy colorspace : combo box (default : YUY2)
-                A colorspace of dummy video stream.
         [Settings Dialog]
             + Wide Dialog : check box (default : unchecked)
                 The layout of the settings dialog becomes two columns.

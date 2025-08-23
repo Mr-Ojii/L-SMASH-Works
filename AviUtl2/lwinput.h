@@ -90,14 +90,6 @@ typedef struct
     output_colorspace_index colorspace;
     struct
     {
-        int width;
-        int height;
-        int framerate_num;
-        int framerate_den;
-        output_colorspace_index colorspace;
-    } dummy;
-    struct
-    {
         int bit_depth;
     } avs;
 } video_option_t;

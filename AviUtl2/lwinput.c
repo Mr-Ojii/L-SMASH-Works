@@ -120,7 +120,6 @@ static audio_option_t *audio_opt_config = &lwinput_opt_config.reader_opt.audio_o
 static const char *settings_path = NULL;
 static const char *settings_path_list[] = { "lsmash.ini", "plugins/lsmash.ini" };
 static const char *seek_mode_list[] = { "Normal", "Unsafe", "Aggressive" };
-static const char *dummy_colorspace_list[] = { "YUY2", "RGB", "YC48" };
 static const char *scaler_list[] = { "Fast bilinear", "Bilinear", "Bicubic", "Experimental", "Nearest neighbor", "Area averaging",
                                      "L-bicubic/C-bilinear", "Gaussian", "Sinc", "Lanczos", "Bicubic spline" };
 static const char *field_dominance_list[] = { "Obey source flags", "Top -> Bottom", "Bottom -> Top" };
@@ -372,32 +371,9 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "libav_disabled=%d",      &_lwinput_opt->reader_disabled[3] ) != 1 )
             _lwinput_opt->reader_disabled[3] = 0;
         /* dummy reader */
-        if( !fgets( buf, sizeof(buf), ini )
-         || sscanf( buf, "dummy_resolution=%dx%d", &_video_opt->dummy.width, &_video_opt->dummy.height ) != 2 )
-        {
-            _video_opt->dummy.width  = 720;
-            _video_opt->dummy.height = 480;
-        }
-        else
-        {
-            _video_opt->dummy.width  = MAX( _video_opt->dummy.width,  32 );
-            _video_opt->dummy.height = MAX( _video_opt->dummy.height, 32 );
-        }
-        if( !fgets( buf, sizeof(buf), ini )
-         || sscanf( buf, "dummy_framerate=%d/%d", &_video_opt->dummy.framerate_num, &_video_opt->dummy.framerate_den ) != 2 )
-        {
-            _video_opt->dummy.framerate_num = 24;
-            _video_opt->dummy.framerate_den = 1;
-        }
-        else
-        {
-            _video_opt->dummy.framerate_num = MAX( _video_opt->dummy.framerate_num, 1 );
-            _video_opt->dummy.framerate_den = MAX( _video_opt->dummy.framerate_den, 1 );
-        }
-        if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "dummy_colorspace=%d", (int *)&_video_opt->dummy.colorspace ) != 1 )
-            _video_opt->dummy.colorspace = OUTPUT_YUY2;
-        else
-            _video_opt->dummy.colorspace = CLIP_VALUE( _video_opt->dummy.colorspace, 0, 2 );
+        fgets( buf, sizeof(buf), ini ); // dummy_resolution is deleted, for compatibility
+        fgets( buf, sizeof(buf), ini ); // dummy_framerate is deleted, for compatibility
+        fgets( buf, sizeof(buf), ini ); // dummy_colorspace is deleted, for compatibility
         /* preferred decoders settings */
         char preferred_decoder_names[512] = { 0 };
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "preferred_decoders=%s", preferred_decoder_names ) != 1 )
@@ -461,11 +437,6 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         _video_opt->vfr2cfr.framerate_num   = 60000;
         _video_opt->vfr2cfr.framerate_den   = 1001;
         _video_opt->colorspace              = 0;
-        _video_opt->dummy.width             = 720;
-        _video_opt->dummy.height            = 480;
-        _video_opt->dummy.framerate_num     = 24;
-        _video_opt->dummy.framerate_den     = 1;
-        _video_opt->dummy.colorspace        = OUTPUT_YUY2;
         _video_opt->avs.bit_depth           = 8;
         _lwinput_opt->audio_delay           = 0;
         _lwinput_opt->delete_old_cache      = 1;
@@ -535,10 +506,10 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
     fprintf( ini, "avs_disabled=%d\n",        _lwinput_opt->reader_disabled[1] );
     fprintf( ini, "vpy_disabled=%d\n",        _lwinput_opt->reader_disabled[2] );
     fprintf( ini, "libav_disabled=%d\n",      _lwinput_opt->reader_disabled[3] );
-    /* dummy reader */
-    fprintf( ini, "dummy_resolution=%dx%d\n", _video_opt->dummy.width, _video_opt->dummy.height );
-    fprintf( ini, "dummy_framerate=%d/%d\n",  _video_opt->dummy.framerate_num, _video_opt->dummy.framerate_den );
-    fprintf( ini, "dummy_colorspace=%d\n",    _video_opt->dummy.colorspace );
+    /* dummy reader (deleted, for compatibility) */
+    fprintf( ini, "dummy_resolution=%dx%d\n", 720, 480 );
+    fprintf( ini, "dummy_framerate=%d/%d\n",  24, 1 );
+    fprintf( ini, "dummy_colorspace=%d\n",    0 );
     /* preferred decoders */
     fprintf( ini, "preferred_decoders=%s\n", _reader_opt->preferred_decoder_names_original_buf );
     /* handle cache (deleted, for compatibility) */
@@ -1096,15 +1067,6 @@ static INT_PTR CALLBACK dialog_proc
             set_check_state( hwnd, IDC_CHECK_AVS_INPUT,        !lwinput_opt_config.reader_disabled[1] );
             set_check_state( hwnd, IDC_CHECK_VPY_INPUT,        !lwinput_opt_config.reader_disabled[2] );
             set_check_state( hwnd, IDC_CHECK_LIBAV_INPUT,      !lwinput_opt_config.reader_disabled[3] );
-            /* dummy reader */
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_WIDTH,         video_opt_config->dummy.width );
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_HEIGHT,        video_opt_config->dummy.height );
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, video_opt_config->dummy.framerate_num );
-            set_int_to_dlg( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, video_opt_config->dummy.framerate_den );
-            hcombo = GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE );
-            for( int i = 0; i < 3; i++ )
-                SendMessageA( hcombo, CB_ADDSTRING, 0, (LPARAM)dummy_colorspace_list[i] );
-            SendMessageA( hcombo, CB_SETCURSEL, video_opt_config->dummy.colorspace, 0 );
             /* preferred decoders */
             if( reader_opt_config->preferred_decoder_names )
             {
@@ -1246,12 +1208,6 @@ static INT_PTR CALLBACK dialog_proc
                     lwinput_opt_config.reader_disabled[1] = !get_check_state( hwnd, IDC_CHECK_AVS_INPUT        );
                     lwinput_opt_config.reader_disabled[2] = !get_check_state( hwnd, IDC_CHECK_VPY_INPUT        );
                     lwinput_opt_config.reader_disabled[3] = !get_check_state( hwnd, IDC_CHECK_LIBAV_INPUT      );
-                    /* dummy reader */
-                    video_opt_config->dummy.width         = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_WIDTH,  32 );
-                    video_opt_config->dummy.height        = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_HEIGHT, 32 );
-                    video_opt_config->dummy.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_NUM, 1 );
-                    video_opt_config->dummy.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_DUMMY_FRAMERATE_DEN, 1 );
-                    video_opt_config->dummy.colorspace    = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_DUMMY_COLORSPACE ), CB_GETCURSEL, 0, 0 );
                     /* preferred decoders */
                     {
                         const int buf_size = 512;
