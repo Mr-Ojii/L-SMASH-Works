@@ -165,7 +165,6 @@ typedef struct
     void  (*video_cleanup)         ( lsmash_handler_t *h );
     void  (*audio_cleanup)         ( lsmash_handler_t *h );
     void  (*close_file)            ( void *private_stuff );
-    int   (*time_to_frame)         ( lsmash_handler_t *h, double time );
 } lsmash_reader_t;
 
 struct lsmash_handler_tag
@@ -183,7 +182,6 @@ struct lsmash_handler_tag
     int  (*is_keyframe)     ( lsmash_handler_t *h, int sample_number );
     void (*video_cleanup)   ( lsmash_handler_t *h );
     void (*close_video_file)( void *private_stuff );
-    int  (*time_to_frame)   ( lsmash_handler_t *h, double time );
     /* Audio stuff */
     reader_type          audio_reader;
     void                *audio_private;

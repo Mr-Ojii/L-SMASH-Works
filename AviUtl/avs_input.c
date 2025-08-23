@@ -424,6 +424,5 @@ lsmash_reader_t avs_reader =
     delay_audio,
     video_cleanup,
     NULL,
-    close_file,
-    NULL
+    close_file
 };

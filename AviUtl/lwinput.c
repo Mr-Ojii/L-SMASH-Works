@@ -742,7 +742,6 @@ INPUT_HANDLE func_open( LPSTR filea )
                     hp->is_keyframe      = reader.is_keyframe;
                     hp->video_cleanup    = reader.video_cleanup;
                     hp->close_video_file = reader.close_file;
-                    hp->time_to_frame    = reader.time_to_frame;
                     video_none = 0;
                 }
                 else

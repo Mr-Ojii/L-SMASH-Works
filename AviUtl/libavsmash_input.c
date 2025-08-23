@@ -480,14 +480,6 @@ static void close_file( void *private_stuff )
     lw_free( hp );
 }
 
-static int time_to_frame( lsmash_handler_t *h, double time )
-{
-    libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
-    if( !hp )
-        return 0;
-    return libavsmash_ts_to_sample_number( hp->vdhp, hp->vohp, time ) - 1; /* For L-SMASH, sample_number is 1-origin. */
-}
-
 lsmash_reader_t libavsmash_reader =
 {
     LIBAVSMASH_READER,
@@ -501,6 +493,5 @@ lsmash_reader_t libavsmash_reader =
     delay_audio,
     video_cleanup,
     audio_cleanup,
-    close_file,
-    time_to_frame
+    close_file
 };
