@@ -1,12 +1,9 @@
 [File]
-    lwinput.aui     : An input plugin for AviUtl
-    lwmuxer.auf     : A filter plugin to multiplex file for AviUtl
-    lwdumper.auf    : A filter plugin to dump file for AviUtl
-    lwcolor.auc     : A color space conversion plugin for AviUtl
+    lwinput.aui2    : An input plugin for AviUtl ExEdit2
 
-[lwinput.aui: L-SMASH Works File Reader]
+[lwinput.aui2: L-SMASH Works File Reader for AviUtl2]
     [Settings]
-        You can open the settings dialog by "File" -> "General settings" -> "Input plugins configure" -> "L-SMASH Works File Reader".
+        You can open the settings dialog by "Setting" -> "InputPlugin" -> Right click "L-SMASH Works File Reader for AviUtl2" -> "SettingPlugin".
         [File readers]
             L-SMASH Works File Reader tries in order of "Libav+L-SMASH" -> "AviSynth Script" -> "LW-Libav".
             + Libav+L-SMASH   : check box (default : checked)
@@ -201,25 +198,3 @@
         [Settings Dialog]
             + Wide Dialog : check box (default : unchecked)
                 The layout of the settings dialog becomes two columns.
-[lwmuxer.auf: L-SMASH Works Muxer]
-    This plugin supports only file formats derived from ISO Base Media (ISO/IEC 14496-12) and QuickTime (MOV) currently.
-    [Settings]
-        You can open the settings dialog box by "File" -> "Export" -> "L-SMASH Works Muxer".
-        + Chapter
-            Specify a path of simple text file which describes chapters.
-            For all ISO Base Media file format, a chapter list will be written.
-            For iTunes MP4 (known as M4A, M4V ...) or QuickTime file format (known as MOV), a reference chapter track will be written.
-        + Optimize for Progressive Download : check box (default : checked)
-            Move overall necessary data to access and decode samples into the very front of the file at the end of muxing if checked.
-[lwdumper.auf: L-SMASH Works Dumper]
-    This plugin supports only file formats derived from ISO Base Media (ISO/IEC 14496-12) and QuickTime (MOV) currently.
-    You can open the save dialog box by "File" -> "Export" -> "L-SMASH Works Dumper".
-        + Dump File (*.txt)
-            Write a text file which shows box structures.
-        + Timecode v2 File (*.tmc)
-            Write a mkvmerge timecode v2 file.
-[lwcolor.auc: L-SMASH Works Color Space Converter]
-    This plugin is used for the direct copying of LW48 into AviUtl internal YC48, and vice versa.
-    That is, AviUtl can handle LW48 directly as if it is YC48.
-    You can enable functions of this plugin by "Settings" -> "Color conversion" -> "LW ColorSpace".
-    If enabled, there is no operation other than copy for LW48<->YC48 conversion.

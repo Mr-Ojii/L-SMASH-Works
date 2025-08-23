@@ -1,12 +1,9 @@
 [File]
-    lwinput.aui     : AviUtl用 入力プラグイン
-    lwmuxer.auf     : AviUtl用 MUXER エクスポートプラグイン
-    lwdumper.auf    : AviUtl用 ファイル解析 エクスポートプラグイン
-    lwcolor.auc     : AviUtl用 色変換プラグイン
+    lwinput.aui2    : AviUtl ExEdit2用 入力プラグイン
 
-[lwinput.aui: L-SMASH Works File Reader]
+[lwinput.aui2: L-SMASH Works File Reader for AviUtl2]
     [設定]
-        設定ダイアログを開くには、"ファイル" -> "環境設定" -> "入力プラグインの設定" -> "L-SMASH Works File Reader"と進みます。
+        設定ダイアログを開くには、"設定" -> "入力プラグインの設定" -> "L-SMASH Works File Reader for AviUtl2"を右クリック -> "プラグインの設定" -> と進みます。
         [ファイルリーダー]
             L-SMASH Works File Reader は "Libav+L-SMASH" -> "AviSynth Script" -> "LW-Libav" の順番でファイルを開くことを試みます。
             + Libav+L-SMASH   : チェックボックス (デフォルト値 : 有効)
@@ -199,26 +196,3 @@
         [設定ダイアログ]
             + Wide Dialog : チェックボックス (デフォルト値 : 無効)
                 設定ダイアログのレイアウトが横長になります。
-[lwmuxer.auf: L-SMASH Works Muxer]
-    このエクスポートプラグインは ISO Base Media (ISO/IEC 14496-12) または QuickTime (MOV) 派生のファイル形式のみ現在サポートしています。
-    [設定]
-        設定ダイアログを開くには、"ファイル" -> "エクスポート" -> "L-SMASH Works Muxer" と進みます。
-        + Chapter
-            チャプターを記述した平易なテキストファイルのパスを指定します。
-            Specify a path of simple text file which describes chapters.
-            全てのISO Base Media派生のファイル形式には、チャプターリストが書き込まれます。
-            全てのiTunes MP4 (M4AやM4Vといったもの) または QuickTimeファイル形式 (MOVとして知られる) では参照チャプタートラックが書き込まれます。
-        + Optimize for Progressive Download : チェックボックス (デフォルト値 : 有効)
-            チェックされていた場合、Muxの最後に、サンプルにアクセスしデコードするために必要な全てのデータを出力ファイルの出来るだけ先頭に移動します。
-[lwdumper.auf: L-SMASH Works Dumper]
-    このエクスポートプラグインは ISO Base Media (ISO/IEC 14496-12) または QuickTime (MOV) 派生のファイル形式のみ現在サポートしています。
-    保存ダイアログを開くには、"ファイル" -> "エクスポート" -> "L-SMASH Works Dumper" と進みます。
-        + Dump File (*.txt)
-            ボックス構造を示したテキストファイルを書き出します。
-        + Timecode v2 File (*.tmc)
-            mkvmerge timecode v2 fileを書き出します。
-[lwcolor.auc: L-SMASH Works Color Space Converter]
-    このプラグインはLW48形式からAviUtl内部YC48形式への直接コピー、またその逆に使用されます。
-    これにより、AviUtlはあたかもYC48を扱うようにLW48を直接的に扱えます。
-    また、このプラグインは "設定" -> "色変換の設定" -> "LW ColorSpace" により有効に出来ます。
-    有効にした場合、LW48<->YC48変換においてコピー以外の演算は使用されません。
