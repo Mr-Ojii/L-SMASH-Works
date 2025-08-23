@@ -72,7 +72,6 @@ typedef enum
     AVS_READER        = 2,
     VPY_READER        = 3,
     LIBAV_READER      = 4,
-    DUMMY_READER      = 5,
 } reader_type;
 
 typedef struct

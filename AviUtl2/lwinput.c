@@ -689,12 +689,10 @@ INPUT_HANDLE func_open( LPCWSTR filew )
     extern lsmash_reader_t avs_reader;
     extern lsmash_reader_t vpy_reader;
     extern lsmash_reader_t libav_reader;
-    extern lsmash_reader_t dummy_reader;
     enum
     {
         AU_VIDEO_READER  = 1,
-        AU_SCRIPT_READER = 2,
-        AU_DUMMY_READER  = 3
+        AU_SCRIPT_READER = 2
     };
     static const struct
     {
@@ -706,9 +704,6 @@ INPUT_HANDLE func_open( LPCWSTR filew )
             { &avs_reader       , AU_SCRIPT_READER },
             { &vpy_reader       , AU_SCRIPT_READER },
             { &libav_reader     , AU_VIDEO_READER  },
-#ifndef AVIUTL2
-            { &dummy_reader     , AU_DUMMY_READER  },
-#endif
             { NULL              , 0                }
         };
     for( int i = 0; lsmash_reader_table[i].reader; i++ )
@@ -772,7 +767,7 @@ INPUT_HANDLE func_open( LPCWSTR filew )
             if( hp->video_reader == reader.type )
                 break;
             if( hp->audio_reader == reader.type )
-                i = DUMMY_READER - 2;
+                i = LIBAV_READER - 1;
         }
     }
     if( hp->video_reader == hp->audio_reader )
