@@ -34,4 +34,3 @@ func_convert_colorspace to_yuv16le_to_yc48;
 func_convert_colorspace to_rgba;
 func_convert_colorspace to_rgb24;
 func_convert_colorspace to_yuy2;
-func_convert_colorspace to_pa64;

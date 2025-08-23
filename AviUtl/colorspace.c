@@ -357,33 +357,6 @@ static void convert_yv12i_to_yuy2
 #undef COPY_CHROMA
 }
 
-static void convert_pa64_premultiply
-(
-    uint8_t *buf,
-    int      output_rowsize,
-    int      height
-)
-{
-    /* RGBA 16:16:16:16 packed straight -> RGBA 16:16:16:16 packed premultiplied */
-    uint32_t r, g, b, a;
-    for( int y = 0; y < height; y++ )
-    {
-        uint8_t *p8_buf = buf + y * output_rowsize;
-        for ( int x = 0; x < output_rowsize; x += PA64_SIZE )
-        {
-            uint16_t *p_buf = (uint16_t *)p8_buf;
-            r = p_buf[0];
-            g = p_buf[1];
-            b = p_buf[2];
-            a = p_buf[3];
-            p_buf[0] = (uint16_t)((r * a + 32767) / 65535);
-            p_buf[1] = (uint16_t)((g * a + 32767) / 65535);
-            p_buf[2] = (uint16_t)((b * a + 32767) / 65535);
-            p8_buf += PA64_SIZE;
-        }
-    }
-}
-
 static int to_yuv16le
 (
     struct SwsContext *sws_ctx,
@@ -559,24 +532,4 @@ int to_yuy2
         output_rowsize = vshp->input_width * YUY2_SIZE;
     }
     return MAKE_AVIUTL_PITCH( output_rowsize << 3 ) * vohp->output_height;
-}
-
-int to_pa64
-(
-    lw_video_output_handler_t *vohp,
-    AVFrame                   *picture,
-    uint8_t                   *buf
-)
-{
-    lw_video_scaler_handler_t *vshp    = &vohp->scaler;
-    au_video_output_handler_t *au_vohp = (au_video_output_handler_t *)vohp->private_handler;
-    uint8_t *dst_data    [4] = { buf, NULL, NULL, NULL };
-    int      dst_linesize[4] = {au_vohp->output_linesize, 0, 0, 0 };
-    int output_height  = sws_scale( vshp->sws_ctx, (const uint8_t* const*)picture->data, picture->linesize, 0, vshp->input_height, dst_data, dst_linesize );
-    int output_rowsize = vshp->input_width * PA64_SIZE;
-
-    /* premultiplied alpha conversion */
-    convert_pa64_premultiply( buf, output_rowsize, output_height );
-    
-    return MAKE_AVIUTL_PITCH( output_rowsize << 3 ) * output_height;
 }

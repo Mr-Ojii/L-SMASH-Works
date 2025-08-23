@@ -233,7 +233,6 @@ int au_setup_video_rendering
             { to_rgba,            RGBA_SIZE,  OUTPUT_TAG_RGBA },
             { to_yuv16le_to_yc48, YC48_SIZE,  OUTPUT_TAG_YC48 },
             { to_yuv16le_to_lw48, LW48_SIZE,  OUTPUT_TAG_LW48 },
-            { to_pa64,            PA64_SIZE,  OUTPUT_TAG_PA64 },
         };
     au_vohp->convert_colorspace = colorspace_table[index].convert_colorspace;
     /* BITMAPINFOHEADER */
