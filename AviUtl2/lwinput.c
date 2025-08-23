@@ -58,6 +58,7 @@
 #define VAPOURSYNTH_FILE_EXT "*.vpy"
 #define SUPPORTED_FILE_EXT  MPEG4_FILE_EXT ";" VIDEO_FILE_EXT ";" AUDIO_FILE_EXT ";" INDEX_FILE_EXT ";" AVISYNTH_FILE_EXT ";" VAPOURSYNTH_FILE_EXT
 
+
 static char plugin_information[512] = { 0 };
 static char* plugin_dir = NULL;
 static char* default_index_dir = NULL;
@@ -66,7 +67,7 @@ static HMODULE hModuleDLL = NULL;
 static void get_plugin_information( void )
 {
     sprintf( plugin_information,
-             "L-SMASH Works File Reader r%s\n"
+             "L-SMASH Works File Reader for AviUtl2 r%s\n"
              "    libavutil %s : %s\n"
              "    libavcodec %s : %s\n"
              "    libavformat %s : %s\n"
@@ -82,39 +83,26 @@ static void get_plugin_information( void )
 
 INPUT_PLUGIN_TABLE input_plugin_table =
 {
-    INPUT_PLUGIN_FLAG_VIDEO | INPUT_PLUGIN_FLAG_AUDIO,              /* INPUT_PLUGIN_FLAG_VIDEO : support images
-                                                                     * INPUT_PLUGIN_FLAG_AUDIO : support audio */
-    "L-SMASH Works File Reader",                                    /* Name of plugin */
-    "MPEG-4 File (" MPEG4_FILE_EXT ")\0" MPEG4_FILE_EXT "\0"        /* Filter for Input file */
-    "LW-Libav Index File (" INDEX_FILE_EXT ")\0" INDEX_FILE_EXT "\0"
-    "Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
-    "L-SMASH Works File Reader r" LSMASHWORKS_REV " by Mr-Ojii\0",  /* Information of plugin */
-    func_init,                                                      /* Pointer to function called when opening DLL (If NULL, won't be called.) */
-    func_exit,                                                      /* Pointer to function called when closing DLL (If NULL, won't be called.) */
-    func_open,                                                      /* Pointer to function to open input file */
-    func_close,                                                     /* Pointer to function to close input file */
-    func_info_get,                                                  /* Pointer to function to get information of input file */
-    func_read_video,                                                /* Pointer to function to read image data */
-    func_read_audio,                                                /* Pointer to function to read audio data */
-    func_is_keyframe,                                               /* Pointer to function to check if it is a keyframe or not (If NULL, all is keyframe.) */
-    func_config,                                                    /* Pointer to function called when configuration dialog is required */
+    INPUT_PLUGIN_FLAG_VIDEO | INPUT_PLUGIN_FLAG_AUDIO,
+    L"L-SMASH Works File Reader for AviUtl2",
+    L"Supported File (" SUPPORTED_FILE_EXT ")\0" SUPPORTED_FILE_EXT "\0"
+    L"Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
+    L"L-SMASH Works File Reader for AviUtl2 r" LSMASHWORKS_REV L" by Mr-Ojii\0",
+    func_open,
+    func_close,
+    func_info_get,
+    func_read_video,
+    func_read_audio,
+    func_config,
+    NULL,
+    func_time_to_frame,
 };
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
-    wchar_t *exe_path;
-    if ( lw_GetModuleFileNameW( NULL, &exe_path ) ) {
-        wchar_t* p = exe_path;
-        while(*p != L'\0')
-                p++;
-        while(*p != L'\\')
-                p--;
-        p++;
-        if ( wcscmp( p, L"pipe32aui.exe" ) == 0 ) {
-            MessageBoxA( HWND_DESKTOP, "Use lwinput.aui with AviUtl ExEdit2 is deprecated.\nUse lwinput.aui2 instead.", "lwinput", MB_OK );
-        }
-        lw_free( exe_path );
-    }
+    // In AviUtl ExEdit2, func_init is obsolete.
+    // In the sample code, it is called in DLL_PROCESS_ATTACH, but since the program freezes, it is called here.
+    func_init();
 
     return &input_plugin_table;
 }
@@ -317,7 +305,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
             _video_opt->field_dominance = 0;
         else
             _video_opt->field_dominance = CLIP_VALUE( _video_opt->field_dominance, 0, 2 );
-        /* VFR->CFR */
+        /* VFR->CFR (for compatibility ) */
         if( !fgets( buf, sizeof(buf), ini )
          || sscanf( buf, "vfr2cfr=%d:%d:%d",
                     &_video_opt->vfr2cfr.active,
@@ -330,6 +318,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         }
         else
         {
+            _video_opt->vfr2cfr.active = 0;
             _video_opt->vfr2cfr.framerate_num = MAX( _video_opt->vfr2cfr.framerate_num, 1 );
             _video_opt->vfr2cfr.framerate_den = MAX( _video_opt->vfr2cfr.framerate_den, 1 );
         }
@@ -680,10 +669,10 @@ BOOL func_exit( void ) {
     return TRUE;
 }
 
-INPUT_HANDLE func_open( LPSTR filea )
+INPUT_HANDLE func_open( LPCWSTR filew )
 {
     char* file = NULL;
-    lw_convert_mb_string( CP_ACP, CP_UTF8, filea, &file );
+    lw_string_from_wchar( CP_UTF8, filew, &file );
     if( !file )
         return NULL;
 
@@ -717,7 +706,9 @@ INPUT_HANDLE func_open( LPSTR filea )
             { &avs_reader       , AU_SCRIPT_READER },
             { &vpy_reader       , AU_SCRIPT_READER },
             { &libav_reader     , AU_VIDEO_READER  },
+#ifndef AVIUTL2
             { &dummy_reader     , AU_DUMMY_READER  },
+#endif
             { NULL              , 0                }
         };
     for( int i = 0; lsmash_reader_table[i].reader; i++ )
@@ -803,7 +794,7 @@ INPUT_HANDLE func_open( LPSTR filea )
     return hp;
 }
 
-BOOL func_close( INPUT_HANDLE ih )
+bool func_close( INPUT_HANDLE ih )
 {
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
     if( !hp )
@@ -825,7 +816,7 @@ BOOL func_close( INPUT_HANDLE ih )
     return TRUE;
 }
 
-BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
+bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
 {
     if( !ih || !iip )
         return FALSE;
@@ -834,13 +825,14 @@ BOOL func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
     memset( iip, 0, sizeof(INPUT_INFO) );
     if( hp->video_reader != READER_NONE )
     {
-        iip->flag             |= INPUT_INFO_FLAG_VIDEO | INPUT_INFO_FLAG_VIDEO_RANDOM_ACCESS;
+        iip->flag             |= INPUT_INFO_FLAG_VIDEO;
+        if( hp->time_to_frame )
+            iip->flag         |= INPUT_INFO_TIME_TO_FRAME;
         iip->rate              = hp->framerate_num;
         iip->scale             = hp->framerate_den;
         iip->n                 = hp->video_sample_count;
         iip->format            = &hp->video_format;
         iip->format_size       = hp->video_format.biSize;
-        iip->handler           = 0;
     }
     if( hp->audio_reader != READER_NONE )
     {
@@ -874,16 +866,13 @@ int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf )
     return length;
 }
 
-BOOL func_is_keyframe( INPUT_HANDLE ih, int sample_number )
+int func_time_to_frame( INPUT_HANDLE ih, double time )
 {
     if( !ih )
-        return TRUE;
+        return 0;
 
     lsmash_handler_t *hp = (lsmash_handler_t *)ih;
-    if( sample_number >= hp->video_sample_count )
-        return FALSE;   /* In reading as double framerate, keyframe detection doesn't work at all
-                         * since sample_number exceeds the number of video samples. */
-    return hp->is_keyframe ? hp->is_keyframe( hp, sample_number ) : TRUE;
+    return hp->time_to_frame ? hp->time_to_frame( hp, time ) : time * hp->framerate_num / hp->framerate_den;
 }
 
 static inline void set_buddy_window_for_updown_control
@@ -1050,6 +1039,9 @@ static INT_PTR CALLBACK dialog_proc
             set_check_state( hwnd, IDC_CHECK_VFR_TO_CFR, video_opt_config->vfr2cfr.active );
             set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, video_opt_config->vfr2cfr.framerate_num );
             set_int_to_dlg( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, video_opt_config->vfr2cfr.framerate_den );
+            EnableWindow( GetDlgItem( hwnd, IDC_CHECK_VFR_TO_CFR ), FALSE );
+            EnableWindow( GetDlgItem( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM ), FALSE );
+            EnableWindow( GetDlgItem( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN ), FALSE );
             /* LW48 output */
             set_check_state( hwnd, IDC_CHECK_LW48_OUTPUT, video_opt_config->colorspace != 0 );
             /* AVS bit-depth */
@@ -1223,7 +1215,7 @@ static INT_PTR CALLBACK dialog_proc
                     /* field_dominance */
                     video_opt_config->field_dominance = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_FIELD_DOMINANCE ), CB_GETCURSEL, 0, 0 );
                     /* VFR->CFR */
-                    video_opt_config->vfr2cfr.active = get_check_state( hwnd, IDC_CHECK_VFR_TO_CFR );
+                    video_opt_config->vfr2cfr.active = 0;
                     video_opt_config->vfr2cfr.framerate_num = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_NUM, 1 );
                     video_opt_config->vfr2cfr.framerate_den = get_int_from_dlg_with_min( hwnd, IDC_EDIT_CONST_FRAMERATE_DEN, 1 );
                     /* LW48 output */
@@ -1304,7 +1296,7 @@ static INT_PTR CALLBACK dialog_proc
 
                     EndDialog( hwnd, IDOK );
                     
-                    MESSAGE_BOX_DESKTOP( MB_OK, "Please relaunch AviUtl for updating settings!" );
+                    MESSAGE_BOX_DESKTOP( MB_OK, "Please relaunch AviUtl ExEdit2 for updating settings!" );
                     
                     return TRUE;
                 }
@@ -1319,7 +1311,7 @@ static INT_PTR CALLBACK dialog_proc
     }
 }
 
-BOOL func_config( HWND hwnd, HINSTANCE dll_hinst )
+bool func_config( HWND hwnd, HINSTANCE dll_hinst )
 {
     const wchar_t* template = L"LWINPUT_CONFIG";
     /* Get Display Height ( Scaled ) */
@@ -1347,6 +1339,10 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
     { 
         case DLL_PROCESS_ATTACH:
             hModuleDLL = hinstDLL;
+            break;
+        case DLL_PROCESS_DETACH:
+            if (lpReserved != NULL) break;
+            func_exit();
             break;
     }
     return TRUE;

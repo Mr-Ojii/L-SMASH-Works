@@ -39,28 +39,11 @@ static inline enum AVSampleFormat au_decide_audio_output_sample_format
     int                 input_bits_per_sample
 )
 {
-    /* AviUtl doesn't support IEEE floating point format. */
-    switch ( input_sample_format )
-    {
-        case AV_SAMPLE_FMT_U8 :
-        case AV_SAMPLE_FMT_U8P :
-            return AV_SAMPLE_FMT_U8;
-        case AV_SAMPLE_FMT_S16 :
-        case AV_SAMPLE_FMT_S16P :
-            return AV_SAMPLE_FMT_S16;
-        case AV_SAMPLE_FMT_S32 :
-        case AV_SAMPLE_FMT_S32P :
-            return AV_SAMPLE_FMT_S32;
-        default :
-            if( input_bits_per_sample == 0 )
-                return AV_SAMPLE_FMT_S32;
-            else if( input_bits_per_sample <= 8 )
-                return AV_SAMPLE_FMT_U8;
-            else if( input_bits_per_sample <= 16 )
-                return AV_SAMPLE_FMT_S16;
-            else
-                return AV_SAMPLE_FMT_S32;
-    }
+    /* AviUtl2 beta1 only supports following format? */
+    /* - PCM signed 16bit int (stereo)               */
+    /* - PCM 32bit float      (stereo)               */
+    /* - PCM 32bit float      (mono)                 */
+    return AV_SAMPLE_FMT_FLT;
 }
 
 static inline WORD au_get_format_tag

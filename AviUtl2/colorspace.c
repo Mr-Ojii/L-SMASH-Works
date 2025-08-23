@@ -576,7 +576,11 @@ int to_pa64
     int output_rowsize = vshp->input_width * PA64_SIZE;
 
     /* premultiplied alpha conversion */
-    convert_pa64_premultiply( buf, output_rowsize, output_height );
+    static int avx2_available = -1;
+    if( avx2_available == -1 )
+        avx2_available = lw_check_avx2();
+    static void (*func_pa64_premultiply[2])( uint8_t *, int, int ) = { convert_pa64_premultiply, convert_pa64_premultiply_avx2 };
+    func_pa64_premultiply[avx2_available]( buf, output_rowsize, output_height );
     
     return MAKE_AVIUTL_PITCH( output_rowsize << 3 ) * output_height;
 }

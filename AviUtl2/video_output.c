@@ -47,105 +47,22 @@ static output_colorspace_index determine_colorspace_conversion
     avoid_yuv_scale_conversion( &input_pixel_format );
     switch( input_pixel_format )
     {
-        case AV_PIX_FMT_YUV444P :
-        case AV_PIX_FMT_YUV440P :
-        case AV_PIX_FMT_YUV420P9LE :
-        case AV_PIX_FMT_YUV420P9BE :
-        case AV_PIX_FMT_YUV422P9LE :
-        case AV_PIX_FMT_YUV422P9BE :
-        case AV_PIX_FMT_YUV444P9LE :
-        case AV_PIX_FMT_YUV444P9BE :
-        case AV_PIX_FMT_YUV420P10LE :
-        case AV_PIX_FMT_YUV420P10BE :
-        case AV_PIX_FMT_YUV422P10LE :
-        case AV_PIX_FMT_YUV422P10BE :
-        case AV_PIX_FMT_YUV444P10LE :
-        case AV_PIX_FMT_YUV444P10BE :
-        case AV_PIX_FMT_YUV420P16LE :
-        case AV_PIX_FMT_YUV420P16BE :
-        case AV_PIX_FMT_YUV422P16LE :
-        case AV_PIX_FMT_YUV422P16BE :
-        case AV_PIX_FMT_YUV444P16LE :
-        case AV_PIX_FMT_YUV444P16BE :
-        case AV_PIX_FMT_GRAY12LE :
-        case AV_PIX_FMT_GRAY12BE :
-        case AV_PIX_FMT_GRAY16LE :
-        case AV_PIX_FMT_GRAY16BE :
-        case AV_PIX_FMT_RGB48LE :
-        case AV_PIX_FMT_RGB48BE :
-        case AV_PIX_FMT_BGR48LE :
-        case AV_PIX_FMT_BGR48BE :
-        case AV_PIX_FMT_GBRP9LE :
-        case AV_PIX_FMT_GBRP9BE :
-        case AV_PIX_FMT_GBRP10LE :
-        case AV_PIX_FMT_GBRP10BE :
-        case AV_PIX_FMT_GBRP16LE :
-        case AV_PIX_FMT_GBRP16BE :
-#ifdef FFMPEG_HIGH_DEPTH_SUPPORT
-        case AV_PIX_FMT_YUV420P12LE :
-        case AV_PIX_FMT_YUV420P12BE :
-        case AV_PIX_FMT_YUV422P12LE :
-        case AV_PIX_FMT_YUV422P12BE :
-        case AV_PIX_FMT_YUV444P12LE :
-        case AV_PIX_FMT_YUV444P12BE :
-        case AV_PIX_FMT_YUV420P14LE :
-        case AV_PIX_FMT_YUV420P14BE :
-        case AV_PIX_FMT_YUV422P14LE :
-        case AV_PIX_FMT_YUV422P14BE :
-        case AV_PIX_FMT_YUV444P14LE :
-        case AV_PIX_FMT_YUV444P14BE :
-        case AV_PIX_FMT_GRAY10LE :
-        case AV_PIX_FMT_GRAY10BE :
-#endif
-            *output_pixel_format = AV_PIX_FMT_YUV444P16LE;  /* planar YUV 4:4:4, 48bpp little-endian -> YC48 */
-            return OUTPUT_YC48;
-        case AV_PIX_FMT_YUVA420P :
-        case AV_PIX_FMT_YUVA422P :
-        case AV_PIX_FMT_YUVA444P :
-        case AV_PIX_FMT_YUVA420P9LE :
-        case AV_PIX_FMT_YUVA420P9BE :
-        case AV_PIX_FMT_YUVA422P9LE :
-        case AV_PIX_FMT_YUVA422P9BE :
-        case AV_PIX_FMT_YUVA444P9LE :
-        case AV_PIX_FMT_YUVA444P9BE :
-        case AV_PIX_FMT_YUVA420P10LE :
-        case AV_PIX_FMT_YUVA420P10BE :
-        case AV_PIX_FMT_YUVA422P10LE :
-        case AV_PIX_FMT_YUVA422P10BE :
-        case AV_PIX_FMT_YUVA444P10LE :
-        case AV_PIX_FMT_YUVA444P10BE :
-        case AV_PIX_FMT_YUVA420P16LE :
-        case AV_PIX_FMT_YUVA420P16BE :
-        case AV_PIX_FMT_YUVA422P16LE :
-        case AV_PIX_FMT_YUVA422P16BE :
-        case AV_PIX_FMT_YUVA444P16LE :
-        case AV_PIX_FMT_YUVA444P16BE :
-        case AV_PIX_FMT_YA8 :
-        case AV_PIX_FMT_YA16LE :
-        case AV_PIX_FMT_YA16BE :
-        case AV_PIX_FMT_ARGB :
-        case AV_PIX_FMT_RGBA :
-        case AV_PIX_FMT_ABGR :
-        case AV_PIX_FMT_BGRA :
-        case AV_PIX_FMT_RGBA64LE :
-        case AV_PIX_FMT_RGBA64BE :
-        case AV_PIX_FMT_BGRA64LE :
-        case AV_PIX_FMT_BGRA64BE :
-        case AV_PIX_FMT_GBRAP :
-        case AV_PIX_FMT_GBRAP10LE :
-        case AV_PIX_FMT_GBRAP10BE :
-        case AV_PIX_FMT_GBRAP12LE :
-        case AV_PIX_FMT_GBRAP12BE :
-        case AV_PIX_FMT_GBRAP16LE :
-        case AV_PIX_FMT_GBRAP16BE :
-#ifdef FFMPEG_HIGH_DEPTH_SUPPORT
-        case AV_PIX_FMT_YUVA422P12LE :
-        case AV_PIX_FMT_YUVA422P12BE :
-        case AV_PIX_FMT_YUVA444P12LE :
-        case AV_PIX_FMT_YUVA444P12BE :
-#endif
-            *output_pixel_format = AV_PIX_FMT_BGRA;         /* packed BGRA 8:8:8:8, 32bpp, BGRABGRA... */
-            return OUTPUT_RGBA;
+        case AV_PIX_FMT_YUV420P :
+        case AV_PIX_FMT_YUYV422 :
+        case AV_PIX_FMT_YUV422P :
+        case AV_PIX_FMT_YUV410P :
+        case AV_PIX_FMT_YUV411P :
+        case AV_PIX_FMT_GRAY8 :
+        case AV_PIX_FMT_MONOWHITE :
+        case AV_PIX_FMT_MONOBLACK :
+        case AV_PIX_FMT_UYVY422 :
+        case AV_PIX_FMT_UYYVYY411 :
+        case AV_PIX_FMT_NV12 :
+        case AV_PIX_FMT_NV21 :
+        case AV_PIX_FMT_NV16 :
+        case AV_PIX_FMT_YVYU422 :
+            *output_pixel_format = AV_PIX_FMT_YUYV422;   /* packed YUV 4:2:2, 16bpp */
+            return OUTPUT_YUY2;
         case AV_PIX_FMT_RGB24 :
         case AV_PIX_FMT_BGR24 :
         case AV_PIX_FMT_BGR8 :
@@ -167,12 +84,24 @@ static output_colorspace_index determine_colorspace_conversion
         case AV_PIX_FMT_BGR444LE :
         case AV_PIX_FMT_BGR444BE :
         case AV_PIX_FMT_GBRP :
-        case AV_PIX_FMT_PAL8 :
-            *output_pixel_format = AV_PIX_FMT_BGR24;        /* packed RGB 8:8:8, 24bpp, BGRBGR... */
+        case AV_PIX_FMT_0RGB :
+        case AV_PIX_FMT_RGB0 :
+        case AV_PIX_FMT_0BGR :
+        case AV_PIX_FMT_BGR0 :
+        case AV_PIX_FMT_PAL8 : //
+            *output_pixel_format = AV_PIX_FMT_BGR24;     /* packed RGB 8:8:8, 24bpp, BGRBGR... */
             return OUTPUT_RGB24;
+        case AV_PIX_FMT_ARGB :
+        case AV_PIX_FMT_RGBA :
+        case AV_PIX_FMT_ABGR :
+        case AV_PIX_FMT_BGRA :
+        case AV_PIX_FMT_YA8:
+        case AV_PIX_FMT_GBRAP :
+            *output_pixel_format = AV_PIX_FMT_BGRA;      /* packed RGBA 8:8:8:8, 32bpp, BGRABGRA... */
+            return OUTPUT_RGBA;
         default :
-            *output_pixel_format = AV_PIX_FMT_YUYV422;      /* packed YUV 4:2:2, 16bpp */
-            return OUTPUT_YUY2;
+            *output_pixel_format = AV_PIX_FMT_RGBA64LE;  /* packed RGBA 16:16:16:16, 64bpp, RGBARGBA... little-endian */
+            return OUTPUT_PA64;
     }
 }
 

@@ -740,3 +740,64 @@ void LW_FUNC_ALIGN convert_yuv16le_to_yc48_sse4_1
 {
     convert_yuv16le_to_yc48_simd( buf, buf_linesize, dst_data, dst_linesize, output_rowsize, output_height, full_range, 1 );
 }
+
+#ifdef __GNUC__
+#pragma GCC target ("avx2")
+#endif
+#include <immintrin.h>
+
+void LW_FUNC_ALIGN convert_pa64_premultiply_avx2
+(
+    uint8_t *buf,
+    int      output_rowsize,
+    int      height
+)
+{
+    const __m256i v_alpha_perm_mask = _mm256_setr_epi32(3, 3, 3, 3, 7, 7, 7, 7); // Permutation mask for extracting alpha values
+    const __m256i v_blend_mask = _mm256_setr_epi32(-1, -1, -1, 0, -1, -1, -1, 0); // Blend mask R(N), G(N), B(N), A(O), R(N), G(N), B(N), A(O)
+
+    const __m256i v_const_32767 = _mm256_set1_epi32(32767);       // for fast addition in division
+    const __m256i v_const_magic = _mm256_set1_epi32(-2147450879); // magic number for fast division by 65535
+
+    int oneless_bytes = output_rowsize * height - 8;
+
+    __m128i x0, x1;
+    __m256i y0, y1, y2;
+
+    // 2pixel per cycle
+    for (int x = 0; x < oneless_bytes; x += 16, buf += 16)
+    {
+        x0 = _mm_loadu_si128((__m128i*)buf); // load 2pixel (u16x8)
+        y0 = _mm256_cvtepu16_epi32(x0); // u16x8 to u32x8
+        y1 = _mm256_permutevar8x32_epi32(y0, v_alpha_perm_mask); // extract alpha values
+        y1 = _mm256_mullo_epi32(y0, y1); // multiply with alpha
+        y1 = _mm256_add_epi32(y1, v_const_32767); // add 32767 for rounding
+
+        // -- divide by 65535 start --
+        y2 = _mm256_mul_epu32(v_const_magic, y1);
+        y1 = _mm256_mul_epu32(v_const_magic, _mm256_srli_si256(y1, 4));
+        y1 = _mm256_blend_epi32(_mm256_srli_si256(y2, 4), y1, 0xAA);
+        y1 = _mm256_srli_epi32(y1, 15);
+        // -- divide by 65535 end --
+
+        y0 = _mm256_blendv_epi8(y0, y1, v_blend_mask); // Blend new RGB with original alpha
+
+        x0 = _mm256_castsi256_si128(y0);
+        x1 = _mm256_extracti128_si256(y0, 1);
+        x0 = _mm_packus_epi32(x0, x1); // Pack 32-bit results to 16-bit
+
+        _mm_storeu_si128((__m128i*)buf, x0); // Store the result back to memory
+    }
+
+    if ((oneless_bytes / 16) % 2 == 0)
+    {
+        uint16_t *ptr = (uint16_t *)buf;
+        uint32_t r = ptr[0];
+        uint32_t g = ptr[1];
+        uint32_t b = ptr[2];
+        uint32_t a = ptr[3];
+        ptr[0] = (uint16_t)((r * a + 32767) / 65535);
+        ptr[1] = (uint16_t)((g * a + 32767) / 65535);
+        ptr[2] = (uint16_t)((b * a + 32767) / 65535);
+    }
+}

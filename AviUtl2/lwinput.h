@@ -27,8 +27,9 @@
 #include <inttypes.h>
 #include <windows.h>
 #include <mmreg.h>
+#include <stdbool.h>
 
-#include "input.h"
+#include "input2.h"
 
 #include "lwcolor.h"
 #include "../common/utils.h"
@@ -203,3 +204,13 @@ void au_message_box_desktop
     lw_log_level      level,
     const char       *message
 );
+
+BOOL func_init( void );
+BOOL func_exit( void );
+INPUT_HANDLE func_open( LPCWSTR file );
+bool func_close( INPUT_HANDLE ih );
+bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip );
+int func_read_video( INPUT_HANDLE ih, int sample_number, void *buf );
+int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf );
+bool func_config( HWND hwnd, HINSTANCE dll_hinst );
+int func_time_to_frame( INPUT_HANDLE ih, double time );

@@ -23,6 +23,9 @@
 *.auc
 *.aul
 
+# Compiled AviUtl ExEdit2 plugins
+*.aui2
+
 # Compiled Resource files
 *.res
 
