@@ -240,14 +240,23 @@ static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
     h->video_track_count = lwlibav_video_get_track_count( hp->lwh.file_path, hp->vdhp );
+    if( h->video_track_count <= 0 )
+    {
+        h->video_track_count = 0;
+        return -1;
+    }
     return 0;
 }
 
 static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
 {
-    /* dummy */
-    libav_handler_t *hp = (libav_handler_t *)h->video_private;
+    libav_handler_t *hp = (libav_handler_t *)h->audio_private;
     h->audio_track_count = lwlibav_audio_get_track_count( hp->lwh.file_path, hp->adhp );
+    if( h->audio_track_count <= 0 )
+    {
+        h->audio_track_count = 0;
+        return -1;
+    }
     return 0;
 }
 
@@ -312,22 +321,28 @@ static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index 
     if( 0 <= stream_index && ( !reader_opt->force_audio || reader_opt->force_audio_index != stream_index ) ) {
         reader_opt->force_audio = 1;
         reader_opt->force_audio_index = stream_index;
+        bool is_global = ( h->video_private == h->audio_private );
+        if( !is_global )
+            reader_opt->force_video = 0;
+
         // force reopen
-        char* f = lw_malloc_zero(strlen(hp->lwh.file_path));
+        char* f = lw_malloc_zero(strlen( hp->lwh.file_path ));
         if( f )
         {
             strcpy( f, hp->lwh.file_path );
             libav_handler_t* new_hp = open_file( f, reader_opt );
             if( new_hp )
             {
-                video_cleanup( h );
+                if( is_global )
+                    video_cleanup( h );
                 close_file( hp );
-                if( h->video_private == h->audio_private )
+                if( is_global )
                     h->video_private = h->audio_private = h->global_private = new_hp;
                 hp = h->audio_private = new_hp;
                 find_video( h, &reader_opt->video_opt );
                 find_audio( h, &reader_opt->audio_opt );
-                get_video_track( h, &reader_opt->video_opt, last_video );
+                if( is_global )
+                    get_video_track( h, &reader_opt->video_opt, last_video );
             }
             lw_free( f );
         }
