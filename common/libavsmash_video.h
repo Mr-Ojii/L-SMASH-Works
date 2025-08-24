@@ -198,6 +198,17 @@ uint64_t libavsmash_video_get_min_cts
 /*****************************************************************************
  * Others
  *****************************************************************************/
+ int libavsmash_video_get_track_count
+(
+    libavsmash_video_decode_handler_t *vdhp
+);
+
+uint32_t libavsmash_video_get_track_id_from_index
+(
+    libavsmash_video_decode_handler_t *vdhp,
+    uint32_t                           index
+);
+
 int libavsmash_video_get_track
 (
     libavsmash_video_decode_handler_t *vdhp,

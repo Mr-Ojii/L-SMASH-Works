@@ -83,7 +83,7 @@ static void get_plugin_information( void )
 
 INPUT_PLUGIN_TABLE input_plugin_table =
 {
-    INPUT_PLUGIN_FLAG_VIDEO | INPUT_PLUGIN_FLAG_AUDIO,
+    INPUT_PLUGIN_FLAG_VIDEO | INPUT_PLUGIN_FLAG_AUDIO | INPUT_PLUGIN_FLAG_MULTI_TRACK,
     L"L-SMASH Works File Reader for AviUtl2",
     L"Supported File (" SUPPORTED_FILE_EXT ")\0" SUPPORTED_FILE_EXT "\0"
     L"Any File (" ANY_FILE_EXT ")\0" ANY_FILE_EXT "\0",
@@ -94,7 +94,7 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     func_read_video,
     func_read_audio,
     func_config,
-    NULL,
+    func_set_track,
     func_time_to_frame,
 };
 
@@ -673,15 +673,17 @@ INPUT_HANDLE func_open( LPCWSTR filew )
             if( !hp->video_private )
             {
                 hp->video_private = private_stuff;
-                if( reader.get_video_track
-                 && reader.get_video_track( hp, video_opt ) == 0 )
+                if( reader.find_video
+                 && reader.find_video( hp, video_opt ) == 0 )
                 {
-                    hp->video_reader     = reader.type;
-                    hp->read_video       = reader.read_video;
-                    hp->is_keyframe      = reader.is_keyframe;
-                    hp->video_cleanup    = reader.video_cleanup;
-                    hp->close_video_file = reader.close_file;
-                    hp->time_to_frame    = reader.time_to_frame;
+                    hp->video_reader             = reader.type;
+                    hp->get_video_track          = reader.get_video_track;
+                    hp->read_video               = reader.read_video;
+                    hp->is_keyframe              = reader.is_keyframe;
+                    hp->video_cleanup            = reader.video_cleanup;
+                    hp->destroy_video_disposable = reader.destroy_disposable;
+                    hp->close_video_file         = reader.close_file;
+                    hp->time_to_frame            = reader.time_to_frame;
                     video_none = 0;
                 }
                 else
@@ -690,14 +692,16 @@ INPUT_HANDLE func_open( LPCWSTR filew )
             if( !hp->audio_private )
             {
                 hp->audio_private = private_stuff;
-                if( reader.get_audio_track
-                 && reader.get_audio_track( hp, audio_opt ) == 0 )
+                if( reader.find_audio
+                 && reader.find_audio( hp, audio_opt ) == 0 )
                 {
-                    hp->audio_reader     = reader.type;
-                    hp->read_audio       = reader.read_audio;
-                    hp->delay_audio      = reader.delay_audio;
-                    hp->audio_cleanup    = reader.audio_cleanup;
-                    hp->close_audio_file = reader.close_file;
+                    hp->audio_reader             = reader.type;
+                    hp->get_audio_track          = reader.get_audio_track;
+                    hp->read_audio               = reader.read_audio;
+                    hp->delay_audio              = reader.delay_audio;
+                    hp->audio_cleanup            = reader.audio_cleanup;
+                    hp->destroy_audio_disposable = reader.destroy_disposable;
+                    hp->close_audio_file         = reader.close_file;
                     audio_none = 0;
                 }
                 else
@@ -709,9 +713,6 @@ INPUT_HANDLE func_open( LPCWSTR filew )
             if( reader.close_file )
                 reader.close_file( private_stuff );
         }
-        else
-            if( reader.destroy_disposable )
-                reader.destroy_disposable( private_stuff );
         /* Found both video and audio reader. */
         if( hp->video_reader != READER_NONE && hp->audio_reader != READER_NONE )
             break;
@@ -725,10 +726,13 @@ INPUT_HANDLE func_open( LPCWSTR filew )
     }
     if( hp->video_reader == hp->audio_reader )
     {
-        hp->global_private = hp->video_private;
-        hp->close_file     = hp->close_video_file;
-        hp->close_video_file = NULL;
-        hp->close_audio_file = NULL;
+        hp->global_private           = hp->video_private;
+        hp->destroy_disposable       = hp->destroy_video_disposable;
+        hp->destroy_video_disposable = NULL;
+        hp->destroy_audio_disposable = NULL;
+        hp->close_file               = hp->close_video_file;
+        hp->close_video_file         = NULL;
+        hp->close_audio_file         = NULL;
     }
     if( hp->video_reader == READER_NONE && hp->audio_reader == READER_NONE )
     {
@@ -740,6 +744,51 @@ INPUT_HANDLE func_open( LPCWSTR filew )
 
     lw_free( file );
     return hp;
+}
+
+int func_set_track( INPUT_HANDLE ih, int type, int index )
+{
+    lsmash_handler_t *hp = (lsmash_handler_t *)ih;
+    if( index == -1 )
+    {
+        if( type == TRACK_TYPE_VIDEO )
+            return hp->video_track_count;
+        else if( type == TRACK_TYPE_AUDIO )
+            return hp->audio_track_count;
+
+        return 0;
+    }
+
+    if( type == TRACK_TYPE_VIDEO )
+    {
+        if( hp->get_video_track ) {
+            int ret = hp->get_video_track( hp, video_opt, index );
+            
+            if( hp->destroy_video_disposable )
+                hp->destroy_video_disposable( hp->video_private );
+            
+            return ret;
+        }
+        return -1;
+    }
+    else if( type == TRACK_TYPE_AUDIO )
+    {
+        if( hp->get_audio_track ) {
+            int ret = hp->get_audio_track( hp, audio_opt, index );
+
+            if( hp->destroy_audio_disposable )
+                hp->destroy_audio_disposable( hp->audio_private );
+
+            /* Assuming that called in the order of video -> audio */
+            if( hp->destroy_disposable )
+                hp->destroy_disposable( hp->global_private );
+
+            return ret;
+        }
+        return -1;
+    }
+
+    return -1;
 }
 
 bool func_close( INPUT_HANDLE ih )

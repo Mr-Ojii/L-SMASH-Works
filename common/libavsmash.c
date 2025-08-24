@@ -109,6 +109,92 @@ open_fail:
     return NULL;
 }
 
+uint32_t libavsmash_get_track_count_by_media_type
+(
+    lsmash_root_t    *root,
+    uint32_t          type,
+    lw_log_handler_t *lhp
+)
+{
+    char error_string[128] = { 0 };
+    lsmash_movie_parameters_t movie_param;
+    lsmash_initialize_movie_parameters( &movie_param );
+    if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
+    {
+        strcpy( error_string, "Failed to get movie paramters.\n" );
+        goto fail;
+    }
+    uint32_t count = 0;
+    for( uint32_t i = 1; i <= movie_param.number_of_tracks; i++ )
+    {
+        uint32_t track_id = lsmash_get_track_ID( root, i );
+        if( track_id == 0 )
+        {
+            strcpy( error_string, "Failed to find track.\n" );
+            goto fail;
+        }
+        lsmash_media_parameters_t media_param;
+        lsmash_initialize_media_parameters( &media_param );
+        if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+        {
+            strcpy( error_string, "Failed to get media parameters.\n" );
+            goto fail;
+        }
+        if( media_param.handler_type == type )
+            count++;
+    }
+    return count;
+fail:
+    lw_log_show( lhp, LW_LOG_FATAL, "%s", error_string );
+    return 0;
+}
+
+uint32_t libavsmash_get_track_id_from_index_by_media_type
+(
+    lsmash_root_t    *root,
+    uint32_t          type,
+    uint32_t          index,
+    lw_log_handler_t *lhp
+)
+{
+    if( index == 0 )
+        index++;
+    
+    char error_string[128] = { 0 };
+    lsmash_movie_parameters_t movie_param;
+    lsmash_initialize_movie_parameters( &movie_param );
+    if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
+    {
+        strcpy( error_string, "Failed to get movie paramters.\n" );
+        goto fail;
+    }
+    uint32_t count = 0;
+    for( uint32_t i = 1; i <= movie_param.number_of_tracks; i++ )
+    {
+        uint32_t track_id = lsmash_get_track_ID( root, i );
+        if( track_id == 0 )
+        {
+            strcpy( error_string, "Failed to find track.\n" );
+            goto fail;
+        }
+        lsmash_media_parameters_t media_param;
+        lsmash_initialize_media_parameters( &media_param );
+        if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+        {
+            strcpy( error_string, "Failed to get media parameters.\n" );
+            goto fail;
+        }
+        if( media_param.handler_type == type )
+            count++;
+        if( count == index )
+            return track_id;
+    }
+    return 0;
+fail:
+    lw_log_show( lhp, LW_LOG_FATAL, "%s", error_string );
+    return 0;
+}
+
 uint32_t libavsmash_get_track_by_media_type
 (
     lsmash_root_t    *root,
@@ -127,7 +213,7 @@ uint32_t libavsmash_get_track_by_media_type
         lsmash_movie_parameters_t movie_param;
         if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
         {
-            strcpy( error_string, "Failed to get movie paramters.\n" );
+            strcpy( error_string, "Failed to get movie paramters3.\n" );
             goto fail;
         }
         uint32_t i;

@@ -114,23 +114,44 @@ static libavsmash_handler_t *alloc_handler
     return hp;
 }
 
-static int get_first_track_of_type( lsmash_handler_t *h, uint32_t type )
+static int get_track_count_of_type( lsmash_handler_t *h, uint32_t type )
+{
+    libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
+    if( type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK)
+    {
+        libavsmash_video_set_root( hp->vdhp, hp->root );
+        h->video_track_count = libavsmash_video_get_track_count( hp->vdhp );
+        return h->video_track_count;
+    }
+    else
+    {
+        libavsmash_audio_set_root( hp->adhp, hp->root );
+        h->audio_track_count = libavsmash_audio_get_track_count( hp->adhp );
+        return h->audio_track_count;
+    }
+    return 0;
+}
+
+static int get_track_of_type_by_index( lsmash_handler_t *h, uint32_t type, int index )
 {
     int ret;
     lw_log_handler_t *lhp;
+    uint32_t track_id;
     if( type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK )
     {
         libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
         lhp = libavsmash_video_get_log_handler( hp->vdhp );
-        libavsmash_video_set_root( hp->vdhp, hp->root );
-        ret = libavsmash_video_get_track( hp->vdhp, 0 );
+        if( ( track_id = libavsmash_video_get_track_id_from_index( hp->vdhp, index ) ) <= 0 )
+            return -1;
+        ret = libavsmash_video_get_track( hp->vdhp, track_id );
     }
     else
     {
         libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
         lhp = libavsmash_audio_get_log_handler( hp->adhp );
-        libavsmash_audio_set_root( hp->adhp, hp->root );
-        ret = libavsmash_audio_get_track( hp->adhp, 0 );
+        if( ( track_id = libavsmash_audio_get_track_id_from_index( hp->adhp, index ) ) <= 0 )
+            return -1;
+        ret = libavsmash_audio_get_track( hp->adhp, track_id );
     }
     lhp->level = LW_LOG_WARNING;
     return ret;
@@ -358,10 +379,23 @@ static void *open_file( char *file_name, reader_option_t *opt )
     return hp;
 }
 
-static int get_first_video_track( lsmash_handler_t *h, video_option_t *opt )
+static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
+    get_track_count_of_type( h, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
+    return 0;
+}
+
+static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
+{
+    get_track_count_of_type( h, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
+    return 0;
+}
+
+static int get_video_track_by_index( lsmash_handler_t *h, video_option_t *opt, int index )
+{
+    index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
-    if( get_first_track_of_type( h, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK ) != 0 )
+    if( get_track_of_type_by_index( h, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index ) != 0 )
     {
         uint32_t track_id = libavsmash_video_get_track_id( hp->vdhp );
         lsmash_destruct_timeline( hp->root, track_id );
@@ -377,20 +411,25 @@ static int get_first_video_track( lsmash_handler_t *h, video_option_t *opt )
     vohp->cfr_num = 60000;
     vohp->cfr_den = 1001;
     /* TODO: Maybe, the number of output frames should be set up here. */
-    return prepare_video_decoding( h, opt );
+    if( prepare_video_decoding( h, opt ) != 0 )
+        return -1;
+    return index - 1;
 }
 
-static int get_first_audio_track( lsmash_handler_t *h, audio_option_t *opt )
+static int get_audio_track_by_index( lsmash_handler_t *h, audio_option_t *opt, int index )
 {
+    index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
-    if( get_first_track_of_type( h, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK ) != 0 )
+    if( get_track_of_type_by_index( h, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index ) != 0 )
     {
         uint32_t track_id = libavsmash_audio_get_track_id( hp->adhp );
         lsmash_destruct_timeline( hp->root, track_id );
         libavsmash_audio_close_codec_context( hp->adhp );
         return -1;
     }
-    return prepare_audio_decoding( h, opt );
+    if( prepare_audio_decoding( h, opt ) != 0 )
+        return -1;
+    return index - 1;
 }
 
 static void destroy_disposable( void *private_stuff )
@@ -492,8 +531,10 @@ lsmash_reader_t libavsmash_reader =
 {
     LIBAVSMASH_READER,
     open_file,
-    get_first_video_track,
-    get_first_audio_track,
+    find_video,
+    find_audio,
+    get_video_track_by_index,
+    get_audio_track_by_index,
     destroy_disposable,
     read_video,
     read_audio,

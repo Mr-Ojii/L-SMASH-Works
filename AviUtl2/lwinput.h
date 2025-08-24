@@ -141,8 +141,10 @@ typedef struct
 {
     reader_type type;
     void *(*open_file)             ( char *file_name, reader_option_t *opt );
-    int   (*get_video_track)       ( lsmash_handler_t *h, video_option_t *opt );
-    int   (*get_audio_track)       ( lsmash_handler_t *h, audio_option_t *opt );
+    int   (*find_video)            ( lsmash_handler_t *h, video_option_t *opt );
+    int   (*find_audio)            ( lsmash_handler_t *h, audio_option_t *opt );
+    int   (*get_video_track)       ( lsmash_handler_t *h, video_option_t *opt, int index );
+    int   (*get_audio_track)       ( lsmash_handler_t *h, audio_option_t *opt, int index );
     void  (*destroy_disposable)    ( void *private_stuff );
     int   (*read_video)            ( lsmash_handler_t *h, int sample_number, void *buf );
     int   (*read_audio)            ( lsmash_handler_t *h, int start, int wanted_length, void *buf );
@@ -157,28 +159,35 @@ typedef struct
 struct lsmash_handler_tag
 {
     void                *global_private;
-    void (*close_file)( void *private_stuff );
+    void (*destroy_disposable)( void *private_stuff );
+    void (*close_file)        ( void *private_stuff );
     /* Video stuff */
     reader_type          video_reader;
     void                *video_private;
+    int                  video_track_count;
     BITMAPINFOHEADER     video_format;
     int                  framerate_num;
     int                  framerate_den;
     uint32_t             video_sample_count;
-    int  (*read_video)      ( lsmash_handler_t *h, int sample_number, void *buf );
-    int  (*is_keyframe)     ( lsmash_handler_t *h, int sample_number );
-    void (*video_cleanup)   ( lsmash_handler_t *h );
-    void (*close_video_file)( void *private_stuff );
-    int  (*time_to_frame)   ( lsmash_handler_t *h, double time );
+    int  (*get_video_track)         ( lsmash_handler_t *h, video_option_t *opt, int index );
+    int  (*read_video)              ( lsmash_handler_t *h, int sample_number, void *buf );
+    int  (*is_keyframe)             ( lsmash_handler_t *h, int sample_number );
+    void (*video_cleanup)           ( lsmash_handler_t *h );
+    void (*destroy_video_disposable)( void *private_stuff );
+    void (*close_video_file)        ( void *private_stuff );
+    int  (*time_to_frame)           ( lsmash_handler_t *h, double time );
     /* Audio stuff */
     reader_type          audio_reader;
     void                *audio_private;
+    int                  audio_track_count;
     WAVEFORMATEXTENSIBLE audio_format;
     uint32_t             audio_pcm_sample_count;
-    int  (*read_audio)      ( lsmash_handler_t *h, int start, int wanted_length, void *buf );
-    int  (*delay_audio)     ( lsmash_handler_t *h, int *start, int wanted_length, int audio_delay );
-    void (*audio_cleanup)   ( lsmash_handler_t *h );
-    void (*close_audio_file)( void *private_stuff );
+    int  (*get_audio_track)         ( lsmash_handler_t *h, audio_option_t *opt, int index );
+    int  (*read_audio)              ( lsmash_handler_t *h, int start, int wanted_length, void *buf );
+    int  (*delay_audio)             ( lsmash_handler_t *h, int *start, int wanted_length, int audio_delay );
+    void (*audio_cleanup)           ( lsmash_handler_t *h );
+    void (*destroy_audio_disposable)( void *private_stuff );
+    void (*close_audio_file)        ( void *private_stuff );
 };
 
 typedef void func_get_output( uint8_t *out_data, int out_linesize, uint8_t **in_data, int in_linesize, int height, int full_range );
@@ -198,4 +207,5 @@ bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip );
 int func_read_video( INPUT_HANDLE ih, int sample_number, void *buf );
 int func_read_audio( INPUT_HANDLE ih, int start, int length, void *buf );
 bool func_config( HWND hwnd, HINSTANCE dll_hinst );
+int func_set_track( INPUT_HANDLE ih, int type, int index );
 int func_time_to_frame( INPUT_HANDLE ih, double time );

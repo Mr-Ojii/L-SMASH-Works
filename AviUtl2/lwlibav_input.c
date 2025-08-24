@@ -236,7 +236,21 @@ static void *open_file( char *file_path, reader_option_t *opt )
     return hp;
 }
 
-static int get_video_track( lsmash_handler_t *h, video_option_t *opt )
+static int find_video( lsmash_handler_t *h, video_option_t *opt )
+{
+    /* dummy */
+    h->video_track_count = 1;
+    return 0;
+}
+
+static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
+{
+    /* dummy */
+    h->audio_track_count = 1;
+    return 0;
+}
+
+static int get_video_track( lsmash_handler_t *h, video_option_t *opt, int index )
 {
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
     if( lwlibav_video_get_desired_track( hp->lwh.file_path, hp->vdhp, hp->lwh.threads ) < 0 )
@@ -249,7 +263,7 @@ static int get_video_track( lsmash_handler_t *h, video_option_t *opt )
     return prepare_video_decoding( h, opt );
 }
 
-static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt )
+static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index )
 {
     libav_handler_t *hp = (libav_handler_t *)h->audio_private;
     if( lwlibav_audio_get_desired_track( hp->lwh.file_path, hp->adhp, hp->lwh.threads ) < 0 )
@@ -354,6 +368,8 @@ lsmash_reader_t libav_reader =
 {
     LIBAV_READER,
     open_file,
+    find_video,
+    find_audio,
     get_video_track,
     get_audio_track,
     NULL,
