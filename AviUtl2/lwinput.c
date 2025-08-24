@@ -263,24 +263,8 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "no_create_index=%d", &_reader_opt->no_create_index ) != 1 )
             _reader_opt->no_create_index = 0;
         /* force stream index */
-        if( !fgets( buf, sizeof(buf), ini )
-         || sscanf( buf, "force_video_index=%d:%d",
-                    &_reader_opt->force_video, &_reader_opt->force_video_index ) != 2 )
-        {
-            _reader_opt->force_video       = 0;
-            _reader_opt->force_video_index = -1;
-        }
-        else
-            _reader_opt->force_video_index = MAX( _reader_opt->force_video_index, -1 );
-        if( !fgets( buf, sizeof(buf), ini )
-         || sscanf( buf, "force_audio_index=%d:%d",
-                    &_reader_opt->force_audio, &_reader_opt->force_audio_index ) != 2 )
-        {
-            _reader_opt->force_audio       = 0;
-            _reader_opt->force_audio_index = -1;
-        }
-        else
-            _reader_opt->force_audio_index = MAX( _reader_opt->force_audio_index, -1 );
+        fgets( buf, sizeof(buf), ini ); /* force_video_index is deleted, for compatibility */
+        fgets( buf, sizeof(buf), ini ); /* force_audio_index is deleted, for compatibility */
         /* seek_mode */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "seek_mode=%d", &_video_opt->seek_mode ) != 1 )
             _video_opt->seek_mode = 0;
@@ -453,9 +437,9 @@ static void save_settings( lwinput_option_t *_lwinput_opt ) {
     fprintf( ini, "av_sync=%d\n", _reader_opt->av_sync );
     /* no_create_index */
     fprintf( ini, "no_create_index=%d\n", _reader_opt->no_create_index );
-    /* force stream index */
-    fprintf( ini, "force_video_index=%d:%d\n", _reader_opt->force_video, _reader_opt->force_video_index );
-    fprintf( ini, "force_audio_index=%d:%d\n", _reader_opt->force_audio, _reader_opt->force_audio_index );
+    /* force stream index (deleted, for compatibility) */
+    fprintf( ini, "force_video_index=%d:%d\n", 0, -1 );
+    fprintf( ini, "force_audio_index=%d:%d\n", 0, -1 );
     /* seek_mode */
     fprintf( ini, "seek_mode=%d\n", _video_opt->seek_mode );
     /* forward_seek_threshold */
@@ -1007,11 +991,6 @@ static INT_PTR CALLBACK dialog_proc
             set_check_state( hwnd, IDC_CHECK_AV_SYNC, reader_opt_config->av_sync );
             /* no_create_index */
             set_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE, !reader_opt_config->no_create_index );
-            /* force stream index */
-            set_check_state( hwnd, IDC_CHECK_FORCE_VIDEO, reader_opt_config->force_video );
-            set_check_state( hwnd, IDC_CHECK_FORCE_AUDIO, reader_opt_config->force_audio );
-            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, reader_opt_config->force_video_index );
-            set_int_to_dlg( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, reader_opt_config->force_audio_index );
             /* forward_seek_threshold */
             set_int_to_dlg( hwnd, IDC_EDIT_FORWARD_THRESHOLD, video_opt_config->forward_seek_threshold );
             set_buddy_window_for_updown_control( hwnd, IDC_SPIN_FORWARD_THRESHOLD, IDC_EDIT_FORWARD_THRESHOLD );
@@ -1179,11 +1158,6 @@ static INT_PTR CALLBACK dialog_proc
                     reader_opt_config->av_sync = get_check_state( hwnd, IDC_CHECK_AV_SYNC );
                     /* no_create_index */
                     reader_opt_config->no_create_index = !get_check_state( hwnd, IDC_CHECK_CREATE_INDEX_FILE );
-                    /* force stream index */
-                    reader_opt_config->force_video = get_check_state( hwnd, IDC_CHECK_FORCE_VIDEO );
-                    reader_opt_config->force_audio = get_check_state( hwnd, IDC_CHECK_FORCE_AUDIO );
-                    reader_opt_config->force_video_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_VIDEO_INDEX, -1 );
-                    reader_opt_config->force_audio_index = get_int_from_dlg_with_min( hwnd, IDC_EDIT_FORCE_AUDIO_INDEX, -1 );
                     /* seek_mode */
                     video_opt_config->seek_mode = SendMessageA( GetDlgItem( hwnd, IDC_COMBOBOX_SEEK_MODE ), CB_GETCURSEL, 0, 0 );
                     /* forward_seek_threshold */
