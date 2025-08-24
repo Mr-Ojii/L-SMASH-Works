@@ -238,21 +238,55 @@ static void *open_file( char *file_path, reader_option_t *opt )
 
 static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
-    /* dummy */
-    h->video_track_count = 1;
+    libav_handler_t *hp = (libav_handler_t *)h->video_private;
+    h->video_track_count = lwlibav_video_get_track_count( hp->lwh.file_path, hp->vdhp );
     return 0;
 }
 
 static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
 {
     /* dummy */
-    h->audio_track_count = 1;
+    libav_handler_t *hp = (libav_handler_t *)h->video_private;
+    h->audio_track_count = lwlibav_audio_get_track_count( hp->lwh.file_path, hp->adhp );
     return 0;
 }
 
+static void close_file( void *private_stuff );
+
+static int last_video = 0;
+
 static int get_video_track( lsmash_handler_t *h, video_option_t *opt, int index )
 {
+    last_video = index;
+    index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
+    
+    reader_option_t reader_opt_tmp;
+    reader_option_t* reader_opt = (reader_option_t*)((byte*)opt - ((byte*)&reader_opt_tmp.video_opt - (byte*)&reader_opt_tmp));
+
+    int stream_index = lwlibav_video_get_stream_index_from_index( hp->lwh.file_path, hp->vdhp, index );
+    if( 0 <= stream_index && ( !reader_opt->force_video || reader_opt->force_video_index != stream_index ) ) {
+        reader_opt->force_video = 1;
+        reader_opt->force_video_index = stream_index;
+        // force reopen
+        char* f = lw_malloc_zero(strlen(hp->lwh.file_path));
+        if( f )
+        {
+            strcpy( f, hp->lwh.file_path );
+            libav_handler_t* new_hp = open_file( f, reader_opt );
+            if( new_hp )
+            {
+                close_file( hp );
+                if( h->video_private == h->audio_private )
+                    h->video_private = h->audio_private = h->global_private = new_hp;
+                hp = h->video_private = new_hp;
+                find_video( h, &reader_opt->video_opt );
+                find_audio( h, &reader_opt->audio_opt );
+            }
+            free( f );
+        }
+    }
+
     if( lwlibav_video_get_desired_track( hp->lwh.file_path, hp->vdhp, hp->lwh.threads ) < 0 )
         return -1;
     lw_log_handler_t *lhp = lwlibav_video_get_log_handler( hp->vdhp );
@@ -260,12 +294,45 @@ static int get_video_track( lsmash_handler_t *h, video_option_t *opt, int index 
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
-    return prepare_video_decoding( h, opt );
+    if( prepare_video_decoding( h, opt ) < 0 )
+        return -1;
+    return index - 1;
 }
 
+static void video_cleanup( lsmash_handler_t *h );
 static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index )
 {
+    index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->audio_private;
+
+    reader_option_t reader_opt_tmp;
+    reader_option_t* reader_opt = (reader_option_t*)((byte*)opt - ((byte*)&reader_opt_tmp.audio_opt - (byte*)&reader_opt_tmp));
+
+    int stream_index = lwlibav_audio_get_stream_index_from_index( hp->lwh.file_path, hp->adhp, index );
+    if( 0 <= stream_index && ( !reader_opt->force_audio || reader_opt->force_audio_index != stream_index ) ) {
+        reader_opt->force_audio = 1;
+        reader_opt->force_audio_index = stream_index;
+        // force reopen
+        char* f = lw_malloc_zero(strlen(hp->lwh.file_path));
+        if( f )
+        {
+            strcpy( f, hp->lwh.file_path );
+            libav_handler_t* new_hp = open_file( f, reader_opt );
+            if( new_hp )
+            {
+                video_cleanup( h );
+                close_file( hp );
+                if( h->video_private == h->audio_private )
+                    h->video_private = h->audio_private = h->global_private = new_hp;
+                hp = h->audio_private = new_hp;
+                find_video( h, &reader_opt->video_opt );
+                find_audio( h, &reader_opt->audio_opt );
+                get_video_track( h, &reader_opt->video_opt, last_video );
+            }
+            lw_free( f );
+        }
+    }
+
     if( lwlibav_audio_get_desired_track( hp->lwh.file_path, hp->adhp, hp->lwh.threads ) < 0 )
         return -1;
     lw_log_handler_t *lhp = lwlibav_audio_get_log_handler( hp->adhp );
@@ -273,7 +340,9 @@ static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index 
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
-    return prepare_audio_decoding( h, opt );
+    if( prepare_audio_decoding( h, opt ) < 0 )
+        return -1;
+    return index - 1; 
 }
 
 static int read_video( lsmash_handler_t *h, int frame_number, void *buf )

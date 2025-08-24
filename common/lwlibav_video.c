@@ -267,6 +267,50 @@ void lwlibav_video_force_seek
     vdhp->last_frame_number = vdhp->frame_count + 1;
 }
 
+int lwlibav_video_get_track_count
+(
+    const char                     *file_path,
+    lwlibav_video_decode_handler_t *vdhp
+)
+{
+    AVFormatContext *format = NULL;
+    if( lavf_open_file( &format, file_path, &vdhp->lh ) < 0 )
+        return 0;
+    int count = 0;
+    for( int i = 0; i < format->nb_streams; i++ )
+    {
+        if( format->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
+            count++;
+    }
+    lavf_close_file( &format );
+    return count;
+}
+
+int lwlibav_video_get_stream_index_from_index
+(
+    const char                     *file_path,
+    lwlibav_video_decode_handler_t *vdhp,
+    int                             index
+)
+{
+    AVFormatContext *format = NULL;
+    if( lavf_open_file( &format, file_path, &vdhp->lh ) < 0 )
+        return 0;
+    int ret = 0;
+    int count = 0;
+    for( int i = 0; i < format->nb_streams; i++ )
+    {
+        if( format->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO )
+            count++;
+        if( count == index ) {
+            ret = i;
+            break;
+        }
+    }
+    lavf_close_file( &format );
+    return ret;
+}
+
 int lwlibav_video_get_desired_track
 (
     const char                     *file_path,
