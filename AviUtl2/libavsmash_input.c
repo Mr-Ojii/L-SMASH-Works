@@ -382,12 +382,16 @@ static void *open_file( char *file_name, reader_option_t *opt )
 static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
     get_track_count_of_type( h, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
+    if( h->video_track_count <= 0 )
+        return -1;
     return 0;
 }
 
 static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
 {
     get_track_count_of_type( h, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
+    if( h->audio_track_count <= 0 )
+        return -1;
     return 0;
 }
 
