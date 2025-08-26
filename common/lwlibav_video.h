@@ -160,19 +160,6 @@ void lwlibav_video_force_seek
     lwlibav_video_decode_handler_t *vdhp
 );
 
-int lwlibav_video_get_track_count
-(
-    const char                     *file_path,
-    lwlibav_video_decode_handler_t *vdhp
-);
-
-int lwlibav_video_get_stream_index_from_index
-(
-    const char                     *file_path,
-    lwlibav_video_decode_handler_t *vdhp,
-    int                             index
-);
-
 int lwlibav_video_get_desired_track
 (
     const char                     *file_path,
