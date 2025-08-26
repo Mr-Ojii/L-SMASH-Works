@@ -54,8 +54,8 @@ struct lwlibav_video_decode_handler_tag
     lw_log_handler_t    lh;
     lwlibav_extradata_handler_t exh;
     AVCodecContext     *ctx;
-    AVIndexEntry       *index_entries;
-    int                 index_entries_count;
+    AVIndexEntry      **index_entries_list;
+    int                *index_entries_count_list;
     int                 lw_seek_flags;
     int                 av_seek_flags;
     int                 dv_in_avi;          /* unused */
