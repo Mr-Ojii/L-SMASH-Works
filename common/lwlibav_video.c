@@ -296,7 +296,7 @@ int lwlibav_video_get_stream_index_from_index
     AVFormatContext *format = NULL;
     if( lavf_open_file( &format, file_path, &vdhp->lh ) < 0 )
         return 0;
-    int ret = -1;
+    int ret = 0;
     int count = 0;
     for( int i = 0; i < format->nb_streams; i++ )
     {
