@@ -99,4 +99,6 @@ struct lwlibav_video_decode_handler_tag
     AVRational          actual_time_base;
     int                 strict_cfr;
     int                 reuse_pkt;
+    /* common2 */
+    uint32_t            nb_streams; /* TODO: If we don't add it here, an error will occur. */
 };

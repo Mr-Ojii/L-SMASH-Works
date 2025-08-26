@@ -60,4 +60,6 @@ struct lwlibav_audio_decode_handler_tag
     uint32_t            last_frame_number;
     uint64_t            pcm_sample_count;
     uint64_t            next_pcm_sample_number;
+    /* common2 */
+    uint32_t            nb_streams; /* TODO: If we don't add it here, an error will occur. */
 };

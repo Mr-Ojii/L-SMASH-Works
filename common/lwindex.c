@@ -2046,10 +2046,11 @@ static int create_index
     }
     /*
         # Structure of Libav reader index file
-        <LibavReaderIndexFile=15>
+        <LibavReaderIndexFile=17>
         <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
         <FileHash=0x0123456789abcdef>
+        <StreamCount=2>
         <LibavReaderIndex=0x00000208,0,marumoska>
         <ActiveVideoStreamIndex>+0000000000</ActiveVideoStreamIndex>
         <ActiveAudioStreamIndex>-0000000001</ActiveAudioStreamIndex>
@@ -2088,6 +2089,8 @@ static int create_index
     lwhp->raw_demuxer  = format_ctx->iformat->long_name && !strncmp( format_ctx->iformat->long_name, "raw", 3 );
     vdhp->format       = format_ctx;
     adhp->format       = format_ctx;
+    vdhp->nb_streams   = format_ctx->nb_streams;
+    adhp->nb_streams   = format_ctx->nb_streams;
     adhp->dv_in_avi    = !strcmp( lwhp->format_name, "avi" ) ? -1 : 0;
     int32_t video_index_pos = 0;
     int32_t audio_index_pos = 0;
@@ -2119,6 +2122,7 @@ static int create_index
 #endif
         fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
         fprintf( index, "<FileHash=0x%016" PRIx64 ">\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
+        fprintf( index, "<StreamCount=%u>\n", format_ctx->nb_streams );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
         fprintf( index, "<ActiveVideoStreamIndex>%+011d</ActiveVideoStreamIndex>\n", -1 );
@@ -2833,6 +2837,11 @@ static int parse_index
     if( fscanf( index, "<FileHash=0x%" SCNx64 ">\n", &file_hash ) != 1
      || file_hash != xxhash_file( lwhp->file_path, file_stat.st_size ) )
         return -1;
+    uint32_t nb_streams;
+    if( fscanf( index, "<StreamCount=%u>\n", &nb_streams ) != 1 )
+        return -1;
+    vdhp->nb_streams = nb_streams;
+    adhp->nb_streams = nb_streams;
     if( fscanf( index, "<LibavReaderIndex=0x%x,%d,%[^>]>\n",
                 (unsigned int *)&lwhp->format_flags, &lwhp->raw_demuxer, format_name ) != 3 )
         return -1;
