@@ -36,13 +36,13 @@ struct lwlibav_audio_decode_handler_tag
 {
     /* common */
     AVFormatContext    *format;
+    uint32_t            nb_streams;
     int                 stream_index;
     int                 error;
     lw_log_handler_t    lh;
     lwlibav_extradata_handler_t exh;
     AVCodecContext     *ctx;
-    AVIndexEntry      **index_entries_list;
-    int                *index_entries_count_list;
+    lwlibav_index_entries_t    *index_entries_list;
     int                 lw_seek_flags;
     int                 av_seek_flags;  /* unused */
     int                 dv_in_avi;      /* 1 = 'DV in AVI Type-1', 0 = otherwise */
@@ -60,6 +60,4 @@ struct lwlibav_audio_decode_handler_tag
     uint32_t            last_frame_number;
     uint64_t            pcm_sample_count;
     uint64_t            next_pcm_sample_number;
-    /* common2 */
-    uint32_t            nb_streams; /* TODO: If we don't add it here, an error will occur. */
 };

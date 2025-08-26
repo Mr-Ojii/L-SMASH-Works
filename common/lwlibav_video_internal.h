@@ -49,13 +49,13 @@ struct lwlibav_video_decode_handler_tag
 {
     /* common */
     AVFormatContext    *format;
+    uint32_t            nb_streams;
     int                 stream_index;
     int                 error;
     lw_log_handler_t    lh;
     lwlibav_extradata_handler_t exh;
     AVCodecContext     *ctx;
-    AVIndexEntry      **index_entries_list;
-    int                *index_entries_count_list;
+    lwlibav_index_entries_t    *index_entries_list;
     int                 lw_seek_flags;
     int                 av_seek_flags;
     int                 dv_in_avi;          /* unused */
@@ -99,6 +99,4 @@ struct lwlibav_video_decode_handler_tag
     AVRational          actual_time_base;
     int                 strict_cfr;
     int                 reuse_pkt;
-    /* common2 */
-    uint32_t            nb_streams; /* TODO: If we don't add it here, an error will occur. */
 };

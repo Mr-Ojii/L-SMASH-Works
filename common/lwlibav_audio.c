@@ -92,10 +92,9 @@ void lwlibav_audio_free_decode_handler
     if( adhp->index_entries_list )
     {
         for( int i = 0; i < adhp->nb_streams; i++ )
-            av_freep( &adhp->index_entries_list[i] );
+            av_freep( &adhp->index_entries_list[i].entries );
         lw_free( adhp->index_entries_list );
     }
-    lw_free( adhp->index_entries_count_list );
     av_frame_free( &adhp->frame_buffer );
     avcodec_free_context( &adhp->ctx );
     if( adhp->format )
@@ -257,10 +256,9 @@ int lwlibav_audio_get_desired_track
         if( adhp->index_entries_list )
         {
             for( int i = 0; i < adhp->nb_streams; i++ )
-                av_freep( &adhp->index_entries_list[i] );
+                av_freep( &adhp->index_entries_list[i].entries );
             lw_freep( &adhp->index_entries_list );
         }
-        lw_freep( &adhp->index_entries_count_list );
         lw_freep( &adhp->frame_list );
         if( adhp->format )
             lavf_close_file( &adhp->format );
