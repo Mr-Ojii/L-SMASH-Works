@@ -238,20 +238,31 @@ static void *open_file( char *file_path, reader_option_t *opt )
 
 static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
-    /* dummy */
-    h->video_track_count = 1;
+    libav_handler_t *hp = (libav_handler_t *)h->video_private;
+    h->video_track_count = lwlibav_video_get_track_count( hp->lwh.file_path, hp->vdhp );
+    if( h->video_track_count <= 0 )
+    {
+        h->video_track_count = 0;
+        return -1;
+    }
     return 0;
 }
 
 static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
 {
-    /* dummy */
-    h->audio_track_count = 1;
+    libav_handler_t *hp = (libav_handler_t *)h->audio_private;
+    h->audio_track_count = lwlibav_audio_get_track_count( hp->lwh.file_path, hp->adhp );
+    if( h->audio_track_count <= 0 )
+    {
+        h->audio_track_count = 0;
+        return -1;
+    }
     return 0;
 }
 
 static int get_video_track( lsmash_handler_t *h, video_option_t *opt, int index )
 {
+    index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
     if( lwlibav_video_get_desired_track( hp->lwh.file_path, hp->vdhp, hp->lwh.threads ) < 0 )
         return -1;
@@ -260,11 +271,14 @@ static int get_video_track( lsmash_handler_t *h, video_option_t *opt, int index 
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
-    return prepare_video_decoding( h, opt );
+    if( prepare_video_decoding( h, opt ) < 0 )
+        return -1;
+    return index - 1;
 }
 
 static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index )
 {
+    index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->audio_private;
     if( lwlibav_audio_get_desired_track( hp->lwh.file_path, hp->adhp, hp->lwh.threads ) < 0 )
         return -1;
@@ -273,7 +287,9 @@ static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index 
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
-    return prepare_audio_decoding( h, opt );
+    if( prepare_audio_decoding( h, opt ) < 0 )
+        return -1;
+    return index - 1;
 }
 
 static int read_video( lsmash_handler_t *h, int frame_number, void *buf )

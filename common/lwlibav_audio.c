@@ -190,6 +190,50 @@ void lwlibav_audio_force_seek
     adhp->next_pcm_sample_number = adhp->pcm_sample_count + 1;
 }
 
+int lwlibav_audio_get_track_count
+(
+    const char                     *file_path,
+    lwlibav_audio_decode_handler_t *adhp
+)
+{
+    AVFormatContext *format = NULL;
+    if( lavf_open_file( &format, file_path, &adhp->lh ) < 0 )
+        return -1;
+    int count = 0;
+    for( int i = 0; i < format->nb_streams; i++ )
+    {
+        if( format->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+            count++;
+    }
+    lavf_close_file( &format );
+    return count;
+}
+
+int lwlibav_audio_get_stream_index_from_index
+(
+    const char                     *file_path,
+    lwlibav_audio_decode_handler_t *adhp,
+    int                             index
+)
+{
+    AVFormatContext *format = NULL;
+    if( lavf_open_file( &format, file_path, &adhp->lh ) < 0 )
+        return -1;
+    int ret = -1;
+    int count = 0;
+    for( int i = 0; i < format->nb_streams; i++ )
+    {
+        if( format->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+            count++;
+        if( count == index ) {
+            ret = i;
+            break;
+        }
+    }
+    lavf_close_file( &format );
+    return ret;
+}
+
 int lwlibav_audio_get_desired_track
 (
     const char                     *file_path,
