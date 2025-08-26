@@ -242,7 +242,7 @@ int lwlibav_video_get_max_width
     lwlibav_video_decode_handler_t *vdhp
 )
 {
-    return vdhp ? vdhp->max_width : 0;
+    return vdhp ? vdhp->stream_info_list[vdhp->stream_index].max_width : 0;
 }
 
 int lwlibav_video_get_max_height
@@ -250,7 +250,7 @@ int lwlibav_video_get_max_height
     lwlibav_video_decode_handler_t *vdhp
 )
 {
-    return vdhp ? vdhp->max_height : 0;
+    return vdhp ? vdhp->stream_info_list[vdhp->stream_index].max_height : 0;
 }
 
 AVFrame *lwlibav_video_get_frame_buffer
@@ -270,7 +270,7 @@ void lwlibav_video_force_seek
 )
 {
     /* Force seek before the next reading. */
-    vdhp->last_frame_number = vdhp->frame_count + 1;
+    vdhp->last_frame_number = vdhp->stream_info_list[vdhp->stream_index].frame_count + 1;
 }
 
 int lwlibav_video_get_track_count
@@ -326,7 +326,7 @@ int lwlibav_video_get_desired_track
 {
     AVCodecContext *ctx = NULL;
     if( vdhp->stream_index < 0
-     || vdhp->frame_count == 0
+     || vdhp->stream_info_list[vdhp->stream_index].frame_count == 0
      || lavf_open_file( &vdhp->format, file_path, &vdhp->lh ) < 0
      || find_and_open_decoder( &ctx, vdhp->format->streams[ vdhp->stream_index ]->codecpar,
                                vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads ) < 0 )
@@ -366,7 +366,7 @@ void lwlibav_video_setup_timestamp_info
         *framerate_den = (int64_t)vohp->cfr_den;
         return;
     }
-    if( vdhp->frame_count == 1
+    if( vdhp->stream_info_list[vdhp->stream_index].frame_count == 1
      || lwhp->raw_demuxer
      || vdhp->actual_time_base.num == 0
      || vdhp->actual_time_base.den == 0
@@ -420,10 +420,11 @@ void lwlibav_video_set_initial_input_format
     lwlibav_video_decode_handler_t *vdhp
 )
 {
-    vdhp->ctx->width      = vdhp->initial_width;
-    vdhp->ctx->height     = vdhp->initial_height;
-    vdhp->ctx->pix_fmt    = vdhp->initial_pix_fmt;
-    vdhp->ctx->colorspace = vdhp->initial_colorspace;
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
+    vdhp->ctx->width      = vsinfo->initial_width;
+    vdhp->ctx->height     = vsinfo->initial_height;
+    vdhp->ctx->pix_fmt    = vsinfo->initial_pix_fmt;
+    vdhp->ctx->colorspace = vsinfo->initial_colorspace;
 }
 
 /* Set the indentifier in output order to identify output picture.
@@ -437,7 +438,7 @@ static inline void set_output_order_id
     uint32_t                        coded_picture_number
 )
 {
-    if( vdhp->order_converter && coded_picture_number <= vdhp->frame_count )
+    if( vdhp->order_converter && coded_picture_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count )
     {
         /* Picture reorderings are present. */
         pkt->pts = vdhp->order_converter[coded_picture_number].decoding_to_presentation;
@@ -484,7 +485,7 @@ static uint32_t correct_current_frame_number
     if( pkt->dts > info[p].dts )
     {
         /* too forward */
-        uint32_t limit = MIN( goal, vdhp->frame_count );
+        uint32_t limit = MIN( goal, vdhp->stream_info_list[vdhp->stream_index].frame_count );
         if( oc )
             while( !MATCH_DTS( oc[++i].decoding_to_presentation )
                 && !MATCH_POS( oc[  i].decoding_to_presentation )
@@ -684,7 +685,7 @@ static inline uint32_t is_half_frame
     uint32_t                        output_picture_number
 )
 {
-    return (output_picture_number <= vdhp->frame_count
+    return (output_picture_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count
          && vdhp->frame_list[output_picture_number].repeat_pict == 0);
 }
 
@@ -782,7 +783,7 @@ static uint32_t seek_video
             output_ready = 1;
         }
         /* Handle decoder delay derived from PAFF field coded pictures. */
-        else if( current <= vdhp->frame_count
+        else if( current <= vdhp->stream_info_list[vdhp->stream_index].frame_count
               && current >= rap_number + decoder_delay
               && vdhp->frame_list[current].repeat_pict == 0 )
         {
@@ -962,7 +963,7 @@ static int get_frame
         ++current;
     }
     /* Flush the last frames. */
-    if( current > vdhp->frame_count && vdhp->exh.delay_count )
+    if( current > vdhp->stream_info_list[vdhp->stream_index].frame_count && vdhp->exh.delay_count )
         while( current <= goal )
         {
             uint32_t estimated_picture_number = current - vdhp->exh.delay_count;
@@ -1053,8 +1054,8 @@ static int get_requested_picture
 )
 {
 #define MAX_ERROR_COUNT 3   /* arbitrary */
-    if( picture_number > vdhp->frame_count )
-        picture_number = vdhp->frame_count;
+    if( picture_number > vdhp->stream_info_list[vdhp->stream_index].frame_count )
+        picture_number = vdhp->stream_info_list[vdhp->stream_index].frame_count;
     uint32_t extradata_index;
     uint32_t last_half_offset = get_last_half_offset( vdhp );
     if( picture_number == vdhp->last_frame_number
@@ -1066,14 +1067,14 @@ static int get_requested_picture
         extradata_index = vdhp->frame_list[picture_number].extradata_index;
         goto return_frame;
     }
-    if( picture_number < vdhp->first_valid_frame_number || vdhp->frame_count == 1 )
+    if( picture_number < vdhp->first_valid_frame_number || vdhp->stream_info_list[vdhp->stream_index].frame_count == 1 )
     {
         /* Copy the first valid video frame data. */
         av_frame_unref( frame );
         if( av_frame_ref( frame, vdhp->first_valid_frame ) < 0 )
             goto video_fail;
         /* Force seeking at the next access for valid video frame. */
-        vdhp->last_frame_number = vdhp->frame_count + 1;
+        vdhp->last_frame_number = vdhp->stream_info_list[vdhp->stream_index].frame_count + 1;
         /* Return the first valid video frame. */
         extradata_index = vdhp->frame_list[ vdhp->first_valid_frame_number ].extradata_index;
         goto return_frame;
@@ -1375,7 +1376,7 @@ static uint32_t lwlibav_vfr2cfr
     }
     double next_target_ts = (double)((uint64_t)frame_number * vohp->cfr_den) / vohp->cfr_num;
     for( composition_frame_number++;
-         composition_frame_number <= vdhp->frame_count;
+         composition_frame_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count;
          composition_frame_number++ )
     {
         ts = lwlibav_get_ts( vdhp, composition_frame_number );
@@ -1414,8 +1415,8 @@ static uint32_t lwlibav_vfr2cfr
             prev_ts = current_ts;
         }
     }
-    if( composition_frame_number > vdhp->frame_count )
-        frame_number = vdhp->frame_count;
+    if( composition_frame_number > vdhp->stream_info_list[vdhp->stream_index].frame_count )
+        frame_number = vdhp->stream_info_list[vdhp->stream_index].frame_count;
     vdhp->last_ts_frame_number = frame_number;
     return frame_number;
 }
@@ -1486,7 +1487,7 @@ uint32_t lwlibav_ts_to_frame_number
             return 0;
     }
     for( composition_frame_number++;
-         composition_frame_number <= vdhp->frame_count;
+         composition_frame_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count;
          composition_frame_number++ )
     {
         ts = lwlibav_get_ts( vdhp, composition_frame_number );
@@ -1507,8 +1508,8 @@ uint32_t lwlibav_ts_to_frame_number
             }
         }
     }
-    if( composition_frame_number > vdhp->frame_count )
-        frame_number = vdhp->frame_count;
+    if( composition_frame_number > vdhp->stream_info_list[vdhp->stream_index].frame_count )
+        frame_number = vdhp->stream_info_list[vdhp->stream_index].frame_count;
     vdhp->last_ts_frame_number = frame_number;
     return frame_number;
 }
@@ -1569,11 +1570,11 @@ int lwlibav_video_find_first_valid_frame
     AVCodecParameters   *codecpar = vdhp->format->streams[ vdhp->stream_index ]->codecpar;
     handle_decoder_pix_fmt( codecpar, codec, (enum AVPixelFormat)codecpar->format );
     vdhp->ctx->pix_fmt = (enum AVPixelFormat)codecpar->format;  /* Correct decoder pixel format. */
-    vdhp->last_ts_frame_number = vdhp->frame_count;
+    vdhp->last_ts_frame_number = vdhp->stream_info_list[vdhp->stream_index].frame_count;
     vdhp->av_seek_flags = (vdhp->lw_seek_flags & SEEK_POS_BASED) ? AVSEEK_FLAG_BYTE
                         : vdhp->lw_seek_flags == 0               ? AVSEEK_FLAG_FRAME
                         : 0;
-    if( vdhp->frame_count != 1 )
+    if( vdhp->stream_info_list[vdhp->stream_index].frame_count != 1 )
     {
         vdhp->av_seek_flags |= AVSEEK_FLAG_BACKWARD;
         uint32_t rap_number;
@@ -1585,7 +1586,7 @@ int lwlibav_video_find_first_valid_frame
     uint32_t decoder_delay = get_decoder_delay( vdhp->ctx );
     uint32_t thread_delay  = decoder_delay - vdhp->ctx->has_b_frames;
     AVPacket *pkt = &vdhp->packet;
-    for( uint32_t i = 1; i <= vdhp->frame_count + vdhp->exh.delay_count; i++ )
+    for( uint32_t i = 1; i <= vdhp->stream_info_list[vdhp->stream_index].frame_count + vdhp->exh.delay_count; i++ )
     {
         lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, i, pkt );
         av_frame_unref( vdhp->frame_buffer );
@@ -1593,7 +1594,7 @@ int lwlibav_video_find_first_valid_frame
         int got_picture;
         int ret = decode_video_packet( vdhp->ctx, vdhp->frame_buffer, &got_picture, pkt );
         /* Handle decoder delay derived from PAFF field coded pictures. */
-        if( i <= vdhp->frame_count && i > decoder_delay
+        if( i <= vdhp->stream_info_list[vdhp->stream_index].frame_count && i > decoder_delay
          && !got_picture && vdhp->frame_list[i].repeat_pict == 0 )
         {
             /* No output picture since the second field coded picture of the next frame is not decoded yet. */
@@ -1610,7 +1611,7 @@ int lwlibav_video_find_first_valid_frame
                     vdhp->first_valid_frame_number = (uint32_t)output_id;
                 else
                     vdhp->first_valid_frame_number = i - MIN( decoder_delay, vdhp->exh.delay_count );
-                if( vdhp->first_valid_frame_number > 1 || vdhp->frame_count == 1 )
+                if( vdhp->first_valid_frame_number > 1 || vdhp->stream_info_list[vdhp->stream_index].frame_count == 1 )
                 {
                     vdhp->first_valid_frame = av_frame_clone( vdhp->frame_buffer );
                     if( !vdhp->first_valid_frame )
@@ -1638,7 +1639,7 @@ enum lw_field_info lwlibav_video_get_field_info
     uint32_t                        frame_number
 )
 {
-    return frame_number <= vdhp->frame_count
+    return frame_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count
          ? vdhp->frame_list[frame_number].field_info
          : LW_FIELD_INFO_UNKNOWN;
 }
@@ -1681,7 +1682,7 @@ int try_decode_video_frame
         av_seek_frame( format_ctx, stream_index, rap_pos, vdhp->av_seek_flags | AVSEEK_FLAG_ANY );
     do
     {
-        if( frame_number > vdhp->frame_count )
+        if( frame_number > vdhp->stream_info_list[vdhp->stream_index].frame_count )
             break;
         /* Get a frame. */
         AVPacket pkt = { 0 };

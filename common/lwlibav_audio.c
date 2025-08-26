@@ -249,7 +249,7 @@ int lwlibav_audio_get_desired_track
 {
     AVCodecContext *ctx = NULL;
     if( adhp->stream_index < 0
-     || adhp->frame_count == 0
+     || adhp->stream_info_list[adhp->stream_index].frame_count == 0
      || lavf_open_file( &adhp->format, file_path, &adhp->lh ) < 0
      || find_and_open_decoder( &ctx, adhp->format->streams[ adhp->stream_index ]->codecpar,
                                adhp->preferred_decoder_names, 0, threads ) < 0 )
@@ -281,7 +281,7 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
     uint32_t current_frame_length     = frame_list[1].length;
     uint64_t pcm_sample_count         = 0;
     uint64_t overall_pcm_sample_count = 0;
-    for( uint32_t i = 1; i <= adhp->frame_count; i++ )
+    for( uint32_t i = 1; i <= adhp->stream_info_list[adhp->stream_index].frame_count; i++ )
     {
         if( (current_sample_rate != frame_list[i].sample_rate && frame_list[i].sample_rate > 0)
          || current_frame_length != frame_list[i].length )
@@ -296,8 +296,8 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
         }
         pcm_sample_count += frame_list[i].length;
     }
-    current_sample_rate = frame_list[ adhp->frame_count ].sample_rate > 0
-                        ? frame_list[ adhp->frame_count ].sample_rate
+    current_sample_rate = frame_list[ adhp->stream_info_list[adhp->stream_index].frame_count ].sample_rate > 0
+                        ? frame_list[ adhp->stream_info_list[adhp->stream_index].frame_count ].sample_rate
                         : adhp->ctx->sample_rate;
     if( pcm_sample_count )
         overall_pcm_sample_count += (pcm_sample_count * output_sample_rate - 1) / current_sample_rate + 1;
@@ -343,7 +343,7 @@ static int find_start_audio_frame
         if( start_frame_pos < next_frame_pos )
             break;
         ++frame_number;
-    } while( frame_number <= adhp->frame_count );
+    } while( frame_number <= adhp->stream_info_list[adhp->stream_index].frame_count );
     *start_offset = start_frame_pos - current_frame_pos;
     if( *start_offset && current_sample_rate != output_sample_rate )
         *start_offset = (*start_offset * current_sample_rate - 1) / output_sample_rate + 1;
@@ -375,7 +375,7 @@ static uint32_t get_audio_rap
     uint32_t                        frame_number
 )
 {
-    if( frame_number > adhp->frame_count )
+    if( frame_number > adhp->stream_info_list[adhp->stream_index].frame_count )
         return 0;
     /* Get an unique value of the closest past audio keyframe. */
     uint32_t rap_number = frame_number;
@@ -625,7 +625,7 @@ retry_seek:
             already_gotten = 0;
             make_decodable_packet( alter_pkt, pkt );
         }
-        else if( frame_number > adhp->frame_count )
+        else if( frame_number > adhp->stream_info_list[adhp->stream_index].frame_count )
         {
             av_packet_unref( pkt );
             if( adhp->exh.delay_count || !(output_flags & AUDIO_OUTPUT_ENOUGH) )
@@ -721,7 +721,7 @@ int try_decode_audio_frame
     int              err          = 0;
     do
     {
-        if( frame_number > adhp->frame_count )
+        if( frame_number > adhp->stream_info_list[adhp->stream_index].frame_count )
             break;
         /* Get a frame. */
         int extradata_index = adhp->frame_list[frame_number].extradata_index;

@@ -45,6 +45,19 @@ typedef struct
     uint32_t decoding_to_presentation;
 } order_converter_t;
 
+typedef struct
+{
+    enum AVCodecID       codec_id;
+    AVRational           time_base;
+    uint32_t             frame_count;
+    int                  initial_width;
+    int                  initial_height;
+    int                  max_width;
+    int                  max_height;
+    enum AVPixelFormat   initial_pix_fmt;
+    enum AVColorSpace    initial_colorspace;
+} video_stream_info_t;
+
 struct lwlibav_video_decode_handler_tag
 {
     /* common */
@@ -61,41 +74,34 @@ struct lwlibav_video_decode_handler_tag
     int                 dv_in_avi;          /* unused */
     const char        **preferred_decoder_names;
     int                 prefer_hw_decoder;
-    lwlibav_stream_info_t      *stream_info_list;
-    uint32_t            frame_count;
     AVFrame            *frame_buffer;
     video_frame_info_t *frame_list;         /* stored in presentation order */
     /* */
-    uint32_t            forward_seek_threshold;
-    int                 seek_mode;
-    int                 max_width;
-    int                 max_height;
-    int                 initial_width;
-    int                 initial_height;
-    enum AVPixelFormat  initial_pix_fmt;
-    enum AVColorSpace   initial_colorspace;
-    AVPacket            packet;
-    order_converter_t  *order_converter;            /* maps of decoding to presentation stored in decoding order */
-    uint8_t            *keyframe_list;              /* keyframe list stored in decoding order */
-    uint32_t            last_half_frame;            /* The last frame consists of complementary field coded picture pair
-                                                     * if set to non-zero, otherwise single frame coded picture. */
-    uint32_t            last_frame_number;          /* the number of the last requested frame */
-    uint32_t            last_rap_number;            /* the number of the last random accessible picture */
-    uint32_t            last_fed_picture_number;    /* the number of the last picture fed to the decoder
-                                                     * This number could be larger than frame_count to handle flush. */
-    uint32_t            first_valid_frame_number;
-    AVFrame            *first_valid_frame;          /* the frame buffer
-                                                     * where the first valid frame data is stored */
-    AVFrame            *last_req_frame;             /* the pointer to the frame buffer
-                                                     * where the last requested frame data is stored */
-    AVFrame            *last_dec_frame;             /* the pointer to the frame buffer
-                                                     * where the last output frame data from the decoder is stored */
-    AVFrame            *movable_frame_buffer;       /* the frame buffer
-                                                     * where the decoder outputs temporally stored frame data */
-    int64_t             stream_duration;
-    int64_t             min_ts;
-    uint32_t            last_ts_frame_number;
-    AVRational          actual_time_base;
-    int                 strict_cfr;
-    int                 reuse_pkt;
+    video_stream_info_t *stream_info_list;
+    uint32_t             forward_seek_threshold;
+    int                  seek_mode;
+    AVPacket             packet;
+    order_converter_t   *order_converter;            /* maps of decoding to presentation stored in decoding order */
+    uint8_t             *keyframe_list;              /* keyframe list stored in decoding order */
+    uint32_t             last_half_frame;            /* The last frame consists of complementary field coded picture pair
+                                                      * if set to non-zero, otherwise single frame coded picture. */
+    uint32_t             last_frame_number;          /* the number of the last requested frame */
+    uint32_t             last_rap_number;            /* the number of the last random accessible picture */
+    uint32_t             last_fed_picture_number;    /* the number of the last picture fed to the decoder
+                                                      * This number could be larger than frame_count to handle flush. */
+    uint32_t             first_valid_frame_number;
+    AVFrame             *first_valid_frame;          /* the frame buffer
+                                                      * where the first valid frame data is stored */
+    AVFrame             *last_req_frame;             /* the pointer to the frame buffer
+                                                      * where the last requested frame data is stored */
+    AVFrame             *last_dec_frame;             /* the pointer to the frame buffer
+                                                      * where the last output frame data from the decoder is stored */
+    AVFrame             *movable_frame_buffer;       /* the frame buffer
+                                                      * where the decoder outputs temporally stored frame data */
+    int64_t              stream_duration;
+    int64_t              min_ts;
+    uint32_t             last_ts_frame_number;
+    AVRational           actual_time_base;
+    int                  strict_cfr;
+    int                  reuse_pkt;
 };
