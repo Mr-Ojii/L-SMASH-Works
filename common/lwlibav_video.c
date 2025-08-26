@@ -103,6 +103,7 @@ void lwlibav_video_free_decode_handler
             av_freep( &vdhp->index_entries_list[i].entries );
         lw_free( vdhp->index_entries_list );
     }
+    lw_free( vdhp->stream_info_list);
     av_frame_free( &vdhp->frame_buffer );
     av_frame_free( &vdhp->first_valid_frame );
     av_frame_free( &vdhp->movable_frame_buffer );
@@ -336,6 +337,7 @@ int lwlibav_video_get_desired_track
                 av_freep( &vdhp->index_entries_list[i].entries );
             lw_freep( &vdhp->index_entries_list );
         }
+        lw_freep( &vdhp->stream_info_list );
         lw_freep( &vdhp->frame_list );
         lw_freep( &vdhp->order_converter );
         lw_freep( &vdhp->keyframe_list );
@@ -375,7 +377,7 @@ void lwlibav_video_setup_timestamp_info
     uint64_t stream_timebase  = vdhp->actual_time_base.num;
     uint64_t stream_timescale = vdhp->actual_time_base.den;
     uint64_t reduce = reduce_fraction( &stream_timescale, &stream_timebase );
-    uint64_t stream_duration = (vdhp->stream_duration * vdhp->time_base.num) / reduce;
+    uint64_t stream_duration = (vdhp->stream_duration * vdhp->stream_info_list[ vdhp->stream_index ].time_base.num) / reduce;
     double stream_framerate = (vohp->frame_count - (vohp->repeat_correction_ts ? 1 : 0))
                             * ((double)stream_timescale / stream_duration);
     if( vdhp->strict_cfr || !lw_try_rational_framerate( stream_framerate, framerate_num, framerate_den, stream_timebase ) )

@@ -46,10 +46,9 @@ struct lwlibav_audio_decode_handler_tag
     int                 lw_seek_flags;
     int                 av_seek_flags;  /* unused */
     int                 dv_in_avi;      /* 1 = 'DV in AVI Type-1', 0 = otherwise */
-    enum AVCodecID      codec_id;
     const char        **preferred_decoder_names;
     int                 prefer_hw_decoder;
-    AVRational          time_base;
+    lwlibav_stream_info_t      *stream_info_list;
     uint32_t            frame_count;
     AVFrame            *frame_buffer;
     audio_frame_info_t *frame_list;
