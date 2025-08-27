@@ -90,8 +90,8 @@ void lwlibav_audio_free_decode_handler
     {
         for( int i = 0; i < adhp->nb_streams; i++ )
         {
-            audio_stream_info_t *asinfo = &adhp->stream_info_list[i];
-            lwlibav_extradata_handler_t *exhp = &asinfo->exh;
+            audio_stream_info_t *asip = &adhp->stream_info_list[i];
+            lwlibav_extradata_handler_t *exhp = &asip->exh;
             if( exhp->entries )
             {
                 for( int j = 0; j < exhp->entry_count; j++ )
@@ -99,7 +99,7 @@ void lwlibav_audio_free_decode_handler
                         av_free( exhp->entries[j].extradata );
                 lw_free( exhp->entries );
             }
-            lw_freep( &asinfo->frame_list );
+            lw_freep( &asip->frame_list );
         }
         lw_free( adhp->stream_info_list );
     }
@@ -287,13 +287,13 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
     int                             output_sample_rate
 )
 {
-    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
-    audio_frame_info_t *frame_list    = asinfo->frame_list;
+    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_frame_info_t *frame_list    = asip->frame_list;
     int      current_sample_rate      = frame_list[1].sample_rate > 0 ? frame_list[1].sample_rate : adhp->ctx->sample_rate;
     uint32_t current_frame_length     = frame_list[1].length;
     uint64_t pcm_sample_count         = 0;
     uint64_t overall_pcm_sample_count = 0;
-    for( uint32_t i = 1; i <= asinfo->frame_count; i++ )
+    for( uint32_t i = 1; i <= asip->frame_count; i++ )
     {
         if( (current_sample_rate != frame_list[i].sample_rate && frame_list[i].sample_rate > 0)
          || current_frame_length != frame_list[i].length )
@@ -308,8 +308,8 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
         }
         pcm_sample_count += frame_list[i].length;
     }
-    current_sample_rate = frame_list[ asinfo->frame_count ].sample_rate > 0
-                        ? frame_list[ asinfo->frame_count ].sample_rate
+    current_sample_rate = frame_list[ asip->frame_count ].sample_rate > 0
+                        ? frame_list[ asip->frame_count ].sample_rate
                         : adhp->ctx->sample_rate;
     if( pcm_sample_count )
         overall_pcm_sample_count += (pcm_sample_count * output_sample_rate - 1) / current_sample_rate + 1;
@@ -326,8 +326,8 @@ static int find_start_audio_frame
     uint64_t                       *start_offset
 )
 {
-    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
-    audio_frame_info_t *frame_list = asinfo->frame_list;
+    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_frame_info_t *frame_list = asip->frame_list;
     uint32_t frame_number                    = 1;
     uint64_t current_frame_pos               = 0;
     uint64_t next_frame_pos                  = 0;
@@ -356,7 +356,7 @@ static int find_start_audio_frame
         if( start_frame_pos < next_frame_pos )
             break;
         ++frame_number;
-    } while( frame_number <= asinfo->frame_count );
+    } while( frame_number <= asip->frame_count );
     *start_offset = start_frame_pos - current_frame_pos;
     if( *start_offset && current_sample_rate != output_sample_rate )
         *start_offset = (*start_offset * current_sample_rate - 1) / output_sample_rate + 1;
@@ -364,7 +364,7 @@ static int find_start_audio_frame
     {
         /* Add pre-roll samples if needed.
          * The condition is irresponsible. Patches welcome. */
-        enum AVCodecID codec_id = asinfo->exh.entries[ frame_list[frame_number].extradata_index ].codec_id;
+        enum AVCodecID codec_id = asip->exh.entries[ frame_list[frame_number].extradata_index ].codec_id;
         const AVCodecDescriptor *desc = avcodec_descriptor_get( codec_id );
         if( (desc->props & AV_CODEC_PROP_LOSSY)
          && frame_list[frame_number].extradata_index == frame_list[frame_number - 1].extradata_index )
@@ -388,12 +388,12 @@ static uint32_t get_audio_rap
     uint32_t                        frame_number
 )
 {
-    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
-    if( frame_number > asinfo->frame_count )
+    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    if( frame_number > asip->frame_count )
         return 0;
     /* Get an unique value of the closest past audio keyframe. */
     uint32_t rap_number = frame_number;
-    while( rap_number && !asinfo->frame_list[rap_number].keyframe )
+    while( rap_number && !asip->frame_list[rap_number].keyframe )
         --rap_number;
     if( rap_number == 0 )
         rap_number = 1;
@@ -491,17 +491,17 @@ static uint32_t seek_audio
 #define MAX_ERROR_COUNT 3   /* arbitrary */
     int error_count = 0;
 retry_seek:;
-    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
     uint32_t rap_number = past_rap_number == 0 ? get_audio_rap( adhp, frame_number ) : past_rap_number;
     if( rap_number == 0 )
         return 0;
-    int64_t rap_pos = (asinfo->lw_seek_flags & SEEK_POS_BASED) ? asinfo->frame_list[rap_number].file_offset
-                    : (asinfo->lw_seek_flags & SEEK_PTS_BASED) ? asinfo->frame_list[rap_number].pts
-                    : (asinfo->lw_seek_flags & SEEK_DTS_BASED) ? asinfo->frame_list[rap_number].dts
-                    :                                            asinfo->frame_list[rap_number].sample_number;
+    int64_t rap_pos = (asip->lw_seek_flags & SEEK_POS_BASED) ? asip->frame_list[rap_number].file_offset
+                    : (asip->lw_seek_flags & SEEK_PTS_BASED) ? asip->frame_list[rap_number].pts
+                    : (asip->lw_seek_flags & SEEK_DTS_BASED) ? asip->frame_list[rap_number].dts
+                    :                                          asip->frame_list[rap_number].sample_number;
     /* Seek to audio keyframe.
      * Note: av_seek_frame() for DV in AVI Type-1 requires stream_index = 0. */
-    int flags = (asinfo->lw_seek_flags & SEEK_POS_BASED) ? AVSEEK_FLAG_BYTE : asinfo->lw_seek_flags == 0 ? AVSEEK_FLAG_FRAME : 0;
+    int flags = (asip->lw_seek_flags & SEEK_POS_BASED) ? AVSEEK_FLAG_BYTE : asip->lw_seek_flags == 0 ? AVSEEK_FLAG_FRAME : 0;
     int stream_index = adhp->dv_in_avi == 1 ? 0 : adhp->stream_index;
     if( av_seek_frame( adhp->format, stream_index, rap_pos, flags | AVSEEK_FLAG_BACKWARD ) < 0 )
         av_seek_frame( adhp->format, stream_index, rap_pos, flags | AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY );
@@ -509,7 +509,7 @@ retry_seek:;
     int match = 0;
     for( uint32_t i = rap_number; i <= frame_number; )
     {
-        if( match && picture && asinfo->exh.current_index == asinfo->frame_list[i - 1].extradata_index )
+        if( match && picture && asip->exh.current_index == asip->frame_list[i - 1].extradata_index )
         {
             /* Actual decoding to establish stability of subsequent decoding. */
             AVPacket *alter_pkt = &adhp->alter_packet;
@@ -522,23 +522,23 @@ retry_seek:;
         {
             /* Shift the current frame number in order to match file offset, PTS or DTS
              * since libavformat might have sought wrong position. */
-            if( asinfo->lw_seek_flags & SEEK_POS_BASED )
+            if( asip->lw_seek_flags & SEEK_POS_BASED )
             {
-                if( pkt->pos == -1 || asinfo->frame_list[i].file_offset == -1 )
+                if( pkt->pos == -1 || asip->frame_list[i].file_offset == -1 )
                     continue;
-                i = shift_current_frame_number_pos( asinfo->frame_list, pkt, i, frame_number );
+                i = shift_current_frame_number_pos( asip->frame_list, pkt, i, frame_number );
             }
-            else if( asinfo->lw_seek_flags & SEEK_PTS_BASED )
+            else if( asip->lw_seek_flags & SEEK_PTS_BASED )
             {
                 if( pkt->pts == AV_NOPTS_VALUE )
                     continue;
-                i = shift_current_frame_number_pts( asinfo->frame_list, pkt, i, frame_number );
+                i = shift_current_frame_number_pts( asip->frame_list, pkt, i, frame_number );
             }
-            else if( asinfo->lw_seek_flags & SEEK_DTS_BASED )
+            else if( asip->lw_seek_flags & SEEK_DTS_BASED )
             {
                 if( pkt->dts == AV_NOPTS_VALUE )
                     continue;
-                i = shift_current_frame_number_dts( asinfo->frame_list, pkt, i, frame_number );
+                i = shift_current_frame_number_dts( asip->frame_list, pkt, i, frame_number );
             }
             if( i == 0 )
             {
@@ -566,7 +566,7 @@ uint64_t lwlibav_audio_get_pcm_samples
 {
     if( adhp->error )
         return 0;
-    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
     uint32_t               frame_number;
     uint32_t               rap_number      = 0;
     uint32_t               past_rap_number = 0;
@@ -617,8 +617,8 @@ retry_seek:
             return 0;
         }
         /* Flush audio decoder buffers. */
-        lwlibav_extradata_handler_t *exhp = &asinfo->exh;
-        int extradata_index = asinfo->frame_list[frame_number].extradata_index;
+        lwlibav_extradata_handler_t *exhp = &asip->exh;
+        int extradata_index = asip->frame_list[frame_number].extradata_index;
         if( extradata_index != exhp->current_index )
         {
             /* Update the extradata. */
@@ -641,14 +641,14 @@ retry_seek:
             already_gotten = 0;
             make_decodable_packet( alter_pkt, pkt );
         }
-        else if( frame_number > asinfo->frame_count )
+        else if( frame_number > asip->frame_count )
         {
             av_packet_unref( pkt );
-            if( asinfo->exh.delay_count || !(output_flags & AUDIO_OUTPUT_ENOUGH) )
+            if( asip->exh.delay_count || !(output_flags & AUDIO_OUTPUT_ENOUGH) )
             {
                 *alter_pkt = *pkt;
-                if( asinfo->exh.delay_count )
-                    asinfo->exh.delay_count -= 1;
+                if( asip->exh.delay_count )
+                    asip->exh.delay_count -= 1;
             }
             else
                 goto audio_out;
@@ -673,7 +673,7 @@ retry_seek:
                  && past_rap_number < rap_number )
                     goto retry_seek;
             }
-            ++ asinfo->exh.delay_count;
+            ++ asip->exh.delay_count;
         }
         else
             /* Disable seek retry. */
@@ -705,9 +705,9 @@ void set_audio_basic_settings
 )
 {
     lwlibav_audio_decode_handler_t *adhp = (lwlibav_audio_decode_handler_t *)dhp;
-    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
     AVCodecParameters   *codecpar = adhp->format->streams[ adhp->stream_index ]->codecpar;
-    lwlibav_extradata_t *entry    = &asinfo->exh.entries[ asinfo->frame_list[frame_number].extradata_index ];
+    lwlibav_extradata_t *entry    = &asip->exh.entries[ asip->frame_list[frame_number].extradata_index ];
     codecpar->sample_rate           = entry->sample_rate;
     av_channel_layout_from_mask( &codecpar->ch_layout, entry->channel_layout );
     codecpar->format                = (int)entry->sample_format;
@@ -736,14 +736,14 @@ int try_decode_audio_frame
     AVCodecContext  *ctx          = adhp->ctx;
     uint32_t         start_frame  = frame_number;
     int              err          = 0;
-    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
     do
     {
-        if( frame_number > asinfo->frame_count )
+        if( frame_number > asip->frame_count )
             break;
         /* Get a frame. */
-        int extradata_index = asinfo->frame_list[frame_number].extradata_index;
-        if( extradata_index != asinfo->exh.current_index )
+        int extradata_index = asip->frame_list[frame_number].extradata_index;
+        if( extradata_index != asip->exh.current_index )
             break;
         if( frame_number == start_frame )
             seek_audio( adhp, frame_number, 0, pkt, NULL );
