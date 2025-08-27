@@ -39,6 +39,7 @@ typedef struct
     AVRational           time_base;
     uint32_t             frame_count;
     audio_frame_info_t  *frame_list;
+    int                  lw_seek_flags;
     /* */
     uint32_t             frame_length;
 } audio_stream_info_t;
@@ -54,7 +55,6 @@ struct lwlibav_audio_decode_handler_tag
     lwlibav_extradata_handler_t exh;
     AVCodecContext     *ctx;
     lwlibav_index_entries_t    *index_entries_list;
-    int                 lw_seek_flags;
     int                 av_seek_flags;  /* unused */
     int                 dv_in_avi;      /* 1 = 'DV in AVI Type-1', 0 = otherwise */
     const char        **preferred_decoder_names;

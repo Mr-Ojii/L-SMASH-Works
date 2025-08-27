@@ -492,13 +492,13 @@ retry_seek:;
     uint32_t rap_number = past_rap_number == 0 ? get_audio_rap( adhp, frame_number ) : past_rap_number;
     if( rap_number == 0 )
         return 0;
-    int64_t rap_pos = (adhp->lw_seek_flags & SEEK_POS_BASED) ? asinfo->frame_list[rap_number].file_offset
-                    : (adhp->lw_seek_flags & SEEK_PTS_BASED) ? asinfo->frame_list[rap_number].pts
-                    : (adhp->lw_seek_flags & SEEK_DTS_BASED) ? asinfo->frame_list[rap_number].dts
-                    :                                          asinfo->frame_list[rap_number].sample_number;
+    int64_t rap_pos = (asinfo->lw_seek_flags & SEEK_POS_BASED) ? asinfo->frame_list[rap_number].file_offset
+                    : (asinfo->lw_seek_flags & SEEK_PTS_BASED) ? asinfo->frame_list[rap_number].pts
+                    : (asinfo->lw_seek_flags & SEEK_DTS_BASED) ? asinfo->frame_list[rap_number].dts
+                    :                                            asinfo->frame_list[rap_number].sample_number;
     /* Seek to audio keyframe.
      * Note: av_seek_frame() for DV in AVI Type-1 requires stream_index = 0. */
-    int flags = (adhp->lw_seek_flags & SEEK_POS_BASED) ? AVSEEK_FLAG_BYTE : adhp->lw_seek_flags == 0 ? AVSEEK_FLAG_FRAME : 0;
+    int flags = (asinfo->lw_seek_flags & SEEK_POS_BASED) ? AVSEEK_FLAG_BYTE : asinfo->lw_seek_flags == 0 ? AVSEEK_FLAG_FRAME : 0;
     int stream_index = adhp->dv_in_avi == 1 ? 0 : adhp->stream_index;
     if( av_seek_frame( adhp->format, stream_index, rap_pos, flags | AVSEEK_FLAG_BACKWARD ) < 0 )
         av_seek_frame( adhp->format, stream_index, rap_pos, flags | AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY );
@@ -519,19 +519,19 @@ retry_seek:;
         {
             /* Shift the current frame number in order to match file offset, PTS or DTS
              * since libavformat might have sought wrong position. */
-            if( adhp->lw_seek_flags & SEEK_POS_BASED )
+            if( asinfo->lw_seek_flags & SEEK_POS_BASED )
             {
                 if( pkt->pos == -1 || asinfo->frame_list[i].file_offset == -1 )
                     continue;
                 i = shift_current_frame_number_pos( asinfo->frame_list, pkt, i, frame_number );
             }
-            else if( adhp->lw_seek_flags & SEEK_PTS_BASED )
+            else if( asinfo->lw_seek_flags & SEEK_PTS_BASED )
             {
                 if( pkt->pts == AV_NOPTS_VALUE )
                     continue;
                 i = shift_current_frame_number_pts( asinfo->frame_list, pkt, i, frame_number );
             }
-            else if( adhp->lw_seek_flags & SEEK_DTS_BASED )
+            else if( asinfo->lw_seek_flags & SEEK_DTS_BASED )
             {
                 if( pkt->dts == AV_NOPTS_VALUE )
                     continue;

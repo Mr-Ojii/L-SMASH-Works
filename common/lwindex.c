@@ -499,62 +499,62 @@ static int decide_video_seek_method
     uint32_t                        sample_count
 )
 {
-    vdhp->lw_seek_flags = lineup_seek_base_candidates( lwhp );
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
+    vsinfo->lw_seek_flags = lineup_seek_base_candidates( lwhp );
     video_frame_info_t *info = vsinfo->frame_list;
     /* Decide seek base. */
     for( uint32_t i = 1; i <= sample_count; i++ )
         if( info[i].pts == AV_NOPTS_VALUE )
         {
-            vdhp->lw_seek_flags &= ~SEEK_PTS_BASED;
+            vsinfo->lw_seek_flags &= ~SEEK_PTS_BASED;
             break;
         }
     if( info[1].dts == AV_NOPTS_VALUE )
-        vdhp->lw_seek_flags &= ~SEEK_DTS_BASED;
+        vsinfo->lw_seek_flags &= ~SEEK_DTS_BASED;
     else
         for( uint32_t i = 2; i <= sample_count; i++ )
             if( !(info[i].flags & LW_VFRAME_FLAG_INVISIBLE)
              && (info[i].dts == AV_NOPTS_VALUE || info[i].dts <= info[i - 1].dts) )
             {
-                vdhp->lw_seek_flags &= ~SEEK_DTS_BASED;
+                vsinfo->lw_seek_flags &= ~SEEK_DTS_BASED;
                 break;
             }
     if( info[1].file_offset == -1 )
-        vdhp->lw_seek_flags &= ~SEEK_POS_CORRECTION;
+        vsinfo->lw_seek_flags &= ~SEEK_POS_CORRECTION;
     else
         for( uint32_t i = 2; i <= sample_count; i++ )
             if( info[i].file_offset == -1 || info[i].file_offset <= info[i - 1].file_offset )
             {
-                vdhp->lw_seek_flags &= ~SEEK_POS_CORRECTION;
+                vsinfo->lw_seek_flags &= ~SEEK_POS_CORRECTION;
                 break;
             }
-    if( vdhp->lw_seek_flags & SEEK_POS_BASED )
+    if( vsinfo->lw_seek_flags & SEEK_POS_BASED )
     {
         if( lwhp->format_flags & AVFMT_NO_BYTE_SEEK )
-            vdhp->lw_seek_flags &= ~SEEK_POS_BASED;
+            vsinfo->lw_seek_flags &= ~SEEK_POS_BASED;
         else
         {
             uint32_t error_count = 0;
             for( uint32_t i = 1; i <= sample_count; i++ )
                 error_count += (info[i].file_offset == -1);
             if( error_count == sample_count )
-                vdhp->lw_seek_flags &= ~SEEK_POS_BASED;
+                vsinfo->lw_seek_flags &= ~SEEK_POS_BASED;
         }
     }
     /* Construct frame info about timestamp. */
-    int no_pts_loss = !!(vdhp->lw_seek_flags & SEEK_PTS_BASED);
-    if( (lwhp->raw_demuxer || ((vdhp->lw_seek_flags & SEEK_DTS_BASED) && !(vdhp->lw_seek_flags & SEEK_PTS_BASED)))
+    int no_pts_loss = !!(vsinfo->lw_seek_flags & SEEK_PTS_BASED);
+    if( (lwhp->raw_demuxer || ((vsinfo->lw_seek_flags & SEEK_DTS_BASED) && !(vsinfo->lw_seek_flags & SEEK_PTS_BASED)))
      && (vsinfo->codec_id == AV_CODEC_ID_MPEG1VIDEO || vsinfo->codec_id == AV_CODEC_ID_MPEG2VIDEO
       || vsinfo->codec_id == AV_CODEC_ID_MPEG4    /* MPEG-4 Video (Part2) */
       || vsinfo->codec_id == AV_CODEC_ID_VC1        || vsinfo->codec_id == AV_CODEC_ID_WMV3
       || vsinfo->codec_id == AV_CODEC_ID_VC1IMAGE   || vsinfo->codec_id == AV_CODEC_ID_WMV3IMAGE) )
     {
         /* Generate or interpolate DTS if any invalid DTS for each frame. */
-        if( !(vdhp->lw_seek_flags & SEEK_DTS_BASED) )
+        if( !(vsinfo->lw_seek_flags & SEEK_DTS_BASED) )
             interpolate_dts( &info[1], vsinfo->frame_count, vsinfo->time_base );
         /* Generate PTS from DTS. */
         mpeg124_video_vc1_genarate_pts( vdhp );
-        vdhp->lw_seek_flags |= SEEK_PTS_GENERATED;
+        vsinfo->lw_seek_flags |= SEEK_PTS_GENERATED;
         no_pts_loss = 1;
     }
     else if( (lwhp->raw_demuxer || !no_pts_loss)
@@ -566,7 +566,7 @@ static int decide_video_seek_method
             lw_log_show( &vdhp->lh, LW_LOG_FATAL, "Failed to allocate memory for PTS generation." );
             return -1;
         }
-        vdhp->lw_seek_flags |= SEEK_PTS_GENERATED;
+        vsinfo->lw_seek_flags |= SEEK_PTS_GENERATED;
         no_pts_loss = 1;
     }
     /* Reorder in presentation order. */
@@ -597,15 +597,15 @@ static int decide_video_seek_method
             vsinfo->order_converter[i].decoding_to_presentation = (uint32_t)timestamp[i].pts;
         free( timestamp );
     }
-    else if( vdhp->lw_seek_flags & SEEK_DTS_BASED )
+    else if( vsinfo->lw_seek_flags & SEEK_DTS_BASED )
         for( uint32_t i = 1; i <= sample_count; i++ )
             info[i].pts = info[i].dts;
     /* Set the minimum timestamp. */
-    vsinfo->min_ts = (vdhp->lw_seek_flags & (SEEK_PTS_GENERATED | SEEK_PTS_BASED)) ? info[1].pts
-                   : (vdhp->lw_seek_flags & SEEK_DTS_BASED)                        ? info[1].dts
+    vsinfo->min_ts = (vsinfo->lw_seek_flags & (SEEK_PTS_GENERATED | SEEK_PTS_BASED)) ? info[1].pts
+                   : (vsinfo->lw_seek_flags & SEEK_DTS_BASED)                        ? info[1].dts
                    : AV_NOPTS_VALUE;
     /* Treat video frames with unique value as keyframe. */
-    if( vdhp->lw_seek_flags & SEEK_POS_BASED )
+    if( vsinfo->lw_seek_flags & SEEK_POS_BASED )
     {
         if( info[ info[1].sample_number ].file_offset == -1 )
             info[ info[1].sample_number ].flags &= ~LW_VFRAME_FLAG_KEY;
@@ -622,7 +622,7 @@ static int decide_video_seek_method
             }
         }
     }
-    else if( vdhp->lw_seek_flags & SEEK_PTS_BASED )
+    else if( vsinfo->lw_seek_flags & SEEK_PTS_BASED )
     {
         if( info[ info[1].sample_number ].pts == AV_NOPTS_VALUE )
             info[ info[1].sample_number ].flags &= ~LW_VFRAME_FLAG_KEY;
@@ -639,7 +639,7 @@ static int decide_video_seek_method
             }
         }
     }
-    else if( vdhp->lw_seek_flags & SEEK_DTS_BASED )
+    else if( vsinfo->lw_seek_flags & SEEK_DTS_BASED )
     {
         if( info[ info[1].sample_number ].dts == AV_NOPTS_VALUE )
             info[ info[1].sample_number ].flags &= ~LW_VFRAME_FLAG_KEY;
@@ -669,39 +669,39 @@ static void decide_audio_seek_method
     uint32_t                        sample_count
 )
 {
-    adhp->lw_seek_flags = lineup_seek_base_candidates( lwhp );
     audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    asinfo->lw_seek_flags = lineup_seek_base_candidates( lwhp );
     audio_frame_info_t *info = asinfo->frame_list;
     for( uint32_t i = 1; i <= sample_count; i++ )
         if( info[i].pts == AV_NOPTS_VALUE )
         {
-            adhp->lw_seek_flags &= ~SEEK_PTS_BASED;
+            asinfo->lw_seek_flags &= ~SEEK_PTS_BASED;
             break;
         }
     for( uint32_t i = 1; i <= sample_count; i++ )
         if( info[i].dts == AV_NOPTS_VALUE )
         {
-            adhp->lw_seek_flags &= ~SEEK_DTS_BASED;
+            asinfo->lw_seek_flags &= ~SEEK_DTS_BASED;
             break;
         }
-    if( adhp->lw_seek_flags & SEEK_POS_BASED )
+    if( asinfo->lw_seek_flags & SEEK_POS_BASED )
     {
         if( lwhp->format_flags & AVFMT_NO_BYTE_SEEK )
-            adhp->lw_seek_flags &= ~SEEK_POS_BASED;
+            asinfo->lw_seek_flags &= ~SEEK_POS_BASED;
         else
         {
             uint32_t error_count = 0;
             for( uint32_t i = 1; i <= sample_count; i++ )
                 error_count += (info[i].file_offset == -1);
             if( error_count == sample_count )
-                adhp->lw_seek_flags &= ~SEEK_POS_BASED;
+                asinfo->lw_seek_flags &= ~SEEK_POS_BASED;
         }
     }
-    if( !(adhp->lw_seek_flags & SEEK_PTS_BASED) && (adhp->lw_seek_flags & SEEK_DTS_BASED) )
+    if( !(asinfo->lw_seek_flags & SEEK_PTS_BASED) && (asinfo->lw_seek_flags & SEEK_DTS_BASED) )
         for( uint32_t i = 1; i <= sample_count; i++ )
             info[i].pts = info[i].dts;
     /* Treat audio frames with unique value as a keyframe. */
-    if( adhp->lw_seek_flags & SEEK_POS_BASED )
+    if( asinfo->lw_seek_flags & SEEK_POS_BASED )
     {
         info[1].keyframe = (info[1].file_offset != -1);
         for( uint32_t i = 2; i <= sample_count; i++ )
@@ -712,7 +712,7 @@ static void decide_audio_seek_method
             else
                 info[i].keyframe = 1;
     }
-    else if( adhp->lw_seek_flags & SEEK_PTS_BASED )
+    else if( asinfo->lw_seek_flags & SEEK_PTS_BASED )
     {
         info[1].keyframe = (info[1].pts != AV_NOPTS_VALUE);
         for( uint32_t i = 2; i <= sample_count; i++ )
@@ -723,7 +723,7 @@ static void decide_audio_seek_method
             else
                 info[i].keyframe = 1;
     }
-    else if( adhp->lw_seek_flags & SEEK_DTS_BASED )
+    else if( asinfo->lw_seek_flags & SEEK_DTS_BASED )
     {
         info[1].keyframe = (info[1].dts != AV_NOPTS_VALUE);
         for( uint32_t i = 2; i <= sample_count; i++ )
@@ -751,14 +751,14 @@ static int64_t calculate_av_gap
     audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
     /* Pick the first video timestamp.
      * If invalid, skip A/V gap calculation. */
-    int64_t video_ts = (vdhp->lw_seek_flags & SEEK_PTS_BASED) ? vsinfo->frame_list[1].pts : vsinfo->frame_list[1].dts;
+    int64_t video_ts = (vsinfo->lw_seek_flags & SEEK_PTS_BASED) ? vsinfo->frame_list[1].pts : vsinfo->frame_list[1].dts;
     if( video_ts == AV_NOPTS_VALUE )
         return 0;
     /* Pick the first valid audio timestamp.
      * If not found, skip A/V gap calculation. */
     int64_t  audio_ts        = 0;
     uint32_t audio_ts_number = 0;
-    if( adhp->lw_seek_flags & SEEK_PTS_BASED )
+    if( asinfo->lw_seek_flags & SEEK_PTS_BASED )
     {
         for( uint32_t i = 1; i <= asinfo->frame_count; i++ )
             if( asinfo->frame_list[i].pts != AV_NOPTS_VALUE )
@@ -812,7 +812,7 @@ static void compute_stream_duration
     uint64_t first_duration;
     uint64_t stream_timebase;
     if( !(lwhp->format_flags & AVFMT_TS_DISCONT)
-     && (vdhp->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
+     && (vsinfo->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
         first_ts           = info[1].pts;
         largest_ts         = first_ts;
@@ -837,7 +837,7 @@ static void compute_stream_duration
             largest_ts        = info[i].pts;
         }
     }
-    else if( vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED) )
+    else if( vsinfo->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED) )
     {
         uint32_t prev = 0;
         uint32_t curr = 0;
@@ -924,7 +924,7 @@ static void vfr2cfr_settings
 )
 {
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-    if( vsinfo->stream_duration > 0 && (vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
+    if( vsinfo->stream_duration > 0 && (vsinfo->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
         vohp->vfr2cfr     = opt->vfr2cfr.active;
         vohp->cfr_num     = opt->vfr2cfr.fps_num;
@@ -945,7 +945,7 @@ static void create_video_frame_order_list
 )
 {
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-    if( !(vdhp->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
+    if( !(vsinfo->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
         goto disable_repeat;
     if( opt->vfr2cfr.active )
         opt->apply_repeat_flag = 0;

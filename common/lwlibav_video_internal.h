@@ -52,6 +52,7 @@ typedef struct
     AVRational           time_base;
     uint32_t             frame_count;
     video_frame_info_t  *frame_list;                 /* stored in presentation order */
+    int                  lw_seek_flags;
     /* */
     int                  initial_width;
     int                  initial_height;
@@ -78,7 +79,6 @@ struct lwlibav_video_decode_handler_tag
     lwlibav_extradata_handler_t exh;
     AVCodecContext     *ctx;
     lwlibav_index_entries_t    *index_entries_list;
-    int                 lw_seek_flags;
     int                 av_seek_flags;
     int                 dv_in_avi;          /* unused */
     const char        **preferred_decoder_names;
