@@ -71,18 +71,14 @@ typedef struct
 
 typedef struct
 {
-    AVIndexEntry *entries;
-    int           count;
-} lwlibav_index_entries_t;
-
-typedef struct
-{
     enum AVCodecID       codec_id;
     AVRational           time_base;
     uint32_t             frame_count;
     void                *frame_list;
     int                  lw_seek_flags;
     lwlibav_extradata_handler_t exh;
+    AVIndexEntry        *index_entries;
+    int                  index_entry_count;
 } lwlibav_stream_info_t;
 
 typedef struct
@@ -94,7 +90,6 @@ typedef struct
     int                         error;
     lw_log_handler_t            lh;
     AVCodecContext             *ctx;
-    lwlibav_index_entries_t    *index_entries_list;
     int                         av_seek_flags;
     int                         dv_in_avi;
     const char                **preferred_decoder_names;

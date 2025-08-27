@@ -80,12 +80,6 @@ void lwlibav_audio_free_decode_handler
     if( !adhp )
         return;
     av_packet_unref( &adhp->packet );
-    if( adhp->index_entries_list )
-    {
-        for( int i = 0; i < adhp->nb_streams; i++ )
-            av_freep( &adhp->index_entries_list[i].entries );
-        lw_free( adhp->index_entries_list );
-    }
     if( adhp->stream_info_list )
     {
         for( int i = 0; i < adhp->nb_streams; i++ )
@@ -99,6 +93,7 @@ void lwlibav_audio_free_decode_handler
                         av_free( exhp->entries[j].extradata );
                 lw_free( exhp->entries );
             }
+            av_freep( &asip->index_entries );
             lw_freep( &asip->frame_list );
             lw_free( asip );
         }
@@ -262,17 +257,13 @@ int lwlibav_audio_get_desired_track
      || find_and_open_decoder( &ctx, adhp->format->streams[ adhp->stream_index ]->codecpar,
                                adhp->preferred_decoder_names, 0, threads ) < 0 )
     {
-        if( adhp->index_entries_list )
-        {
-            for( int i = 0; i < adhp->nb_streams; i++ )
-                av_freep( &adhp->index_entries_list[i].entries );
-            lw_freep( &adhp->index_entries_list );
-        }
         if( adhp->stream_info_list )
         {
             for( int i = 0; i < adhp->nb_streams; i++ )
             {
-                lw_freep( &adhp->stream_info_list[i]->frame_list );
+                audio_stream_info_t *asip = adhp->stream_info_list[i];
+                av_freep( &asip->index_entries );
+                lw_freep( &asip->frame_list );
                 lw_freep( &adhp->stream_info_list[i] );
             }
             lw_freep( &adhp->stream_info_list );

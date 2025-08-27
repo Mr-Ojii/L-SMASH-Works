@@ -86,12 +86,6 @@ void lwlibav_video_free_decode_handler
     if( !vdhp )
         return;
     av_packet_unref( &vdhp->packet );
-    if( vdhp->index_entries_list )
-    {
-        for( int i = 0; i < vdhp->nb_streams; i++ )
-            av_freep( &vdhp->index_entries_list[i].entries );
-        lw_free( vdhp->index_entries_list );
-    }
     if( vdhp->stream_info_list )
     {
         for( int i = 0; i < vdhp->nb_streams; i++ )
@@ -105,6 +99,7 @@ void lwlibav_video_free_decode_handler
                         av_free( exhp->entries[j].extradata );
                 lw_free( exhp->entries );
             }
+            av_freep( &vsip->index_entries );
             lw_freep( &vsip->frame_list );
             lw_freep( &vsip->keyframe_list );
             lw_freep( &vsip->order_converter );
@@ -339,17 +334,12 @@ int lwlibav_video_get_desired_track
      || find_and_open_decoder( &ctx, vdhp->format->streams[ vdhp->stream_index ]->codecpar,
                                vdhp->preferred_decoder_names, vdhp->prefer_hw_decoder, threads ) < 0 )
     {
-        if( vdhp->index_entries_list )
-        {
-            for( int i = 0; i < vdhp->nb_streams; i++ )
-                av_freep( &vdhp->index_entries_list[i].entries );
-            lw_freep( &vdhp->index_entries_list );
-        }
         if( vdhp->stream_info_list )
         {
             for( int i = 0; i < vdhp->nb_streams; i++ )
             {
                 video_stream_info_t *vsip = vdhp->stream_info_list[i];
+                av_freep( &vsip->index_entries );
                 lw_freep( &vsip->frame_list );
                 lw_freep( &vsip->keyframe_list );
                 lw_freep( &vsip->order_converter );

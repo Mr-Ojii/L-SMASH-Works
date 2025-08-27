@@ -41,6 +41,8 @@ typedef struct
     audio_frame_info_t  *frame_list;
     int                  lw_seek_flags;
     lwlibav_extradata_handler_t exh;
+    AVIndexEntry        *index_entries;
+    int                  index_entry_count;
     /* */
     uint32_t             frame_length;
 } audio_stream_info_t;
@@ -54,7 +56,6 @@ struct lwlibav_audio_decode_handler_tag
     int                   error;
     lw_log_handler_t      lh;
     AVCodecContext       *ctx;
-    lwlibav_index_entries_t    *index_entries_list;
     int                   av_seek_flags;  /* unused */
     int                   dv_in_avi;      /* 1 = 'DV in AVI Type-1', 0 = otherwise */
     const char          **preferred_decoder_names;
