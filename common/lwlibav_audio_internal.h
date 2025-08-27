@@ -34,10 +34,12 @@ typedef struct
 
 typedef struct
 {
+    /* common */
     enum AVCodecID       codec_id;
     AVRational           time_base;
     uint32_t             frame_count;
     audio_frame_info_t  *frame_list;
+    /* */
     uint32_t             frame_length;
 } audio_stream_info_t;
 

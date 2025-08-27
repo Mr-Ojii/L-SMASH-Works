@@ -47,21 +47,24 @@ typedef struct
 
 typedef struct
 {
+    /* common */
     enum AVCodecID       codec_id;
     AVRational           time_base;
     uint32_t             frame_count;
+    video_frame_info_t  *frame_list;                 /* stored in presentation order */
+    /* */
     int                  initial_width;
     int                  initial_height;
     int                  max_width;
     int                  max_height;
     enum AVPixelFormat   initial_pix_fmt;
     enum AVColorSpace    initial_colorspace;
-    video_frame_info_t  *frame_list;                 /* stored in presentation order */
     uint8_t             *keyframe_list;              /* keyframe list stored in decoding order */
     order_converter_t   *order_converter;            /* maps of decoding to presentation stored in decoding order */
     int64_t              stream_duration;
     int64_t              min_ts;
     AVRational           actual_time_base;
+    int                  strict_cfr;
 } video_stream_info_t;
 
 struct lwlibav_video_decode_handler_tag
@@ -102,6 +105,5 @@ struct lwlibav_video_decode_handler_tag
     AVFrame             *movable_frame_buffer;       /* the frame buffer
                                                       * where the decoder outputs temporally stored frame data */
     uint32_t             last_ts_frame_number;
-    int                  strict_cfr;
     int                  reuse_pkt;
 };

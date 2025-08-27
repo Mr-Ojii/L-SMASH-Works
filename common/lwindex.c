@@ -814,12 +814,12 @@ static void compute_stream_duration
     if( !(lwhp->format_flags & AVFMT_TS_DISCONT)
      && (vdhp->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
-        first_ts          = info[1].pts;
-        largest_ts        = first_ts;
-        second_largest_ts = first_ts;
-        first_duration    = info[2].pts - info[1].pts;
-        stream_timebase   = first_duration;
-        vdhp->strict_cfr = (first_duration != 0);
+        first_ts           = info[1].pts;
+        largest_ts         = first_ts;
+        second_largest_ts  = first_ts;
+        first_duration     = info[2].pts - info[1].pts;
+        stream_timebase    = first_duration;
+        vsinfo->strict_cfr = (first_duration != 0);
         for( uint32_t i = 2; i <= vsinfo->frame_count; i++ )
         {
             uint64_t duration = info[i].pts - info[i - 1].pts;
@@ -830,8 +830,8 @@ static void compute_stream_duration
                              info[i].pts, i );
                 goto fail;
             }
-            if( vdhp->strict_cfr && duration != first_duration )
-                vdhp->strict_cfr = 0;
+            if( vsinfo->strict_cfr && duration != first_duration )
+                vsinfo->strict_cfr = 0;
             stream_timebase   = get_gcd( stream_timebase, duration );
             second_largest_ts = largest_ts;
             largest_ts        = info[i].pts;
@@ -856,12 +856,12 @@ static void compute_stream_duration
         }
         if( i > vsinfo->frame_count )
             goto fail;
-        first_ts          = info[prev].dts;
-        largest_ts        = first_ts;
-        second_largest_ts = first_ts;
-        first_duration    = info[curr].dts - info[prev].dts;
-        stream_timebase   = first_duration;
-        vdhp->strict_cfr = (first_duration != 0);
+        first_ts           = info[prev].dts;
+        largest_ts         = first_ts;
+        second_largest_ts  = first_ts;
+        first_duration     = info[curr].dts - info[prev].dts;
+        stream_timebase    = first_duration;
+        vsinfo->strict_cfr = (first_duration != 0);
         curr = prev;
         while( 1 )
         {
@@ -882,8 +882,8 @@ static void compute_stream_duration
                              info[curr].dts, curr );
                 goto fail;
             }
-            if( vdhp->strict_cfr && duration != first_duration )
-                vdhp->strict_cfr = 0;
+            if( vsinfo->strict_cfr && duration != first_duration )
+                vsinfo->strict_cfr = 0;
             stream_timebase   = get_gcd( stream_timebase, duration );
             second_largest_ts = largest_ts;
             largest_ts        = info[curr].dts;

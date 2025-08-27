@@ -395,7 +395,7 @@ void lwlibav_video_setup_timestamp_info
     uint64_t stream_duration = (vsinfo->stream_duration * vsinfo->time_base.num) / reduce;
     double stream_framerate = (vohp->frame_count - (vohp->repeat_correction_ts ? 1 : 0))
                             * ((double)stream_timescale / stream_duration);
-    if( vdhp->strict_cfr || !lw_try_rational_framerate( stream_framerate, framerate_num, framerate_den, stream_timebase ) )
+    if( vsinfo->strict_cfr || !lw_try_rational_framerate( stream_framerate, framerate_num, framerate_den, stream_timebase ) )
     {
         if( stream_timebase > INT_MAX || (uint64_t)(stream_framerate * stream_timebase + 0.5) > INT_MAX )
             goto use_lavf_frame_rate;
