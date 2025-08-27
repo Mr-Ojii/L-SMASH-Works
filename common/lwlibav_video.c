@@ -392,7 +392,7 @@ void lwlibav_video_setup_timestamp_info
     uint64_t stream_timebase  = vdhp->actual_time_base.num;
     uint64_t stream_timescale = vdhp->actual_time_base.den;
     uint64_t reduce = reduce_fraction( &stream_timescale, &stream_timebase );
-    uint64_t stream_duration = (vdhp->stream_duration * vsinfo->time_base.num) / reduce;
+    uint64_t stream_duration = (vsinfo->stream_duration * vsinfo->time_base.num) / reduce;
     double stream_framerate = (vohp->frame_count - (vohp->repeat_correction_ts ? 1 : 0))
                             * ((double)stream_timescale / stream_duration);
     if( vdhp->strict_cfr || !lw_try_rational_framerate( stream_framerate, framerate_num, framerate_den, stream_timebase ) )

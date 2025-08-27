@@ -894,10 +894,10 @@ static void compute_stream_duration
         goto fail;
     vdhp->actual_time_base.num = (int)(vsinfo->time_base.num * stream_timebase);
     vdhp->actual_time_base.den = vsinfo->time_base.den;
-    vdhp->stream_duration      = (largest_ts - first_ts) + (largest_ts - second_largest_ts);
+    vsinfo->stream_duration      = (largest_ts - first_ts) + (largest_ts - second_largest_ts);
     return;
 fail:
-    vdhp->stream_duration = stream_duration;
+    vsinfo->stream_duration = stream_duration;
     return;
 }
 
@@ -924,13 +924,13 @@ static void vfr2cfr_settings
 )
 {
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-    if( vdhp->stream_duration > 0 && (vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
+    if( vsinfo->stream_duration > 0 && (vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
         vohp->vfr2cfr     = opt->vfr2cfr.active;
         vohp->cfr_num     = opt->vfr2cfr.fps_num;
         vohp->cfr_den     = opt->vfr2cfr.fps_den;
         vohp->frame_count = (uint32_t)(((double)vohp->cfr_num / vohp->cfr_den)
-                                     * ((double)vdhp->stream_duration * vsinfo->time_base.num / vsinfo->time_base.den)
+                                     * ((double)vsinfo->stream_duration * vsinfo->time_base.num / vsinfo->time_base.den)
                                      + 0.5);
     }
     else
@@ -3158,8 +3158,8 @@ static int parse_index
         int64_t stream_duration;
         if( sscanf( buf, "<StreamDuration=%d,%d>%" SCNd64 "</StreamDuration>", &stream_index, &codec_type, &stream_duration ) != 3 )
             goto fail_parsing;
-        if( codec_type == AVMEDIA_TYPE_VIDEO && stream_index == vdhp->stream_index )
-            vdhp->stream_duration = stream_duration;
+        if( codec_type == AVMEDIA_TYPE_VIDEO )
+            vdhp->stream_info_list[stream_index].stream_duration = stream_duration;
         if( !fgets( buf, sizeof(buf), index ) )
             goto fail_parsing;
     }
@@ -3328,7 +3328,7 @@ static int parse_index
             if( decide_video_seek_method( lwhp, vdhp, video_sample_count ) )
                 goto fail_parsing;
             /* Compute the stream duration. */
-            compute_stream_duration( lwhp, vdhp, vdhp->stream_duration );
+            compute_stream_duration( lwhp, vdhp, vsinfo->stream_duration );
             /* Create the repeat control info. */
             create_video_frame_order_list( vdhp, vohp, opt );
             /* Exclude invisible frames from the output handler. */

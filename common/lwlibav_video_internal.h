@@ -59,6 +59,7 @@ typedef struct
     video_frame_info_t  *frame_list;                 /* stored in presentation order */
     uint8_t             *keyframe_list;              /* keyframe list stored in decoding order */
     order_converter_t   *order_converter;            /* maps of decoding to presentation stored in decoding order */
+    int64_t              stream_duration;
 } video_stream_info_t;
 
 struct lwlibav_video_decode_handler_tag
@@ -98,7 +99,6 @@ struct lwlibav_video_decode_handler_tag
                                                       * where the last output frame data from the decoder is stored */
     AVFrame             *movable_frame_buffer;       /* the frame buffer
                                                       * where the decoder outputs temporally stored frame data */
-    int64_t              stream_duration;
     int64_t              min_ts;
     uint32_t             last_ts_frame_number;
     AVRational           actual_time_base;
