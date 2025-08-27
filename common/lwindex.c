@@ -601,9 +601,9 @@ static int decide_video_seek_method
         for( uint32_t i = 1; i <= sample_count; i++ )
             info[i].pts = info[i].dts;
     /* Set the minimum timestamp. */
-    vdhp->min_ts = (vdhp->lw_seek_flags & (SEEK_PTS_GENERATED | SEEK_PTS_BASED)) ? info[1].pts
-                 : (vdhp->lw_seek_flags & SEEK_DTS_BASED)                        ? info[1].dts
-                 : AV_NOPTS_VALUE;
+    vsinfo->min_ts = (vdhp->lw_seek_flags & (SEEK_PTS_GENERATED | SEEK_PTS_BASED)) ? info[1].pts
+                   : (vdhp->lw_seek_flags & SEEK_DTS_BASED)                        ? info[1].dts
+                   : AV_NOPTS_VALUE;
     /* Treat video frames with unique value as keyframe. */
     if( vdhp->lw_seek_flags & SEEK_POS_BASED )
     {

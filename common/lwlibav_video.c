@@ -1376,7 +1376,7 @@ static uint32_t lwlibav_vfr2cfr
     int64_t ts = lwlibav_get_ts( vdhp, vdhp->last_ts_frame_number );
     if( ts != AV_NOPTS_VALUE )
     {
-        current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+        current_ts = ((double)(ts - vsinfo->min_ts) * time_base.num) / time_base.den;
         if( target_ts == current_ts )
             return vdhp->last_ts_frame_number;
     }
@@ -1391,7 +1391,7 @@ static uint32_t lwlibav_vfr2cfr
             ts = lwlibav_get_ts( vdhp, composition_frame_number );
             if( ts != AV_NOPTS_VALUE )
             {
-                current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+                current_ts = ((double)(ts - vsinfo->min_ts) * time_base.num) / time_base.den;
                 prev_ts = current_ts;
                 if( current_ts <= target_ts )
                     break;
@@ -1408,7 +1408,7 @@ static uint32_t lwlibav_vfr2cfr
         ts = lwlibav_get_ts( vdhp, composition_frame_number );
         if( ts != AV_NOPTS_VALUE )
         {
-            current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+            current_ts = ((double)(ts - vsinfo->min_ts) * time_base.num) / time_base.den;
             if( current_ts >= target_ts )
             {
                 uint32_t prev_composition_frame_number = composition_frame_number;
@@ -1491,7 +1491,7 @@ uint32_t lwlibav_ts_to_frame_number
     int64_t ts = lwlibav_get_ts( vdhp, vdhp->last_ts_frame_number );
     if( ts != AV_NOPTS_VALUE )
     {
-        current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+        current_ts = ((double)(ts - vsinfo->min_ts) * time_base.num) / time_base.den;
         if( target_ts == current_ts )
             return vdhp->last_ts_frame_number;
     }
@@ -1505,7 +1505,7 @@ uint32_t lwlibav_ts_to_frame_number
             ts = lwlibav_get_ts( vdhp, composition_frame_number );
             if( ts != AV_NOPTS_VALUE )
             {
-                current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+                current_ts = ((double)(ts - vsinfo->min_ts) * time_base.num) / time_base.den;
                 if( current_ts <= target_ts )
                     break;
             }
@@ -1520,7 +1520,7 @@ uint32_t lwlibav_ts_to_frame_number
         ts = lwlibav_get_ts( vdhp, composition_frame_number );
         if( ts != AV_NOPTS_VALUE )
         {
-            current_ts = ((double)(ts - vdhp->min_ts) * time_base.num) / time_base.den;
+            current_ts = ((double)(ts - vsinfo->min_ts) * time_base.num) / time_base.den;
             if( current_ts >= target_ts )
             {
                 uint32_t prev_composition_frame_number = composition_frame_number;
