@@ -373,6 +373,7 @@ void lwlibav_video_setup_timestamp_info
     int                             apply_repeat_flag
 )
 {
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
     AVStream *stream = vdhp->format->streams[ vdhp->stream_index ];
     if( vohp->vfr2cfr )
     {
@@ -380,7 +381,7 @@ void lwlibav_video_setup_timestamp_info
         *framerate_den = (int64_t)vohp->cfr_den;
         return;
     }
-    if( vdhp->stream_info_list[vdhp->stream_index].frame_count == 1
+    if( vsinfo->frame_count == 1
      || lwhp->raw_demuxer
      || vdhp->actual_time_base.num == 0
      || vdhp->actual_time_base.den == 0
@@ -391,7 +392,7 @@ void lwlibav_video_setup_timestamp_info
     uint64_t stream_timebase  = vdhp->actual_time_base.num;
     uint64_t stream_timescale = vdhp->actual_time_base.den;
     uint64_t reduce = reduce_fraction( &stream_timescale, &stream_timebase );
-    uint64_t stream_duration = (vdhp->stream_duration * vdhp->stream_info_list[ vdhp->stream_index ].time_base.num) / reduce;
+    uint64_t stream_duration = (vdhp->stream_duration * vsinfo->time_base.num) / reduce;
     double stream_framerate = (vohp->frame_count - (vohp->repeat_correction_ts ? 1 : 0))
                             * ((double)stream_timescale / stream_duration);
     if( vdhp->strict_cfr || !lw_try_rational_framerate( stream_framerate, framerate_num, framerate_den, stream_timebase ) )
@@ -501,7 +502,7 @@ static uint32_t correct_current_frame_number
     if( pkt->dts > info[p].dts )
     {
         /* too forward */
-        uint32_t limit = MIN( goal, vdhp->stream_info_list[vdhp->stream_index].frame_count );
+        uint32_t limit = MIN( goal, vsinfo->frame_count );
         if( oc )
             while( !MATCH_DTS( oc[++i].decoding_to_presentation )
                 && !MATCH_POS( oc[  i].decoding_to_presentation )
@@ -1368,6 +1369,7 @@ static uint32_t lwlibav_vfr2cfr
 )
 {
     /* Convert VFR to CFR. */
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
     double target_ts  = (double)((uint64_t)(frame_number - 1) * vohp->cfr_den) / vohp->cfr_num;
     double current_ts = DBL_MAX;
     AVRational time_base = vdhp->format->streams[ vdhp->stream_index ]->time_base;
@@ -1400,7 +1402,7 @@ static uint32_t lwlibav_vfr2cfr
     }
     double next_target_ts = (double)((uint64_t)frame_number * vohp->cfr_den) / vohp->cfr_num;
     for( composition_frame_number++;
-         composition_frame_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count;
+         composition_frame_number <= vsinfo->frame_count;
          composition_frame_number++ )
     {
         ts = lwlibav_get_ts( vdhp, composition_frame_number );
@@ -1439,8 +1441,8 @@ static uint32_t lwlibav_vfr2cfr
             prev_ts = current_ts;
         }
     }
-    if( composition_frame_number > vdhp->stream_info_list[vdhp->stream_index].frame_count )
-        frame_number = vdhp->stream_info_list[vdhp->stream_index].frame_count;
+    if( composition_frame_number > vsinfo->frame_count )
+        frame_number = vsinfo->frame_count;
     vdhp->last_ts_frame_number = frame_number;
     return frame_number;
 }
@@ -1482,9 +1484,10 @@ uint32_t lwlibav_ts_to_frame_number
     double                          target_ts
 )
 {
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
     uint32_t frame_number = 0;
     double current_ts = DBL_MAX;
-    AVRational time_base = vdhp->format->streams[ vdhp->stream_index ]->time_base;
+    AVRational time_base = vsinfo->time_base;
     int64_t ts = lwlibav_get_ts( vdhp, vdhp->last_ts_frame_number );
     if( ts != AV_NOPTS_VALUE )
     {
@@ -1511,7 +1514,7 @@ uint32_t lwlibav_ts_to_frame_number
             return 0;
     }
     for( composition_frame_number++;
-         composition_frame_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count;
+         composition_frame_number <= vsinfo->frame_count;
          composition_frame_number++ )
     {
         ts = lwlibav_get_ts( vdhp, composition_frame_number );
@@ -1532,8 +1535,8 @@ uint32_t lwlibav_ts_to_frame_number
             }
         }
     }
-    if( composition_frame_number > vdhp->stream_info_list[vdhp->stream_index].frame_count )
-        frame_number = vdhp->stream_info_list[vdhp->stream_index].frame_count;
+    if( composition_frame_number > vsinfo->frame_count )
+        frame_number = vsinfo->frame_count;
     vdhp->last_ts_frame_number = frame_number;
     return frame_number;
 }

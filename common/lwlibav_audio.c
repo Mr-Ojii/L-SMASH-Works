@@ -284,12 +284,13 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
     int                             output_sample_rate
 )
 {
-    audio_frame_info_t *frame_list    = adhp->stream_info_list[adhp->stream_index].frame_list;
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    audio_frame_info_t *frame_list    = asinfo->frame_list;
     int      current_sample_rate      = frame_list[1].sample_rate > 0 ? frame_list[1].sample_rate : adhp->ctx->sample_rate;
     uint32_t current_frame_length     = frame_list[1].length;
     uint64_t pcm_sample_count         = 0;
     uint64_t overall_pcm_sample_count = 0;
-    for( uint32_t i = 1; i <= adhp->stream_info_list[adhp->stream_index].frame_count; i++ )
+    for( uint32_t i = 1; i <= asinfo->frame_count; i++ )
     {
         if( (current_sample_rate != frame_list[i].sample_rate && frame_list[i].sample_rate > 0)
          || current_frame_length != frame_list[i].length )
@@ -304,8 +305,8 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
         }
         pcm_sample_count += frame_list[i].length;
     }
-    current_sample_rate = frame_list[ adhp->stream_info_list[adhp->stream_index].frame_count ].sample_rate > 0
-                        ? frame_list[ adhp->stream_info_list[adhp->stream_index].frame_count ].sample_rate
+    current_sample_rate = frame_list[ asinfo->frame_count ].sample_rate > 0
+                        ? frame_list[ asinfo->frame_count ].sample_rate
                         : adhp->ctx->sample_rate;
     if( pcm_sample_count )
         overall_pcm_sample_count += (pcm_sample_count * output_sample_rate - 1) / current_sample_rate + 1;
@@ -322,7 +323,8 @@ static int find_start_audio_frame
     uint64_t                       *start_offset
 )
 {
-    audio_frame_info_t *frame_list = adhp->stream_info_list[adhp->stream_index].frame_list;
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    audio_frame_info_t *frame_list = asinfo->frame_list;
     uint32_t frame_number                    = 1;
     uint64_t current_frame_pos               = 0;
     uint64_t next_frame_pos                  = 0;
@@ -351,7 +353,7 @@ static int find_start_audio_frame
         if( start_frame_pos < next_frame_pos )
             break;
         ++frame_number;
-    } while( frame_number <= adhp->stream_info_list[adhp->stream_index].frame_count );
+    } while( frame_number <= asinfo->frame_count );
     *start_offset = start_frame_pos - current_frame_pos;
     if( *start_offset && current_sample_rate != output_sample_rate )
         *start_offset = (*start_offset * current_sample_rate - 1) / output_sample_rate + 1;
@@ -561,6 +563,7 @@ uint64_t lwlibav_audio_get_pcm_samples
 {
     if( adhp->error )
         return 0;
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
     uint32_t               frame_number;
     uint32_t               rap_number      = 0;
     uint32_t               past_rap_number = 0;
@@ -612,7 +615,7 @@ retry_seek:
         }
         /* Flush audio decoder buffers. */
         lwlibav_extradata_handler_t *exhp = &adhp->exh;
-        int extradata_index = adhp->stream_info_list[adhp->stream_index].frame_list[frame_number].extradata_index;
+        int extradata_index = asinfo->frame_list[frame_number].extradata_index;
         if( extradata_index != exhp->current_index )
         {
             /* Update the extradata. */
@@ -635,7 +638,7 @@ retry_seek:
             already_gotten = 0;
             make_decodable_packet( alter_pkt, pkt );
         }
-        else if( frame_number > adhp->stream_info_list[adhp->stream_index].frame_count )
+        else if( frame_number > asinfo->frame_count )
         {
             av_packet_unref( pkt );
             if( adhp->exh.delay_count || !(output_flags & AUDIO_OUTPUT_ENOUGH) )
