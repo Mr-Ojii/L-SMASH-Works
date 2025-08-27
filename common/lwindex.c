@@ -892,8 +892,8 @@ static void compute_stream_duration
     }
     else
         goto fail;
-    vdhp->actual_time_base.num = (int)(vsinfo->time_base.num * stream_timebase);
-    vdhp->actual_time_base.den = vsinfo->time_base.den;
+    vsinfo->actual_time_base.num = (int)(vsinfo->time_base.num * stream_timebase);
+    vsinfo->actual_time_base.den = vsinfo->time_base.den;
     vsinfo->stream_duration      = (largest_ts - first_ts) + (largest_ts - second_largest_ts);
     return;
 fail:

@@ -61,6 +61,7 @@ typedef struct
     order_converter_t   *order_converter;            /* maps of decoding to presentation stored in decoding order */
     int64_t              stream_duration;
     int64_t              min_ts;
+    AVRational           actual_time_base;
 } video_stream_info_t;
 
 struct lwlibav_video_decode_handler_tag
@@ -101,7 +102,6 @@ struct lwlibav_video_decode_handler_tag
     AVFrame             *movable_frame_buffer;       /* the frame buffer
                                                       * where the decoder outputs temporally stored frame data */
     uint32_t             last_ts_frame_number;
-    AVRational           actual_time_base;
     int                  strict_cfr;
     int                  reuse_pkt;
 };

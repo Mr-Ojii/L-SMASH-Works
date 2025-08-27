@@ -383,14 +383,14 @@ void lwlibav_video_setup_timestamp_info
     }
     if( vsinfo->frame_count == 1
      || lwhp->raw_demuxer
-     || vdhp->actual_time_base.num == 0
-     || vdhp->actual_time_base.den == 0
+     || vsinfo->actual_time_base.num == 0
+     || vsinfo->actual_time_base.den == 0
      || ((lwhp->format_flags & AVFMT_TS_DISCONT) && !(vdhp->lw_seek_flags & SEEK_DTS_BASED))
      || !(vdhp->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED))
      || (apply_repeat_flag && ((stream->avg_frame_rate.num && stream->avg_frame_rate.den) || (stream->r_frame_rate.num && stream->r_frame_rate.den))) )
         goto use_lavf_frame_rate;
-    uint64_t stream_timebase  = vdhp->actual_time_base.num;
-    uint64_t stream_timescale = vdhp->actual_time_base.den;
+    uint64_t stream_timebase  = vsinfo->actual_time_base.num;
+    uint64_t stream_timescale = vsinfo->actual_time_base.den;
     uint64_t reduce = reduce_fraction( &stream_timescale, &stream_timebase );
     uint64_t stream_duration = (vsinfo->stream_duration * vsinfo->time_base.num) / reduce;
     double stream_framerate = (vohp->frame_count - (vohp->repeat_correction_ts ? 1 : 0))
