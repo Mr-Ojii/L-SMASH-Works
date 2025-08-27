@@ -56,6 +56,8 @@ typedef struct
     int                  max_height;
     enum AVPixelFormat   initial_pix_fmt;
     enum AVColorSpace    initial_colorspace;
+    video_frame_info_t  *frame_list;                 /* stored in presentation order */
+    uint8_t             *keyframe_list;              /* keyframe list stored in decoding order */
 } video_stream_info_t;
 
 struct lwlibav_video_decode_handler_tag
@@ -75,14 +77,12 @@ struct lwlibav_video_decode_handler_tag
     const char        **preferred_decoder_names;
     int                 prefer_hw_decoder;
     AVFrame            *frame_buffer;
-    video_frame_info_t *frame_list;         /* stored in presentation order */
     /* */
     video_stream_info_t *stream_info_list;
     uint32_t             forward_seek_threshold;
     int                  seek_mode;
     AVPacket             packet;
     order_converter_t   *order_converter;            /* maps of decoding to presentation stored in decoding order */
-    uint8_t             *keyframe_list;              /* keyframe list stored in decoding order */
     uint32_t             last_half_frame;            /* The last frame consists of complementary field coded picture pair
                                                       * if set to non-zero, otherwise single frame coded picture. */
     uint32_t             last_frame_number;          /* the number of the last requested frame */

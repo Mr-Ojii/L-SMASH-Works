@@ -195,7 +195,7 @@ static void mpeg124_video_vc1_genarate_pts
 )
 {
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[ vdhp->stream_index ];
-    video_frame_info_t *info = vdhp->frame_list;
+    video_frame_info_t *info = vsinfo->frame_list;
     int      reordered_stream  = 0;
     uint32_t num_consecutive_b = 0;
     for( uint32_t i = 1; i <= vsinfo->frame_count; i++ )
@@ -362,7 +362,7 @@ static int poc_genarate_pts
 )
 {
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[ vdhp->stream_index ];
-    video_frame_info_t *info = &vdhp->frame_list[1];
+    video_frame_info_t *info = &vsinfo->frame_list[1];
     /* Deduplicate POCs. */
     int64_t  poc_offset            = 0;
     int64_t  poc_min               = 0;
@@ -500,7 +500,8 @@ static int decide_video_seek_method
 )
 {
     vdhp->lw_seek_flags = lineup_seek_base_candidates( lwhp );
-    video_frame_info_t *info = vdhp->frame_list;
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
+    video_frame_info_t *info = vsinfo->frame_list;
     /* Decide seek base. */
     for( uint32_t i = 1; i <= sample_count; i++ )
         if( info[i].pts == AV_NOPTS_VALUE )
@@ -657,7 +658,7 @@ static int decide_video_seek_method
     }
     /* Set up keyframe list: presentation order (info) -> decoding order (keyframe_list) */
     for( uint32_t i = 1; i <= sample_count; i++ )
-        vdhp->keyframe_list[ info[i].sample_number ] = !!(info[i].flags & LW_VFRAME_FLAG_KEY);
+        vsinfo->keyframe_list[ info[i].sample_number ] = !!(info[i].flags & LW_VFRAME_FLAG_KEY);
     return 0;
 }
 
@@ -669,7 +670,8 @@ static void decide_audio_seek_method
 )
 {
     adhp->lw_seek_flags = lineup_seek_base_candidates( lwhp );
-    audio_frame_info_t *info = adhp->frame_list;
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    audio_frame_info_t *info = asinfo->frame_list;
     for( uint32_t i = 1; i <= sample_count; i++ )
         if( info[i].pts == AV_NOPTS_VALUE )
         {
@@ -749,7 +751,7 @@ static int64_t calculate_av_gap
     audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
     /* Pick the first video timestamp.
      * If invalid, skip A/V gap calculation. */
-    int64_t video_ts = (vdhp->lw_seek_flags & SEEK_PTS_BASED) ? vdhp->frame_list[1].pts : vdhp->frame_list[1].dts;
+    int64_t video_ts = (vdhp->lw_seek_flags & SEEK_PTS_BASED) ? vsinfo->frame_list[1].pts : vsinfo->frame_list[1].dts;
     if( video_ts == AV_NOPTS_VALUE )
         return 0;
     /* Pick the first valid audio timestamp.
@@ -759,18 +761,18 @@ static int64_t calculate_av_gap
     if( adhp->lw_seek_flags & SEEK_PTS_BASED )
     {
         for( uint32_t i = 1; i <= asinfo->frame_count; i++ )
-            if( adhp->frame_list[i].pts != AV_NOPTS_VALUE )
+            if( asinfo->frame_list[i].pts != AV_NOPTS_VALUE )
             {
-                audio_ts        = adhp->frame_list[i].pts;
+                audio_ts        = asinfo->frame_list[i].pts;
                 audio_ts_number = i;
                 break;
             }
     }
     else
         for( uint32_t i = 1; i <= asinfo->frame_count; i++ )
-            if( adhp->frame_list[i].dts != AV_NOPTS_VALUE )
+            if( asinfo->frame_list[i].dts != AV_NOPTS_VALUE )
             {
-                audio_ts        = adhp->frame_list[i].dts;
+                audio_ts        = asinfo->frame_list[i].dts;
                 audio_ts_number = i;
                 break;
             }
@@ -779,8 +781,8 @@ static int64_t calculate_av_gap
     /* Estimate the first audio timestamp if invalid. */
     AVRational audio_sample_base = { 1, sample_rate };
     for( uint32_t i = 1, delay_count = 0; i < MIN( audio_ts_number + delay_count, asinfo->frame_count ); i++ )
-        if( adhp->frame_list[i].length != -1 )
-            audio_ts -= av_rescale_q( adhp->frame_list[i].length, audio_sample_base, asinfo->time_base );
+        if( asinfo->frame_list[i].length != -1 )
+            audio_ts -= av_rescale_q( asinfo->frame_list[i].length, audio_sample_base, asinfo->time_base );
         else
             ++delay_count;
     /* Calculate A/V gap in audio samplerate. */
@@ -803,7 +805,7 @@ static void compute_stream_duration
 )
 {
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-    video_frame_info_t *info = vdhp->frame_list;
+    video_frame_info_t *info = vsinfo->frame_list;
     int64_t  first_ts;
     int64_t  largest_ts;
     int64_t  second_largest_ts;
@@ -941,14 +943,15 @@ static void create_video_frame_order_list
     lwlibav_option_t               *opt
 )
 {
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
     if( !(vdhp->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
         goto disable_repeat;
     if( opt->vfr2cfr.active )
         opt->apply_repeat_flag = 0;
-    video_frame_info_t *info                      = vdhp->frame_list;
-    uint32_t            frame_count               = vdhp->stream_info_list[vdhp->stream_index].frame_count;
+    video_frame_info_t *info                      = vsinfo->frame_list;
+    uint32_t            frame_count               = vsinfo->frame_count;
     uint32_t            order_count               = 0;
-    int                 no_support_frame_tripling = (vdhp->stream_info_list[vdhp->stream_index].codec_id != AV_CODEC_ID_MPEG2VIDEO);
+    int                 no_support_frame_tripling = (vsinfo->codec_id != AV_CODEC_ID_MPEG2VIDEO);
     int                 specified_field_dominance = opt->field_dominance == 0 ? LW_FIELD_INFO_UNKNOWN   /* Obey source flags. */
                                                   : opt->field_dominance == 1 ? LW_FIELD_INFO_TOP       /* TFF: Top -> Bottom */
                                                   :                             LW_FIELD_INFO_BOTTOM;   /* BFF: Bottom -> Top */
@@ -1131,7 +1134,7 @@ static void create_video_visible_frame_list
         return;
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
     lw_video_frame_order_t *order_list = NULL;
-    video_frame_info_t     *info       = vdhp->frame_list;
+    video_frame_info_t     *info       = vsinfo->frame_list;
     if( vohp->vfr2cfr )
     {
         /* Duplicated frame numbers could be occured, so frame cache buffers are needed. */
@@ -1925,13 +1928,12 @@ static void write_audio_extradata
 
 static void disable_video_stream( lwlibav_video_decode_handler_t *vdhp )
 {
-    lw_freep( &vdhp->frame_list );
-    lw_freep( &vdhp->keyframe_list );
+
     lw_freep( &vdhp->order_converter );
-    lw_freep( &vdhp->stream_info_list );
     if( vdhp->index_entries_list )
     {
-        for( int i = 0; i < vdhp->nb_streams; i++ ) {
+        for( int i = 0; i < vdhp->nb_streams; i++ )
+        {
             av_freep( &vdhp->index_entries_list[i].entries );
             vdhp->index_entries_list[i].count = 0;
         }
@@ -1939,8 +1941,14 @@ static void disable_video_stream( lwlibav_video_decode_handler_t *vdhp )
     if( vdhp->stream_info_list )
     {
         for( int i = 0; i < vdhp->nb_streams; i++ )
-            vdhp->stream_info_list[i].frame_count = 0;
+        {
+            video_stream_info_t *vsinfo = &vdhp->stream_info_list[i];
+            lw_freep( &vsinfo->frame_list );
+            lw_freep( &vsinfo->keyframe_list );
+            vsinfo->frame_count = 0;
+        }
     }
+    lw_freep( &vdhp->stream_info_list );
     vdhp->stream_index        = -1;
 }
 
@@ -2759,10 +2767,10 @@ static int create_index
     if( vdhp->stream_index >= 0 )
     {
         video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-        vdhp->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
-        if( !vdhp->keyframe_list )
+        vsinfo->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
+        if( !vsinfo->keyframe_list )
             goto fail_index;
-        vdhp->frame_list      = video_info;
+        vsinfo->frame_list      = video_info;
         vsinfo->frame_count = video_sample_count;
         vsinfo->initial_pix_fmt = vdhp->ctx->pix_fmt;
         if( decide_video_seek_method( lwhp, vdhp, video_sample_count ) )
@@ -2776,9 +2784,10 @@ static int create_index
     }
     if( adhp->stream_index >= 0 )
     {
-        adhp->frame_list   = audio_info;
-        adhp->stream_info_list[adhp->stream_index].frame_count  = audio_sample_count;
-        adhp->frame_length = constant_frame_length ? adhp->frame_list[1].length : 0;
+        audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+        asinfo->frame_list   = audio_info;
+        asinfo->frame_count  = audio_sample_count;
+        asinfo->frame_length = constant_frame_length ? asinfo->frame_list[1].length : 0;
         decide_audio_seek_method( lwhp, adhp, audio_sample_count );
         if( opt->av_sync && vdhp->stream_index >= 0 )
             lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, audio_sample_rate );
@@ -3313,11 +3322,12 @@ static int parse_index
     {
         if( vdhp->stream_index >= 0 )
         {
-            vdhp->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
-            if( !vdhp->keyframe_list )
+            video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
+            vsinfo->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
+            if( !vsinfo->keyframe_list )
                 goto fail_parsing;
-            vdhp->frame_list  = video_info;
-            vdhp->stream_info_list[vdhp->stream_index].frame_count = video_sample_count;
+            vsinfo->frame_list  = video_info;
+            vsinfo->frame_count = video_sample_count;
             if( decide_video_seek_method( lwhp, vdhp, video_sample_count ) )
                 goto fail_parsing;
             /* Compute the stream duration. */
@@ -3329,6 +3339,7 @@ static int parse_index
         }
         if( adhp->stream_index >= 0 )
         {
+            audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
             if( adhp->dv_in_avi == 1 && adhp->index_entries_list[ adhp->stream_index ].count == 0 )
             {
                 /* DV in AVI Type-1 */
@@ -3353,9 +3364,9 @@ static int parse_index
                 }
                 adhp->dv_in_avi = 0;
             }
-            adhp->frame_list   = audio_info;
-            adhp->stream_info_list[adhp->stream_index].frame_count  = audio_sample_count;
-            adhp->frame_length = constant_frame_length ? audio_info[1].length : 0;
+            asinfo->frame_list   = audio_info;
+            asinfo->frame_count  = audio_sample_count;
+            asinfo->frame_length = constant_frame_length ? audio_info[1].length : 0;
             decide_audio_seek_method( lwhp, adhp, audio_sample_count );
             if( opt->av_sync && vdhp->stream_index >= 0 )
                 lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, audio_sample_rate );
@@ -3370,8 +3381,16 @@ static int parse_index
         return 0;
     }
 fail_parsing:
-    vdhp->frame_list = NULL;
-    adhp->frame_list = NULL;
+    if( vdhp->stream_index >= 0 )
+    {
+        video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
+        vsinfo->frame_list = NULL;
+    }
+    if( adhp->stream_index >= 0 )
+    {
+        audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+        asinfo->frame_list = NULL;
+    }
     if( video_info )
         free( video_info );
     if( audio_info )

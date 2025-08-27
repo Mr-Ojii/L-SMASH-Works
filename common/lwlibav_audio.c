@@ -88,14 +88,18 @@ void lwlibav_audio_free_decode_handler
         lw_free( exhp->entries );
     }
     av_packet_unref( &adhp->packet );
-    lw_free( adhp->frame_list );
     if( adhp->index_entries_list )
     {
         for( int i = 0; i < adhp->nb_streams; i++ )
             av_freep( &adhp->index_entries_list[i].entries );
         lw_free( adhp->index_entries_list );
     }
-    lw_free( adhp->stream_info_list );
+    if( adhp->stream_info_list )
+    {
+        for( int i = 0; i < adhp->nb_streams; i++ )
+            lw_freep( &adhp->stream_info_list[i].frame_list );
+        lw_free( adhp->stream_info_list );
+    }
     av_frame_free( &adhp->frame_buffer );
     avcodec_free_context( &adhp->ctx );
     if( adhp->format )
@@ -260,8 +264,12 @@ int lwlibav_audio_get_desired_track
                 av_freep( &adhp->index_entries_list[i].entries );
             lw_freep( &adhp->index_entries_list );
         }
-        lw_freep( &adhp->stream_info_list );
-        lw_freep( &adhp->frame_list );
+        if( adhp->stream_info_list )
+        {
+            for( int i = 0; i < adhp->nb_streams; i++ )
+                lw_freep( &adhp->stream_info_list[i].frame_list );
+            lw_freep( &adhp->stream_info_list );
+        }
         if( adhp->format )
             lavf_close_file( &adhp->format );
         return -1;
@@ -276,7 +284,7 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
     int                             output_sample_rate
 )
 {
-    audio_frame_info_t *frame_list    = adhp->frame_list;
+    audio_frame_info_t *frame_list    = adhp->stream_info_list[adhp->stream_index].frame_list;
     int      current_sample_rate      = frame_list[1].sample_rate > 0 ? frame_list[1].sample_rate : adhp->ctx->sample_rate;
     uint32_t current_frame_length     = frame_list[1].length;
     uint64_t pcm_sample_count         = 0;
@@ -314,7 +322,7 @@ static int find_start_audio_frame
     uint64_t                       *start_offset
 )
 {
-    audio_frame_info_t *frame_list = adhp->frame_list;
+    audio_frame_info_t *frame_list = adhp->stream_info_list[adhp->stream_index].frame_list;
     uint32_t frame_number                    = 1;
     uint64_t current_frame_pos               = 0;
     uint64_t next_frame_pos                  = 0;
@@ -375,11 +383,12 @@ static uint32_t get_audio_rap
     uint32_t                        frame_number
 )
 {
-    if( frame_number > adhp->stream_info_list[adhp->stream_index].frame_count )
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
+    if( frame_number > asinfo->frame_count )
         return 0;
     /* Get an unique value of the closest past audio keyframe. */
     uint32_t rap_number = frame_number;
-    while( rap_number && !adhp->frame_list[rap_number].keyframe )
+    while( rap_number && !asinfo->frame_list[rap_number].keyframe )
         --rap_number;
     if( rap_number == 0 )
         rap_number = 1;
@@ -477,13 +486,14 @@ static uint32_t seek_audio
 #define MAX_ERROR_COUNT 3   /* arbitrary */
     int error_count = 0;
 retry_seek:;
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
     uint32_t rap_number = past_rap_number == 0 ? get_audio_rap( adhp, frame_number ) : past_rap_number;
     if( rap_number == 0 )
         return 0;
-    int64_t rap_pos = (adhp->lw_seek_flags & SEEK_POS_BASED) ? adhp->frame_list[rap_number].file_offset
-                    : (adhp->lw_seek_flags & SEEK_PTS_BASED) ? adhp->frame_list[rap_number].pts
-                    : (adhp->lw_seek_flags & SEEK_DTS_BASED) ? adhp->frame_list[rap_number].dts
-                    :                                          adhp->frame_list[rap_number].sample_number;
+    int64_t rap_pos = (adhp->lw_seek_flags & SEEK_POS_BASED) ? asinfo->frame_list[rap_number].file_offset
+                    : (adhp->lw_seek_flags & SEEK_PTS_BASED) ? asinfo->frame_list[rap_number].pts
+                    : (adhp->lw_seek_flags & SEEK_DTS_BASED) ? asinfo->frame_list[rap_number].dts
+                    :                                          asinfo->frame_list[rap_number].sample_number;
     /* Seek to audio keyframe.
      * Note: av_seek_frame() for DV in AVI Type-1 requires stream_index = 0. */
     int flags = (adhp->lw_seek_flags & SEEK_POS_BASED) ? AVSEEK_FLAG_BYTE : adhp->lw_seek_flags == 0 ? AVSEEK_FLAG_FRAME : 0;
@@ -494,7 +504,7 @@ retry_seek:;
     int match = 0;
     for( uint32_t i = rap_number; i <= frame_number; )
     {
-        if( match && picture && adhp->exh.current_index == adhp->frame_list[i - 1].extradata_index )
+        if( match && picture && adhp->exh.current_index == asinfo->frame_list[i - 1].extradata_index )
         {
             /* Actual decoding to establish stability of subsequent decoding. */
             AVPacket *alter_pkt = &adhp->alter_packet;
@@ -509,21 +519,21 @@ retry_seek:;
              * since libavformat might have sought wrong position. */
             if( adhp->lw_seek_flags & SEEK_POS_BASED )
             {
-                if( pkt->pos == -1 || adhp->frame_list[i].file_offset == -1 )
+                if( pkt->pos == -1 || asinfo->frame_list[i].file_offset == -1 )
                     continue;
-                i = shift_current_frame_number_pos( adhp->frame_list, pkt, i, frame_number );
+                i = shift_current_frame_number_pos( asinfo->frame_list, pkt, i, frame_number );
             }
             else if( adhp->lw_seek_flags & SEEK_PTS_BASED )
             {
                 if( pkt->pts == AV_NOPTS_VALUE )
                     continue;
-                i = shift_current_frame_number_pts( adhp->frame_list, pkt, i, frame_number );
+                i = shift_current_frame_number_pts( asinfo->frame_list, pkt, i, frame_number );
             }
             else if( adhp->lw_seek_flags & SEEK_DTS_BASED )
             {
                 if( pkt->dts == AV_NOPTS_VALUE )
                     continue;
-                i = shift_current_frame_number_dts( adhp->frame_list, pkt, i, frame_number );
+                i = shift_current_frame_number_dts( asinfo->frame_list, pkt, i, frame_number );
             }
             if( i == 0 )
             {
@@ -602,7 +612,7 @@ retry_seek:
         }
         /* Flush audio decoder buffers. */
         lwlibav_extradata_handler_t *exhp = &adhp->exh;
-        int extradata_index = adhp->frame_list[frame_number].extradata_index;
+        int extradata_index = adhp->stream_info_list[adhp->stream_index].frame_list[frame_number].extradata_index;
         if( extradata_index != exhp->current_index )
         {
             /* Update the extradata. */
@@ -689,8 +699,9 @@ void set_audio_basic_settings
 )
 {
     lwlibav_audio_decode_handler_t *adhp = (lwlibav_audio_decode_handler_t *)dhp;
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
     AVCodecParameters   *codecpar = adhp->format->streams[ adhp->stream_index ]->codecpar;
-    lwlibav_extradata_t *entry    = &adhp->exh.entries[ adhp->frame_list[frame_number].extradata_index ];
+    lwlibav_extradata_t *entry    = &adhp->exh.entries[ asinfo->frame_list[frame_number].extradata_index ];
     codecpar->sample_rate           = entry->sample_rate;
     av_channel_layout_from_mask( &codecpar->ch_layout, entry->channel_layout );
     codecpar->format                = (int)entry->sample_format;
@@ -719,12 +730,13 @@ int try_decode_audio_frame
     AVCodecContext  *ctx          = adhp->ctx;
     uint32_t         start_frame  = frame_number;
     int              err          = 0;
+    audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
     do
     {
-        if( frame_number > adhp->stream_info_list[adhp->stream_index].frame_count )
+        if( frame_number > asinfo->frame_count )
             break;
         /* Get a frame. */
-        int extradata_index = adhp->frame_list[frame_number].extradata_index;
+        int extradata_index = asinfo->frame_list[frame_number].extradata_index;
         if( extradata_index != adhp->exh.current_index )
             break;
         if( frame_number == start_frame )
