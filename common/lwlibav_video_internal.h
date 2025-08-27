@@ -72,20 +72,20 @@ typedef struct
 struct lwlibav_video_decode_handler_tag
 {
     /* common */
-    AVFormatContext    *format;
-    uint32_t            nb_streams;
-    int                 stream_index;
-    int                 error;
-    lw_log_handler_t    lh;
-    AVCodecContext     *ctx;
+    AVFormatContext      *format;
+    uint32_t              nb_streams;
+    int                   stream_index;
+    int                   error;
+    lw_log_handler_t      lh;
+    AVCodecContext       *ctx;
     lwlibav_index_entries_t    *index_entries_list;
-    int                 av_seek_flags;
-    int                 dv_in_avi;          /* unused */
-    const char        **preferred_decoder_names;
-    int                 prefer_hw_decoder;
-    AVFrame            *frame_buffer;
+    int                   av_seek_flags;
+    int                   dv_in_avi;          /* unused */
+    const char          **preferred_decoder_names;
+    int                   prefer_hw_decoder;
+    AVFrame              *frame_buffer;
+    video_stream_info_t **stream_info_list;
     /* */
-    video_stream_info_t *stream_info_list;
     uint32_t             forward_seek_threshold;
     int                  seek_mode;
     AVPacket             packet;

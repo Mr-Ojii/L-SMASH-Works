@@ -194,7 +194,7 @@ static void mpeg124_video_vc1_genarate_pts
     lwlibav_video_decode_handler_t *vdhp
 )
 {
-    video_stream_info_t *vsip = &vdhp->stream_info_list[ vdhp->stream_index ];
+    video_stream_info_t *vsip = vdhp->stream_info_list[ vdhp->stream_index ];
     video_frame_info_t *info = vsip->frame_list;
     int      reordered_stream  = 0;
     uint32_t num_consecutive_b = 0;
@@ -361,7 +361,7 @@ static int poc_genarate_pts
     int                             max_num_reorder_pics
 )
 {
-    video_stream_info_t *vsip = &vdhp->stream_info_list[ vdhp->stream_index ];
+    video_stream_info_t *vsip = vdhp->stream_info_list[ vdhp->stream_index ];
     video_frame_info_t *info = &vsip->frame_list[1];
     /* Deduplicate POCs. */
     int64_t  poc_offset            = 0;
@@ -499,7 +499,7 @@ static int decide_video_seek_method
     uint32_t                        sample_count
 )
 {
-    video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+    video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     vsip->lw_seek_flags = lineup_seek_base_candidates( lwhp );
     video_frame_info_t *info = vsip->frame_list;
     /* Decide seek base. */
@@ -669,7 +669,7 @@ static void decide_audio_seek_method
     uint32_t                        sample_count
 )
 {
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     asip->lw_seek_flags = lineup_seek_base_candidates( lwhp );
     audio_frame_info_t *info = asip->frame_list;
     for( uint32_t i = 1; i <= sample_count; i++ )
@@ -747,8 +747,8 @@ static int64_t calculate_av_gap
     int                             sample_rate
 )
 {
-    video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     /* Pick the first video timestamp.
      * If invalid, skip A/V gap calculation. */
     int64_t video_ts = (vsip->lw_seek_flags & SEEK_PTS_BASED) ? vsip->frame_list[1].pts : vsip->frame_list[1].dts;
@@ -804,7 +804,7 @@ static void compute_stream_duration
     int64_t                         stream_duration
 )
 {
-    video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+    video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     video_frame_info_t *info = vsip->frame_list;
     int64_t  first_ts;
     int64_t  largest_ts;
@@ -923,7 +923,7 @@ static void vfr2cfr_settings
     lwlibav_option_t               *opt
 )
 {
-    video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+    video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     if( vsip->stream_duration > 0 && (vsip->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
         vohp->vfr2cfr     = opt->vfr2cfr.active;
@@ -944,7 +944,7 @@ static void create_video_frame_order_list
     lwlibav_option_t               *opt
 )
 {
-    video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+    video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     if( !(vsip->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
         goto disable_repeat;
     if( opt->vfr2cfr.active )
@@ -1133,7 +1133,7 @@ static void create_video_visible_frame_list
 {
     if( vohp->repeat_control || invisible_count == 0 )
         return;
-    video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+    video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     lw_video_frame_order_t *order_list = NULL;
     video_frame_info_t     *info       = vsip->frame_list;
     if( vohp->vfr2cfr )
@@ -1941,7 +1941,7 @@ static void disable_video_stream( lwlibav_video_decode_handler_t *vdhp )
     {
         for( int i = 0; i < vdhp->nb_streams; i++ )
         {
-            video_stream_info_t *vsip = &vdhp->stream_info_list[i];
+            video_stream_info_t *vsip = vdhp->stream_info_list[i];
             lw_freep( &vsip->frame_list );
             lw_freep( &vsip->keyframe_list );
             lw_freep( &vsip->order_converter );
@@ -2123,12 +2123,25 @@ static int create_index
     adhp->index_entries_list = (lwlibav_index_entries_t *)lw_malloc_zero( adhp->nb_streams * sizeof(lwlibav_index_entries_t) );
     if( !adhp->index_entries_list )
         goto fail_index;
-    vdhp->stream_info_list = (video_stream_info_t *)lw_malloc_zero( vdhp->nb_streams * sizeof(video_stream_info_t) );
+    vdhp->stream_info_list = (video_stream_info_t **)lw_malloc_zero( vdhp->nb_streams * sizeof(video_stream_info_t *) );
     if( !vdhp->stream_info_list )
         goto fail_index;
-    adhp->stream_info_list = (audio_stream_info_t *)lw_malloc_zero( adhp->nb_streams * sizeof(audio_stream_info_t) );
+    for( int i = 0; i < vdhp->nb_streams; i++ )
+    {
+        vdhp->stream_info_list[i] = (video_stream_info_t *)lw_malloc_zero( sizeof(video_stream_info_t) );
+        if( !vdhp->stream_info_list[i] )
+            goto fail_index;
+    }
+    adhp->stream_info_list = (audio_stream_info_t **)lw_malloc_zero( adhp->nb_streams * sizeof(audio_stream_info_t *) );
     if( !adhp->stream_info_list )
         goto fail_index;
+    
+    for( int i = 0; i < adhp->nb_streams; i++ )
+    {
+        adhp->stream_info_list[i] = (audio_stream_info_t *)lw_malloc_zero( sizeof(audio_stream_info_t) );
+        if( !adhp->stream_info_list[i] )
+            goto fail_index;
+    }
 
     int32_t video_index_pos = 0;
     int32_t audio_index_pos = 0;
@@ -2252,7 +2265,7 @@ static int create_index
              || (!opt->force_video && (vdhp->stream_index == -1 || (pkt.stream_index != vdhp->stream_index && higher_priority)))
              || (opt->force_video && vdhp->stream_index == -1 && pkt.stream_index == opt->force_video_index) )
             {
-                video_stream_info_t *vsip = &vdhp->stream_info_list[ pkt.stream_index ];
+                video_stream_info_t *vsip = vdhp->stream_info_list[ pkt.stream_index ];
                 /* Update active video stream. */
                 if( index )
                 {
@@ -2325,7 +2338,7 @@ static int create_index
             /* Set video frame info if this stream is active. */
             if( pkt.stream_index == vdhp->stream_index )
             {
-                video_stream_info_t *vsip = &vdhp->stream_info_list[ pkt.stream_index ];
+                video_stream_info_t *vsip = vdhp->stream_info_list[ pkt.stream_index ];
                 ++video_sample_count;
                 video_frame_info_t *info = &video_info[video_sample_count];
                 info->pts             = pkt.pts;
@@ -2418,7 +2431,7 @@ static int create_index
         {
             if( adhp->stream_index == -1 && (!opt->force_audio || (opt->force_audio && pkt.stream_index == opt->force_audio_index)) )
             {
-                audio_stream_info_t *asip = &adhp->stream_info_list[pkt.stream_index];
+                audio_stream_info_t *asip = adhp->stream_info_list[pkt.stream_index];
                 /* Update active audio stream. */
                 if( index )
                 {
@@ -2439,7 +2452,7 @@ static int create_index
             /* Set audio frame info if this stream is active. */
             if( pkt.stream_index == adhp->stream_index )
             {
-                audio_stream_info_t *asip = &adhp->stream_info_list[pkt.stream_index];
+                audio_stream_info_t *asip = adhp->stream_info_list[pkt.stream_index];
                 if( frame_length != -1 )
                     audio_duration += frame_length;
                 if( audio_duration <= INT32_MAX )
@@ -2732,8 +2745,8 @@ static int create_index
             if( !helper || !helper->codec_ctx )
                 continue;
             
-            video_stream_info_t *vsip = &vdhp->stream_info_list[stream_index];
-            audio_stream_info_t *asip = &adhp->stream_info_list[stream_index];
+            video_stream_info_t *vsip = vdhp->stream_info_list[stream_index];
+            audio_stream_info_t *asip = adhp->stream_info_list[stream_index];
 
             lwlibav_extradata_handler_t *list = &helper->exh;
             void (*write_av_extradata)( FILE *, lwlibav_extradata_t * ) = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
@@ -2759,7 +2772,7 @@ static int create_index
     print_index( index, "</LibavReaderIndexFile>\n" );
     if( vdhp->stream_index >= 0 )
     {
-        video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+        video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
         vsip->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
         if( !vsip->keyframe_list )
             goto fail_index;
@@ -2777,7 +2790,7 @@ static int create_index
     }
     if( adhp->stream_index >= 0 )
     {
-        audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+        audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
         asip->frame_list   = audio_info;
         asip->frame_count  = audio_sample_count;
         asip->frame_length = constant_frame_length ? asip->frame_list[1].length : 0;
@@ -2923,16 +2936,20 @@ static int parse_index
     }
     if( active_audio_index == -2 && opt->force_audio_index != -2 )
         goto fail_parsing;
-    vdhp->stream_info_list = (video_stream_info_t *)lw_malloc_zero( nb_streams * sizeof(video_stream_info_t) );
+    vdhp->stream_info_list = (video_stream_info_t **)lw_malloc_zero( nb_streams * sizeof(video_stream_info_t*) );
     if( !vdhp->stream_info_list )
         goto fail_parsing;
-    adhp->stream_info_list = (audio_stream_info_t *)lw_malloc_zero( nb_streams * sizeof(audio_stream_info_t) );
+    adhp->stream_info_list = (audio_stream_info_t **)lw_malloc_zero( nb_streams * sizeof(audio_stream_info_t*) );
     if( !adhp->stream_info_list )
         goto fail_parsing;
     for( uint32_t i = 0; i < nb_streams; i++ )
     {
-        video_stream_info_t *vsip = &vdhp->stream_info_list[i];
-        audio_stream_info_t *asip = &adhp->stream_info_list[i];
+        video_stream_info_t *vsip = vdhp->stream_info_list[i] = (video_stream_info_t *)lw_malloc_zero( sizeof(video_stream_info_t) );
+        if( !vsip )
+            goto fail_parsing;
+        audio_stream_info_t *asip = adhp->stream_info_list[i] = (audio_stream_info_t *)lw_malloc_zero( sizeof(audio_stream_info_t) );
+        if( !asip )
+            goto fail_parsing;
         vsip->codec_id           = AV_CODEC_ID_NONE;
         asip->codec_id           = AV_CODEC_ID_NONE;
         vsip->initial_pix_fmt    = AV_PIX_FMT_NONE;
@@ -2977,7 +2994,7 @@ static int parse_index
             }
             if( stream_index == vdhp->stream_index )
             {
-                video_stream_info_t *vsip = &vdhp->stream_info_list[ stream_index ];
+                video_stream_info_t *vsip = vdhp->stream_info_list[ stream_index ];
                 int pict_type;
                 int poc;
                 int repeat_pict;
@@ -3064,7 +3081,7 @@ static int parse_index
                 goto fail_parsing;
             if( stream_index == adhp->stream_index )
             {
-                audio_stream_info_t *asip = &adhp->stream_info_list[stream_index];
+                audio_stream_info_t *asip = adhp->stream_info_list[stream_index];
                 uint64_t layout;
                 int      channels;
                 int      sample_rate;
@@ -3139,7 +3156,7 @@ static int parse_index
             }
         }
     }
-    video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+    video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     if( video_present && opt->force_video && opt->force_video_index != -1
      && (video_sample_count == 0 || vsip->initial_pix_fmt == AV_PIX_FMT_NONE || vsip->initial_width == 0 || vsip->initial_height == 0) )
         goto fail_parsing;  /* Need to re-create the index file. */
@@ -3158,7 +3175,7 @@ static int parse_index
         if( sscanf( buf, "<StreamDuration=%d,%d>%" SCNd64 "</StreamDuration>", &stream_index, &codec_type, &stream_duration ) != 3 )
             goto fail_parsing;
         if( codec_type == AVMEDIA_TYPE_VIDEO )
-            vdhp->stream_info_list[stream_index].stream_duration = stream_duration;
+            vdhp->stream_info_list[stream_index]->stream_duration = stream_duration;
         if( !fgets( buf, sizeof(buf), index ) )
             goto fail_parsing;
     }
@@ -3242,8 +3259,8 @@ static int parse_index
         {
             if( codec_type == AVMEDIA_TYPE_VIDEO || codec_type == AVMEDIA_TYPE_AUDIO )
             {
-                video_stream_info_t *vsip = &vdhp->stream_info_list[stream_index];
-                audio_stream_info_t *asip = &adhp->stream_info_list[stream_index];
+                video_stream_info_t *vsip = vdhp->stream_info_list[stream_index];
+                audio_stream_info_t *asip = adhp->stream_info_list[stream_index];
                 lwlibav_extradata_handler_t *exhp = codec_type == AVMEDIA_TYPE_VIDEO ? &vsip->exh : &asip->exh;
                 if( !alloc_extradata_entries( exhp, entry_count ) )
                     goto fail_parsing;
@@ -3319,7 +3336,7 @@ static int parse_index
     {
         if( vdhp->stream_index >= 0 )
         {
-            video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+            video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
             vsip->keyframe_list = (uint8_t *)lw_malloc_zero( (video_sample_count + 1) * sizeof(uint8_t) );
             if( !vsip->keyframe_list )
                 goto fail_parsing;
@@ -3336,7 +3353,7 @@ static int parse_index
         }
         if( adhp->stream_index >= 0 )
         {
-            audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+            audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
             lwlibav_index_entries_t *index_entries = &adhp->index_entries_list[adhp->stream_index];
             if( adhp->dv_in_avi == 1 && index_entries->count == 0 )
             {
@@ -3381,12 +3398,12 @@ static int parse_index
 fail_parsing:
     if( vdhp->stream_index >= 0 )
     {
-        video_stream_info_t *vsip = &vdhp->stream_info_list[vdhp->stream_index];
+        video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
         vsip->frame_list = NULL;
     }
     if( adhp->stream_index >= 0 )
     {
-        audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+        audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
         asip->frame_list = NULL;
     }
     if( video_info )

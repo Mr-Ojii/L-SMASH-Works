@@ -77,21 +77,30 @@ typedef struct
 
 typedef struct
 {
+    enum AVCodecID       codec_id;
+    AVRational           time_base;
+    uint32_t             frame_count;
+    void                *frame_list;
+    int                  lw_seek_flags;
+    lwlibav_extradata_handler_t exh;
+} lwlibav_stream_info_t;
+
+typedef struct
+{
     /* common */
     AVFormatContext            *format;
     uint32_t                    nb_streams;
     int                         stream_index;
     int                         error;
     lw_log_handler_t            lh;
-    lwlibav_extradata_handler_t exh;
     AVCodecContext             *ctx;
     lwlibav_index_entries_t    *index_entries_list;
-    int                         lw_seek_flags;
     int                         av_seek_flags;
     int                         dv_in_avi;
     const char                **preferred_decoder_names;
     int                         prefer_hw_decoder;
     AVFrame                    *frame_buffer;
+    lwlibav_stream_info_t     **stream_info_list;
 } lwlibav_decode_handler_t;
 
 static inline int lavf_open_file

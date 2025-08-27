@@ -45,6 +45,7 @@ void lwlibav_flush_buffers
     lwlibav_decode_handler_t *dhp
 )
 {
+    lwlibav_stream_info_t   *sip          = dhp->stream_info_list[dhp->stream_index];
     const AVCodecParameters *codecpar     = dhp->format->streams[ dhp->stream_index ]->codecpar;
     const AVCodec           *codec        = dhp->ctx->codec;
     void                    *app_specific = dhp->ctx->opaque;
@@ -64,7 +65,7 @@ void lwlibav_flush_buffers
         dhp->ctx = ctx;
         dhp->ctx->opaque = app_specific;
     }
-    dhp->exh.delay_count = 0;
+    sip->exh.delay_count = 0;
 }
 
 void lwlibav_update_configuration
@@ -75,7 +76,8 @@ void lwlibav_update_configuration
     int64_t                   rap_pos
 )
 {
-    lwlibav_extradata_handler_t *exhp = &dhp->exh;
+    lwlibav_stream_info_t *sip = dhp->stream_info_list[dhp->stream_index];
+    lwlibav_extradata_handler_t *exhp = &sip->exh;
     if( exhp->entry_count == 0 || extradata_index < 0 )
     {
         /* No need to update the extradata. */

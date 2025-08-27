@@ -48,20 +48,20 @@ typedef struct
 struct lwlibav_audio_decode_handler_tag
 {
     /* common */
-    AVFormatContext    *format;
-    uint32_t            nb_streams;
-    int                 stream_index;
-    int                 error;
-    lw_log_handler_t    lh;
-    AVCodecContext     *ctx;
+    AVFormatContext      *format;
+    uint32_t              nb_streams;
+    int                   stream_index;
+    int                   error;
+    lw_log_handler_t      lh;
+    AVCodecContext       *ctx;
     lwlibav_index_entries_t    *index_entries_list;
-    int                 av_seek_flags;  /* unused */
-    int                 dv_in_avi;      /* 1 = 'DV in AVI Type-1', 0 = otherwise */
-    const char        **preferred_decoder_names;
-    int                 prefer_hw_decoder;
-    AVFrame            *frame_buffer;
+    int                   av_seek_flags;  /* unused */
+    int                   dv_in_avi;      /* 1 = 'DV in AVI Type-1', 0 = otherwise */
+    const char          **preferred_decoder_names;
+    int                   prefer_hw_decoder;
+    AVFrame              *frame_buffer;
+    audio_stream_info_t **stream_info_list;
     /* */
-    audio_stream_info_t *stream_info_list;
     AVPacket             packet;         /* for getting and freeing */
     AVPacket             alter_packet;   /* for consumed by the decoder instead of 'packet'. */
     uint32_t             last_frame_number;

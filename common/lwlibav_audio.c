@@ -90,7 +90,7 @@ void lwlibav_audio_free_decode_handler
     {
         for( int i = 0; i < adhp->nb_streams; i++ )
         {
-            audio_stream_info_t *asip = &adhp->stream_info_list[i];
+            audio_stream_info_t *asip = adhp->stream_info_list[i];
             lwlibav_extradata_handler_t *exhp = &asip->exh;
             if( exhp->entries )
             {
@@ -100,6 +100,7 @@ void lwlibav_audio_free_decode_handler
                 lw_free( exhp->entries );
             }
             lw_freep( &asip->frame_list );
+            lw_free( asip );
         }
         lw_free( adhp->stream_info_list );
     }
@@ -256,7 +257,7 @@ int lwlibav_audio_get_desired_track
 {
     AVCodecContext *ctx = NULL;
     if( adhp->stream_index < 0
-     || adhp->stream_info_list[adhp->stream_index].frame_count == 0
+     || adhp->stream_info_list[adhp->stream_index]->frame_count == 0
      || lavf_open_file( &adhp->format, file_path, &adhp->lh ) < 0
      || find_and_open_decoder( &ctx, adhp->format->streams[ adhp->stream_index ]->codecpar,
                                adhp->preferred_decoder_names, 0, threads ) < 0 )
@@ -270,7 +271,10 @@ int lwlibav_audio_get_desired_track
         if( adhp->stream_info_list )
         {
             for( int i = 0; i < adhp->nb_streams; i++ )
-                lw_freep( &adhp->stream_info_list[i].frame_list );
+            {
+                lw_freep( &adhp->stream_info_list[i]->frame_list );
+                lw_freep( &adhp->stream_info_list[i] );
+            }
             lw_freep( &adhp->stream_info_list );
         }
         if( adhp->format )
@@ -287,7 +291,7 @@ uint64_t lwlibav_audio_count_overall_pcm_samples
     int                             output_sample_rate
 )
 {
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     audio_frame_info_t *frame_list    = asip->frame_list;
     int      current_sample_rate      = frame_list[1].sample_rate > 0 ? frame_list[1].sample_rate : adhp->ctx->sample_rate;
     uint32_t current_frame_length     = frame_list[1].length;
@@ -326,7 +330,7 @@ static int find_start_audio_frame
     uint64_t                       *start_offset
 )
 {
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     audio_frame_info_t *frame_list = asip->frame_list;
     uint32_t frame_number                    = 1;
     uint64_t current_frame_pos               = 0;
@@ -388,7 +392,7 @@ static uint32_t get_audio_rap
     uint32_t                        frame_number
 )
 {
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     if( frame_number > asip->frame_count )
         return 0;
     /* Get an unique value of the closest past audio keyframe. */
@@ -491,7 +495,7 @@ static uint32_t seek_audio
 #define MAX_ERROR_COUNT 3   /* arbitrary */
     int error_count = 0;
 retry_seek:;
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     uint32_t rap_number = past_rap_number == 0 ? get_audio_rap( adhp, frame_number ) : past_rap_number;
     if( rap_number == 0 )
         return 0;
@@ -566,7 +570,7 @@ uint64_t lwlibav_audio_get_pcm_samples
 {
     if( adhp->error )
         return 0;
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     uint32_t               frame_number;
     uint32_t               rap_number      = 0;
     uint32_t               past_rap_number = 0;
@@ -705,7 +709,7 @@ void set_audio_basic_settings
 )
 {
     lwlibav_audio_decode_handler_t *adhp = (lwlibav_audio_decode_handler_t *)dhp;
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     AVCodecParameters   *codecpar = adhp->format->streams[ adhp->stream_index ]->codecpar;
     lwlibav_extradata_t *entry    = &asip->exh.entries[ asip->frame_list[frame_number].extradata_index ];
     codecpar->sample_rate           = entry->sample_rate;
@@ -736,7 +740,7 @@ int try_decode_audio_frame
     AVCodecContext  *ctx          = adhp->ctx;
     uint32_t         start_frame  = frame_number;
     int              err          = 0;
-    audio_stream_info_t *asip = &adhp->stream_info_list[adhp->stream_index];
+    audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
     do
     {
         if( frame_number > asip->frame_count )
