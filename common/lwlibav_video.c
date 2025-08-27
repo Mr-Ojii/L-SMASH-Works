@@ -85,14 +85,6 @@ void lwlibav_video_free_decode_handler
 {
     if( !vdhp )
         return;
-    lwlibav_extradata_handler_t *exhp = &vdhp->exh;
-    if( exhp->entries )
-    {
-        for( int i = 0; i < exhp->entry_count; i++ )
-            if( exhp->entries[i].extradata )
-                av_free( exhp->entries[i].extradata );
-        lw_free( exhp->entries );
-    }
     av_packet_unref( &vdhp->packet );
     if( vdhp->index_entries_list )
     {
@@ -105,6 +97,14 @@ void lwlibav_video_free_decode_handler
         for( int i = 0; i < vdhp->nb_streams; i++ )
         {
             video_stream_info_t *vsinfo = &vdhp->stream_info_list[i];
+            lwlibav_extradata_handler_t *exhp = &vsinfo->exh;
+            if( exhp->entries )
+            {
+                for( int j = 0; j < exhp->entry_count; j++ )
+                    if( exhp->entries[j].extradata )
+                        av_free( exhp->entries[j].extradata );
+                lw_free( exhp->entries );
+            }
             lw_freep( &vsinfo->frame_list );
             lw_freep( &vsinfo->keyframe_list );
             lw_freep( &vsinfo->order_converter );
@@ -206,7 +206,7 @@ void lwlibav_video_set_get_buffer_func
     lwlibav_video_decode_handler_t *vdhp
 )
 {
-    vdhp->exh.get_buffer = vdhp->ctx->get_buffer2;
+    vdhp->stream_info_list[vdhp->stream_index].exh.get_buffer = vdhp->ctx->get_buffer2;
 }
 
 /*****************************************************************************
@@ -605,7 +605,7 @@ static int decode_video_picture
                     if (drain_ret >= 0)
                     {
                         // We got a frame during draining! Check if it's the one we want.
-                        uint32_t estimated_picture_number = (uint32_t)get_output_order_id(mov_frame) + vdhp->exh.delay_count;
+                        uint32_t estimated_picture_number = (uint32_t)get_output_order_id(mov_frame) + vsinfo->exh.delay_count;
                         if (estimated_picture_number == goal && !vdhp->reuse_pkt)
                         {
                             vdhp->reuse_pkt = 1;
@@ -718,13 +718,14 @@ static void correct_output_delay
     uint32_t                        estimated_picture_number
 )
 {
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
     if( reliable_picture_number != estimated_picture_number )
     {
         /* If positive, we got a frame earlier than expected.
          * Otherwise, we got a frame later than expected and it's an error. */
         int64_t diff = reliable_picture_number - estimated_picture_number;
-        vdhp->exh.delay_count    = (uint32_t)(vdhp->exh.delay_count    - diff);
-        *goal_fed_picture_number = (uint32_t)(*goal_fed_picture_number - diff);
+        vsinfo->exh.delay_count    = (uint32_t)(vsinfo->exh.delay_count  - diff);
+        *goal_fed_picture_number   = (uint32_t)(*goal_fed_picture_number - diff);
     }
 }
 
@@ -739,8 +740,8 @@ static uint32_t seek_video
 )
 {
     /* Prepare to decode from random accessible picture. */
-    lwlibav_extradata_handler_t *exhp = &vdhp->exh;
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
+    lwlibav_extradata_handler_t *exhp = &vsinfo->exh;
     int extradata_index = vsinfo->frame_list[rap_number].extradata_index;
     if( extradata_index != exhp->current_index )
         /* Update the decoder configuration. */
@@ -912,7 +913,7 @@ static int get_frame
 {
 #define REQUESTED_FRAME_IS_ALREADY_ON_OUTPUT_FRAME_BUFFER 0
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-    uint32_t goal = requested_picture_number + vdhp->exh.delay_count;
+    uint32_t goal = requested_picture_number + vsinfo->exh.delay_count;
     int got_picture = (current > goal);
     if( got_picture )
     {
@@ -931,7 +932,7 @@ static int get_frame
         else if( ret == 1 )
             /* No more frames. */
             break;
-        uint32_t estimated_picture_number = current - vdhp->exh.delay_count;
+        uint32_t estimated_picture_number = current - vsinfo->exh.delay_count;
         if( got_picture )
         {
             /* The decoder output a frame. */
@@ -980,17 +981,17 @@ static int get_frame
             {
                 /* Fundamental seek operations after the decoder initialization is already done, but
                  * more input pictures are required to output and the goal becomes more distant. */
-                ++ vdhp->exh.delay_count;
+                ++ vsinfo->exh.delay_count;
                 ++ goal;
             }
         }
         ++current;
     }
     /* Flush the last frames. */
-    if( current > vsinfo->frame_count && vdhp->exh.delay_count )
+    if( current > vsinfo->frame_count && vsinfo->exh.delay_count )
         while( current <= goal )
         {
-            uint32_t estimated_picture_number = current - vdhp->exh.delay_count;
+            uint32_t estimated_picture_number = current - vsinfo->exh.delay_count;
             uint32_t last_half_frame = is_half_frame( vdhp, estimated_picture_number );
             int ret = is_picture_stored_in_frame( vdhp, vdhp->last_dec_frame, estimated_picture_number );
             if( ret == 1 )
@@ -1157,7 +1158,7 @@ static int get_requested_picture
 return_frame:;
     vdhp->last_req_frame = frame;
     /* Don't exceed the maximum presentation size specified for each sequence. */
-    lwlibav_extradata_t *entry = &vdhp->exh.entries[extradata_index];
+    lwlibav_extradata_t *entry = &vsinfo->exh.entries[extradata_index];
     if( vdhp->ctx->width > entry->width )
         vdhp->ctx->width = entry->width;
     if( vdhp->ctx->height > entry->height )
@@ -1616,7 +1617,7 @@ int lwlibav_video_find_first_valid_frame
     uint32_t decoder_delay = get_decoder_delay( vdhp->ctx );
     uint32_t thread_delay  = decoder_delay - vdhp->ctx->has_b_frames;
     AVPacket *pkt = &vdhp->packet;
-    for( uint32_t i = 1; i <= vsinfo->frame_count + vdhp->exh.delay_count; i++ )
+    for( uint32_t i = 1; i <= vsinfo->frame_count + vsinfo->exh.delay_count; i++ )
     {
         lwlibav_get_av_frame( vdhp->format, vdhp->stream_index, i, pkt );
         av_frame_unref( vdhp->frame_buffer );
@@ -1640,7 +1641,7 @@ int lwlibav_video_find_first_valid_frame
                 if( output_id != AV_NOPTS_VALUE )
                     vdhp->first_valid_frame_number = (uint32_t)output_id;
                 else
-                    vdhp->first_valid_frame_number = i - MIN( decoder_delay, vdhp->exh.delay_count );
+                    vdhp->first_valid_frame_number = i - MIN( decoder_delay, vsinfo->exh.delay_count );
                 if( vdhp->first_valid_frame_number > 1 || vsinfo->frame_count == 1 )
                 {
                     vdhp->first_valid_frame = av_frame_clone( vdhp->frame_buffer );
@@ -1653,7 +1654,7 @@ int lwlibav_video_find_first_valid_frame
             }
             else if( pkt->data )
                 /* Output is delayed. */
-                ++ vdhp->exh.delay_count;
+                ++ vsinfo->exh.delay_count;
             else
                 /* No more output.
                  * Failed to find the first valid video frame. */
@@ -1685,7 +1686,7 @@ void set_video_basic_settings
     lwlibav_video_decode_handler_t *vdhp = (lwlibav_video_decode_handler_t *)dhp;
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
     AVCodecParameters   *codecpar = vdhp->format->streams[ vdhp->stream_index ]->codecpar;
-    lwlibav_extradata_t *entry    = &vdhp->exh.entries[ vsinfo->frame_list[frame_number].extradata_index ];
+    lwlibav_extradata_t *entry    = &vsinfo->exh.entries[ vsinfo->frame_list[frame_number].extradata_index ];
     codecpar->width                 = entry->width;
     codecpar->height                = entry->height;
     codecpar->bits_per_coded_sample = entry->bits_per_sample;
@@ -1720,7 +1721,7 @@ int try_decode_video_frame
         /* Get a frame. */
         AVPacket pkt = { 0 };
         int extradata_index = vsinfo->frame_list[frame_number].extradata_index;
-        if( extradata_index != vdhp->exh.current_index )
+        if( extradata_index != vsinfo->exh.current_index )
             break;
         int ret = lwlibav_get_av_frame( format_ctx, stream_index, frame_number, &pkt );
         if( ret > 0 )

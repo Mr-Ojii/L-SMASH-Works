@@ -79,14 +79,6 @@ void lwlibav_audio_free_decode_handler
 {
     if( !adhp )
         return;
-    lwlibav_extradata_handler_t *exhp = &adhp->exh;
-    if( exhp->entries )
-    {
-        for( int i = 0; i < exhp->entry_count; i++ )
-            if( exhp->entries[i].extradata )
-                av_free( exhp->entries[i].extradata );
-        lw_free( exhp->entries );
-    }
     av_packet_unref( &adhp->packet );
     if( adhp->index_entries_list )
     {
@@ -97,7 +89,18 @@ void lwlibav_audio_free_decode_handler
     if( adhp->stream_info_list )
     {
         for( int i = 0; i < adhp->nb_streams; i++ )
-            lw_freep( &adhp->stream_info_list[i].frame_list );
+        {
+            audio_stream_info_t *asinfo = &adhp->stream_info_list[i];
+            lwlibav_extradata_handler_t *exhp = &asinfo->exh;
+            if( exhp->entries )
+            {
+                for( int j = 0; j < exhp->entry_count; j++ )
+                    if( exhp->entries[j].extradata )
+                        av_free( exhp->entries[j].extradata );
+                lw_free( exhp->entries );
+            }
+            lw_freep( &asinfo->frame_list );
+        }
         lw_free( adhp->stream_info_list );
     }
     av_frame_free( &adhp->frame_buffer );
@@ -361,7 +364,7 @@ static int find_start_audio_frame
     {
         /* Add pre-roll samples if needed.
          * The condition is irresponsible. Patches welcome. */
-        enum AVCodecID codec_id = adhp->exh.entries[ frame_list[frame_number].extradata_index ].codec_id;
+        enum AVCodecID codec_id = asinfo->exh.entries[ frame_list[frame_number].extradata_index ].codec_id;
         const AVCodecDescriptor *desc = avcodec_descriptor_get( codec_id );
         if( (desc->props & AV_CODEC_PROP_LOSSY)
          && frame_list[frame_number].extradata_index == frame_list[frame_number - 1].extradata_index )
@@ -506,7 +509,7 @@ retry_seek:;
     int match = 0;
     for( uint32_t i = rap_number; i <= frame_number; )
     {
-        if( match && picture && adhp->exh.current_index == asinfo->frame_list[i - 1].extradata_index )
+        if( match && picture && asinfo->exh.current_index == asinfo->frame_list[i - 1].extradata_index )
         {
             /* Actual decoding to establish stability of subsequent decoding. */
             AVPacket *alter_pkt = &adhp->alter_packet;
@@ -614,7 +617,7 @@ retry_seek:
             return 0;
         }
         /* Flush audio decoder buffers. */
-        lwlibav_extradata_handler_t *exhp = &adhp->exh;
+        lwlibav_extradata_handler_t *exhp = &asinfo->exh;
         int extradata_index = asinfo->frame_list[frame_number].extradata_index;
         if( extradata_index != exhp->current_index )
         {
@@ -641,11 +644,11 @@ retry_seek:
         else if( frame_number > asinfo->frame_count )
         {
             av_packet_unref( pkt );
-            if( adhp->exh.delay_count || !(output_flags & AUDIO_OUTPUT_ENOUGH) )
+            if( asinfo->exh.delay_count || !(output_flags & AUDIO_OUTPUT_ENOUGH) )
             {
                 *alter_pkt = *pkt;
-                if( adhp->exh.delay_count )
-                    adhp->exh.delay_count -= 1;
+                if( asinfo->exh.delay_count )
+                    asinfo->exh.delay_count -= 1;
             }
             else
                 goto audio_out;
@@ -670,7 +673,7 @@ retry_seek:
                  && past_rap_number < rap_number )
                     goto retry_seek;
             }
-            ++ adhp->exh.delay_count;
+            ++ asinfo->exh.delay_count;
         }
         else
             /* Disable seek retry. */
@@ -704,7 +707,7 @@ void set_audio_basic_settings
     lwlibav_audio_decode_handler_t *adhp = (lwlibav_audio_decode_handler_t *)dhp;
     audio_stream_info_t *asinfo = &adhp->stream_info_list[adhp->stream_index];
     AVCodecParameters   *codecpar = adhp->format->streams[ adhp->stream_index ]->codecpar;
-    lwlibav_extradata_t *entry    = &adhp->exh.entries[ asinfo->frame_list[frame_number].extradata_index ];
+    lwlibav_extradata_t *entry    = &asinfo->exh.entries[ asinfo->frame_list[frame_number].extradata_index ];
     codecpar->sample_rate           = entry->sample_rate;
     av_channel_layout_from_mask( &codecpar->ch_layout, entry->channel_layout );
     codecpar->format                = (int)entry->sample_format;
@@ -740,7 +743,7 @@ int try_decode_audio_frame
             break;
         /* Get a frame. */
         int extradata_index = asinfo->frame_list[frame_number].extradata_index;
-        if( extradata_index != adhp->exh.current_index )
+        if( extradata_index != asinfo->exh.current_index )
             break;
         if( frame_number == start_frame )
             seek_audio( adhp, frame_number, 0, pkt, NULL );

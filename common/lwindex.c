@@ -2731,29 +2731,28 @@ static int create_index
             lwindex_helper_t *helper = get_index_helper( &indexer, stream );
             if( !helper || !helper->codec_ctx )
                 continue;
+            
+            video_stream_info_t *vsinfo = &vdhp->stream_info_list[stream_index];
+            audio_stream_info_t *asinfo = &adhp->stream_info_list[stream_index];
+
             lwlibav_extradata_handler_t *list = &helper->exh;
             void (*write_av_extradata)( FILE *, lwlibav_extradata_t * ) = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
                                                                         ? write_video_extradata
                                                                         : write_audio_extradata;
             print_index( index, "<ExtraDataList=%d,%d,%d>\n", stream_index, codecpar->codec_type, list->entry_count );
-            if( (codecpar->codec_type == AVMEDIA_TYPE_VIDEO && stream_index == vdhp->stream_index)
-             || (codecpar->codec_type == AVMEDIA_TYPE_AUDIO && stream_index == adhp->stream_index) )
-            {
-                for( int i = 0; i < list->entry_count; i++ )
-                    write_av_extradata( index, &list->entries[i] );
-                lwlibav_extradata_handler_t *exhp = codecpar->codec_type == AVMEDIA_TYPE_VIDEO ? &vdhp->exh : &adhp->exh;
-                exhp->entry_count   = list->entry_count;
-                exhp->entries       = list->entries;
-                exhp->current_index = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
-                                    ? video_info[1].extradata_index
-                                    : audio_info[1].extradata_index;
-                /* Avoid freeing entries. */
-                list->entry_count = 0;
-                list->entries     = NULL;
-            }
-            else
-                for( int i = 0; i < list->entry_count; i++ )
-                    write_av_extradata( index, &list->entries[i] );
+            
+            for( int i = 0; i < list->entry_count; i++ )
+                write_av_extradata( index, &list->entries[i] );
+            lwlibav_extradata_handler_t *exhp = codecpar->codec_type == AVMEDIA_TYPE_VIDEO ? &vsinfo->exh : &asinfo->exh;
+            exhp->entry_count   = list->entry_count;
+            exhp->entries       = list->entries;
+            exhp->current_index = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
+                                ? video_info[1].extradata_index
+                                : audio_info[1].extradata_index;
+            /* Avoid freeing entries. */
+            list->entry_count = 0;
+            list->entries     = NULL;
+
             print_index( index, "</ExtraDataList>\n" );
         }
     }
@@ -3109,9 +3108,9 @@ static int parse_index
                     info->sample_rate     = sample_rate;
                 }
                 else
-                    for( uint32_t i = 1; i <= adhp->exh.delay_count; i++ )
+                    for( uint32_t i = 1; i <= asinfo->exh.delay_count; i++ )
                     {
-                        uint32_t audio_frame_number = audio_sample_count - adhp->exh.delay_count + i;
+                        uint32_t audio_frame_number = audio_sample_count - asinfo->exh.delay_count + i;
                         if( audio_frame_number > audio_sample_count )
                             goto fail_parsing;
                         audio_info[audio_frame_number].length = frame_length;
@@ -3128,10 +3127,10 @@ static int parse_index
                     audio_info = temp;
                 }
                 if( frame_length == -1 )
-                    ++ adhp->exh.delay_count;
-                else if( audio_sample_count > adhp->exh.delay_count )
+                    ++ asinfo->exh.delay_count;
+                else if( audio_sample_count > asinfo->exh.delay_count )
                 {
-                    uint32_t audio_frame_number = audio_sample_count - adhp->exh.delay_count;
+                    uint32_t audio_frame_number = audio_sample_count - asinfo->exh.delay_count;
                     audio_info[audio_frame_number].length = frame_length;
                     if( audio_frame_number > 1 && audio_info[audio_frame_number].length != audio_info[audio_frame_number - 1].length )
                         constant_frame_length = 0;
@@ -3241,10 +3240,11 @@ static int parse_index
             goto fail_parsing;
         if( entry_count > 0 )
         {
-            if( (codec_type == AVMEDIA_TYPE_VIDEO && stream_index == vdhp->stream_index)
-             || (codec_type == AVMEDIA_TYPE_AUDIO && stream_index == adhp->stream_index) )
+            if( codec_type == AVMEDIA_TYPE_VIDEO || codec_type == AVMEDIA_TYPE_AUDIO )
             {
-                lwlibav_extradata_handler_t *exhp = codec_type == AVMEDIA_TYPE_VIDEO ? &vdhp->exh : &adhp->exh;
+                video_stream_info_t *vsinfo = &vdhp->stream_info_list[stream_index];
+                audio_stream_info_t *asinfo = &adhp->stream_info_list[stream_index];
+                lwlibav_extradata_handler_t *exhp = codec_type == AVMEDIA_TYPE_VIDEO ? &vsinfo->exh : &asinfo->exh;
                 if( !alloc_extradata_entries( exhp, entry_count ) )
                     goto fail_parsing;
                 exhp->current_index = codec_type == AVMEDIA_TYPE_VIDEO

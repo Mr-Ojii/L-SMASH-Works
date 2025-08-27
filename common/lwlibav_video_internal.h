@@ -53,6 +53,7 @@ typedef struct
     uint32_t             frame_count;
     video_frame_info_t  *frame_list;                 /* stored in presentation order */
     int                  lw_seek_flags;
+    lwlibav_extradata_handler_t exh;
     /* */
     int                  initial_width;
     int                  initial_height;
@@ -76,7 +77,6 @@ struct lwlibav_video_decode_handler_tag
     int                 stream_index;
     int                 error;
     lw_log_handler_t    lh;
-    lwlibav_extradata_handler_t exh;
     AVCodecContext     *ctx;
     lwlibav_index_entries_t    *index_entries_list;
     int                 av_seek_flags;
