@@ -94,7 +94,6 @@ void lwlibav_video_free_decode_handler
         lw_free( exhp->entries );
     }
     av_packet_unref( &vdhp->packet );
-    lw_free( vdhp->order_converter );
     if( vdhp->index_entries_list )
     {
         for( int i = 0; i < vdhp->nb_streams; i++ )
@@ -108,6 +107,7 @@ void lwlibav_video_free_decode_handler
             video_stream_info_t *vsinfo = &vdhp->stream_info_list[i];
             lw_freep( &vsinfo->frame_list );
             lw_freep( &vsinfo->keyframe_list );
+            lw_freep( &vsinfo->order_converter );
         }
         lw_free( vdhp->stream_info_list );
     }
@@ -351,10 +351,10 @@ int lwlibav_video_get_desired_track
                 video_stream_info_t *vsinfo = &vdhp->stream_info_list[i];
                 lw_freep( &vsinfo->frame_list );
                 lw_freep( &vsinfo->keyframe_list );
+                lw_freep( &vsinfo->order_converter );
             }
             lw_freep( &vdhp->stream_info_list );
         }
-        lw_freep( &vdhp->order_converter );
         if( vdhp->format )
             lavf_close_file( &vdhp->format );
         return -1;
@@ -452,10 +452,11 @@ static inline void set_output_order_id
     uint32_t                        coded_picture_number
 )
 {
-    if( vdhp->order_converter && coded_picture_number <= vdhp->stream_info_list[vdhp->stream_index].frame_count )
+    video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
+    if( vsinfo->order_converter && coded_picture_number <= vsinfo->frame_count )
     {
         /* Picture reorderings are present. */
-        pkt->pts = vdhp->order_converter[coded_picture_number].decoding_to_presentation;
+        pkt->pts = vsinfo->order_converter[coded_picture_number].decoding_to_presentation;
         pkt->dts = coded_picture_number;
     }
     else if( !(vdhp->lw_seek_flags & SEEK_DTS_BASED) )
@@ -492,7 +493,7 @@ static uint32_t correct_current_frame_number
 #define MATCH_DTS( j ) (info[j].dts == pkt->dts)
 #define MATCH_POS( j ) ((vdhp->lw_seek_flags & SEEK_POS_CORRECTION) && info[j].file_offset == pkt->pos)
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-    order_converter_t  *oc   = vdhp->order_converter;
+    order_converter_t  *oc   = vsinfo->order_converter;
     video_frame_info_t *info = vsinfo->frame_list;
     uint32_t p = oc ? oc[i].decoding_to_presentation : i;
     if( pkt->dts == AV_NOPTS_VALUE || MATCH_DTS( p ) || MATCH_POS( p ) )
@@ -687,8 +688,8 @@ static int64_t get_random_accessible_point_position
 )
 {
     video_stream_info_t *vsinfo = &vdhp->stream_info_list[vdhp->stream_index];
-    uint32_t presentation_rap_number = vdhp->order_converter
-                                     ? vdhp->order_converter[rap_number].decoding_to_presentation
+    uint32_t presentation_rap_number = vsinfo->order_converter
+                                     ? vsinfo->order_converter[rap_number].decoding_to_presentation
                                      : rap_number;
     return (vdhp->lw_seek_flags & SEEK_POS_BASED) ? vsinfo->frame_list[presentation_rap_number].file_offset
          : (vdhp->lw_seek_flags & SEEK_PTS_BASED) ? vsinfo->frame_list[presentation_rap_number].pts

@@ -574,8 +574,8 @@ static int decide_video_seek_method
     {
         /* Consider presentation order for keyframe detection.
          * Note: sample number is 1-origin. */
-        vdhp->order_converter = (order_converter_t *)lw_malloc_zero( (sample_count + 1) * sizeof(order_converter_t) );
-        if( !vdhp->order_converter )
+        vsinfo->order_converter = (order_converter_t *)lw_malloc_zero( (sample_count + 1) * sizeof(order_converter_t) );
+        if( !vsinfo->order_converter )
         {
             lw_log_show( &vdhp->lh, LW_LOG_FATAL, "Failed to allocate memory." );
             return -1;
@@ -594,7 +594,7 @@ static int decide_video_seek_method
         }
         sort_decoding_order( &timestamp[1], sample_count, sizeof(video_timestamp_t) );
         for( uint32_t i = 1; i <= sample_count; i++ )
-            vdhp->order_converter[i].decoding_to_presentation = (uint32_t)timestamp[i].pts;
+            vsinfo->order_converter[i].decoding_to_presentation = (uint32_t)timestamp[i].pts;
         free( timestamp );
     }
     else if( vdhp->lw_seek_flags & SEEK_DTS_BASED )
@@ -844,13 +844,13 @@ static void compute_stream_duration
         uint32_t i    = 0;
         for( ++i; i <= vsinfo->frame_count; i++ )
         {
-            prev = vdhp->order_converter ? vdhp->order_converter[i].decoding_to_presentation : i;
+            prev = vsinfo->order_converter ? vsinfo->order_converter[i].decoding_to_presentation : i;
             if( !(info[prev].flags & LW_VFRAME_FLAG_INVISIBLE) )
                 break;
         }
         for( ++i; i <= vsinfo->frame_count; i++ )
         {
-            curr = vdhp->order_converter ? vdhp->order_converter[i].decoding_to_presentation : i;
+            curr = vsinfo->order_converter ? vsinfo->order_converter[i].decoding_to_presentation : i;
             if( !(info[curr].flags & LW_VFRAME_FLAG_INVISIBLE) )
                 break;
         }
@@ -868,7 +868,7 @@ static void compute_stream_duration
             prev = curr;
             for( ; i <= vsinfo->frame_count; i++ )
             {
-                curr = vdhp->order_converter ? vdhp->order_converter[i].decoding_to_presentation : i;
+                curr = vsinfo->order_converter ? vsinfo->order_converter[i].decoding_to_presentation : i;
                 if( !(info[curr].flags & LW_VFRAME_FLAG_INVISIBLE) )
                     break;
             }
@@ -1928,8 +1928,6 @@ static void write_audio_extradata
 
 static void disable_video_stream( lwlibav_video_decode_handler_t *vdhp )
 {
-
-    lw_freep( &vdhp->order_converter );
     if( vdhp->index_entries_list )
     {
         for( int i = 0; i < vdhp->nb_streams; i++ )
@@ -1945,6 +1943,7 @@ static void disable_video_stream( lwlibav_video_decode_handler_t *vdhp )
             video_stream_info_t *vsinfo = &vdhp->stream_info_list[i];
             lw_freep( &vsinfo->frame_list );
             lw_freep( &vsinfo->keyframe_list );
+            lw_freep( &vsinfo->order_converter );
             vsinfo->frame_count = 0;
         }
     }
