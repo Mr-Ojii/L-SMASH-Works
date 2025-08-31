@@ -239,7 +239,7 @@ static void *open_file( char *file_path, reader_option_t *opt )
 static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
-    h->video_track_count = lwlibav_video_get_track_count( hp->lwh.file_path, hp->vdhp );
+    h->video_track_count = lwlibav_video_get_track_count( hp->vdhp );
     if( h->video_track_count <= 0 )
     {
         h->video_track_count = 0;
@@ -251,7 +251,7 @@ static int find_video( lsmash_handler_t *h, video_option_t *opt )
 static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
 {
     libav_handler_t *hp = (libav_handler_t *)h->audio_private;
-    h->audio_track_count = lwlibav_audio_get_track_count( hp->lwh.file_path, hp->adhp );
+    h->audio_track_count = lwlibav_audio_get_track_count( hp->adhp );
     if( h->audio_track_count <= 0 )
     {
         h->audio_track_count = 0;

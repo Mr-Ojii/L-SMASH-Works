@@ -201,45 +201,37 @@ void lwlibav_audio_force_seek
 
 int lwlibav_audio_get_track_count
 (
-    const char                     *file_path,
     lwlibav_audio_decode_handler_t *adhp
 )
 {
-    AVFormatContext *format = NULL;
-    if( lavf_open_file( &format, file_path, &adhp->lh ) < 0 )
-        return -1;
     int count = 0;
-    for( int i = 0; i < format->nb_streams; i++ )
+    for( int i = 0; i < adhp->nb_streams; i++ )
     {
-        if( format->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+        audio_stream_info_t *asip = adhp->stream_info_list[i];
+        if( asip->frame_list && asip->frame_count > 0 )
             count++;
     }
-    lavf_close_file( &format );
     return count;
 }
 
 int lwlibav_audio_get_stream_index_from_index
 (
-    const char                     *file_path,
     lwlibav_audio_decode_handler_t *adhp,
     int                             index
 )
 {
-    AVFormatContext *format = NULL;
-    if( lavf_open_file( &format, file_path, &adhp->lh ) < 0 )
-        return -1;
     int ret = -1;
     int count = 0;
-    for( int i = 0; i < format->nb_streams; i++ )
+    for( int i = 0; i < adhp->nb_streams; i++ )
     {
-        if( format->streams[ i ]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO )
+        audio_stream_info_t *asip = adhp->stream_info_list[i];
+        if( asip->frame_list && asip->frame_count > 0 )
             count++;
         if( count == index ) {
             ret = i;
             break;
         }
     }
-    lavf_close_file( &format );
     return ret;
 }
 

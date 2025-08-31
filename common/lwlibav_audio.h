@@ -108,13 +108,11 @@ void lwlibav_audio_force_seek
 
 int lwlibav_audio_get_track_count
 (
-    const char                     *file_path,
     lwlibav_audio_decode_handler_t *adhp
 );
 
 int lwlibav_audio_get_stream_index_from_index
 (
-    const char                     *file_path,
     lwlibav_audio_decode_handler_t *adhp,
     int                             index
 );
