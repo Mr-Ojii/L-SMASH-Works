@@ -2856,10 +2856,13 @@ static int create_index
     {
         audio_stream_info_t *asip = adhp->stream_info_list[stream_index];
         audio_stream_temp_t *astp = &atp[stream_index];
-        asip->frame_list   = astp->audio_info;
-        asip->frame_count  = astp->audio_sample_count;
-        asip->frame_length = astp->variable_frame_length ? 0 : asip->frame_list[1].length;
-        decide_audio_seek_method( lwhp, asip, astp->audio_sample_count );
+        if( astp->audio_info && astp->audio_sample_count > 0 )
+        {
+            asip->frame_list   = astp->audio_info;
+            asip->frame_count  = astp->audio_sample_count;
+            asip->frame_length = astp->variable_frame_length ? 0 : asip->frame_list[1].length;
+            decide_audio_seek_method( lwhp, asip, astp->audio_sample_count );
+        }
     }
     if( adhp->stream_index >= 0 )
     {
