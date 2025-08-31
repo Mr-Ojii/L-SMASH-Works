@@ -43,6 +43,7 @@ typedef struct
     lwlibav_extradata_handler_t exh;
     AVIndexEntry        *index_entries;
     int                  index_entry_count;
+    int                  dv_in_avi_stream_index;
     /* */
     uint32_t             frame_length;
 } audio_stream_info_t;

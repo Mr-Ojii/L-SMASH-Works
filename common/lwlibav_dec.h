@@ -79,6 +79,7 @@ typedef struct
     lwlibav_extradata_handler_t exh;
     AVIndexEntry        *index_entries;
     int                  index_entry_count;
+    int                  dv_in_avi_stream_index;
 } lwlibav_stream_info_t;
 
 typedef struct

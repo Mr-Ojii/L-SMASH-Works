@@ -56,6 +56,7 @@ typedef struct
     lwlibav_extradata_handler_t exh;
     AVIndexEntry        *index_entries;
     int                  index_entry_count;
+    int                  dv_in_avi_stream_index;
     /* */
     int                  initial_width;
     int                  initial_height;
@@ -69,6 +70,7 @@ typedef struct
     int64_t              min_ts;
     AVRational           actual_time_base;
     int                  strict_cfr;
+    uint32_t             invisible_count;
 } video_stream_info_t;
 
 struct lwlibav_video_decode_handler_tag
