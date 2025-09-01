@@ -1499,7 +1499,7 @@ uint32_t lwlibav_ts_to_frame_number
         if( composition_frame_number == 0 )
             return 0;
     }
-    for( composition_frame_number++;
+    for( ;
          composition_frame_number <= vsip->frame_count;
          composition_frame_number++ )
     {
@@ -1509,14 +1509,7 @@ uint32_t lwlibav_ts_to_frame_number
             current_ts = ((double)(ts - vsip->min_ts) * time_base.num) / time_base.den;
             if( current_ts >= target_ts )
             {
-                uint32_t prev_composition_frame_number = composition_frame_number;
-                while( lwlibav_get_ts( vdhp, --prev_composition_frame_number ) == AV_NOPTS_VALUE );
-                if( prev_composition_frame_number == 0 )
-                    frame_number = 1;
-                else
-                {
-                    frame_number = prev_composition_frame_number;
-                }
+                frame_number = composition_frame_number;
                 break;
             }
         }
