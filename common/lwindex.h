@@ -31,24 +31,29 @@
 
 typedef struct
 {
-    const char *file_path;
-    const char *cache_dir;
-    int         threads;
-    int         av_sync;
-    int         no_create_index;
-    const char *index_file_path;
-    int         force_video;
-    int         force_video_index;
-    int         force_audio;
-    int         force_audio_index;
-    int         apply_repeat_flag;
-    int         field_dominance;
+    int        av_sync;
+    int        apply_repeat_flag;
+    int        field_dominance;
     struct
     {
         int      active;
         uint32_t fps_num;
         uint32_t fps_den;
     } vfr2cfr;
+} lwlibav_post_process_option_t;
+
+typedef struct
+{
+    const char *file_path;
+    const char *cache_dir;
+    int         threads;
+    int         no_create_index;
+    const char *index_file_path;
+    int         force_video;
+    int         force_video_index;
+    int         force_audio;
+    int         force_audio_index;
+    lwlibav_post_process_option_t post_process;
 } lwlibav_option_t;
 
 #ifdef __cplusplus
@@ -67,6 +72,16 @@ int lwlibav_construct_index
     lwlibav_option_t               *opt,
     progress_indicator_t           *indicator,
     progress_handler_t             *php
+);
+
+void lwlibav_post_process
+(
+    lwlibav_file_handler_t         *lwhp,
+    lwlibav_video_decode_handler_t *vdhp,
+    lwlibav_video_output_handler_t *vohp,
+    lwlibav_audio_decode_handler_t *adhp,
+    lwlibav_audio_output_handler_t *aohp,
+    lwlibav_post_process_option_t  *post_opt
 );
 
 int lwlibav_import_av_index_entry

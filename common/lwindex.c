@@ -939,15 +939,15 @@ static void vfr2cfr_settings
 (
     lwlibav_video_decode_handler_t *vdhp,
     lwlibav_video_output_handler_t *vohp,
-    lwlibav_option_t               *opt
+    lwlibav_post_process_option_t  *post_opt
 )
 {
     video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     if( vsip->stream_duration > 0 && (vsip->lw_seek_flags & (SEEK_DTS_BASED | SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
-        vohp->vfr2cfr     = opt->vfr2cfr.active;
-        vohp->cfr_num     = opt->vfr2cfr.fps_num;
-        vohp->cfr_den     = opt->vfr2cfr.fps_den;
+        vohp->vfr2cfr     = post_opt->vfr2cfr.active;
+        vohp->cfr_num     = post_opt->vfr2cfr.fps_num;
+        vohp->cfr_den     = post_opt->vfr2cfr.fps_den;
         vohp->frame_count = (uint32_t)(((double)vohp->cfr_num / vohp->cfr_den)
                                      * ((double)vsip->stream_duration * vsip->time_base.num / vsip->time_base.den)
                                      + 0.5);
@@ -960,20 +960,20 @@ static void create_video_frame_order_list
 (
     lwlibav_video_decode_handler_t *vdhp,
     lwlibav_video_output_handler_t *vohp,
-    lwlibav_option_t               *opt
+    lwlibav_post_process_option_t  *post_opt
 )
 {
     video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     if( !(vsip->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
         goto disable_repeat;
-    if( opt->vfr2cfr.active )
-        opt->apply_repeat_flag = 0;
+    if( post_opt->vfr2cfr.active )
+        post_opt->apply_repeat_flag = 0;
     video_frame_info_t *info                      = vsip->frame_list;
     uint32_t            frame_count               = vsip->frame_count;
     uint32_t            order_count               = 0;
     int                 no_support_frame_tripling = (vsip->codec_id != AV_CODEC_ID_MPEG2VIDEO);
-    int                 specified_field_dominance = opt->field_dominance == 0 ? LW_FIELD_INFO_UNKNOWN   /* Obey source flags. */
-                                                  : opt->field_dominance == 1 ? LW_FIELD_INFO_TOP       /* TFF: Top -> Bottom */
+    int                 specified_field_dominance = post_opt->field_dominance == 0 ? LW_FIELD_INFO_UNKNOWN   /* Obey source flags. */
+                                                  : post_opt->field_dominance == 1 ? LW_FIELD_INFO_TOP       /* TFF: Top -> Bottom */
                                                   :                             LW_FIELD_INFO_BOTTOM;   /* BFF: Bottom -> Top */
     /* Check repeat_pict and order_count. */
     if( specified_field_dominance > 0 && (lw_field_info_t)specified_field_dominance != info[1].field_info )
@@ -1008,7 +1008,7 @@ static void create_video_frame_order_list
             else if( !repeat_field )
                 goto disable_repeat;
         }
-        if( opt->apply_repeat_flag )
+        if( post_opt->apply_repeat_flag )
             switch( repeat_pict )
             {
                 case 5 :    /* frame tripling */
@@ -1065,7 +1065,7 @@ static void create_video_frame_order_list
         lw_field_info_t field_info  = info[i].field_info;
         order_list[t_count++].top    = i;
         order_list[b_count++].bottom = i;
-        if( opt->apply_repeat_flag )
+        if( post_opt->apply_repeat_flag )
             switch( repeat_pict )
             {
                 case 5 :    /* frame tripling */
@@ -1131,9 +1131,9 @@ disable_repeat:
     vohp->frame_order_count    = 0;
     vohp->frame_order_list     = NULL;
     vohp->frame_count          = vsip->frame_count;
-    if( opt->vfr2cfr.active )
-        vfr2cfr_settings( vdhp, vohp, opt );
-    if( opt->apply_repeat_flag )
+    if( post_opt->vfr2cfr.active )
+        vfr2cfr_settings( vdhp, vohp, post_opt );
+    if( post_opt->apply_repeat_flag )
         lw_log_show( &vdhp->lh, LW_LOG_INFO, "Disable repeat control." );
     return;
 }
@@ -2844,14 +2844,6 @@ static int create_index
             compute_stream_duration( lwhp, vdhp, vsip, format_ctx->streams[ vdhp->stream_index ]->duration );
         }
     }
-    if( vdhp->stream_index >= 0 )
-    {
-        video_stream_temp_t *vstp = &vtp[vdhp->stream_index];
-        /* Create the repeat control info. */
-        create_video_frame_order_list( vdhp, vohp, opt );
-        /* Exclude invisible frames from the output handler. */
-        create_video_visible_frame_list( vdhp, vohp, vstp->invisible_count );
-    }
     for( int stream_index = 0; stream_index < adhp->nb_streams; stream_index++ )
     {
         audio_stream_info_t *asip = adhp->stream_info_list[stream_index];
@@ -2861,15 +2853,11 @@ static int create_index
             asip->frame_list   = astp->audio_info;
             asip->frame_count  = astp->audio_sample_count;
             asip->frame_length = astp->variable_frame_length ? 0 : asip->frame_list[1].length;
+            asip->sample_rate  = astp->audio_sample_rate;
             decide_audio_seek_method( lwhp, asip, astp->audio_sample_count );
         }
     }
-    if( adhp->stream_index >= 0 )
-    {
-        audio_stream_temp_t *astp = &atp[adhp->stream_index];
-        if( opt->av_sync && vdhp->stream_index >= 0 )
-            lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, astp->audio_sample_rate );
-    }
+    lwlibav_post_process( lwhp, vdhp, vohp, adhp, aohp, &opt->post_process );
     cleanup_index_helpers( &indexer, format_ctx );
     free( vtp );
     free( atp );
@@ -3436,14 +3424,6 @@ static int parse_index
                 compute_stream_duration( lwhp, vdhp, vsip, vsip->stream_duration );
             }
         }
-        if( vdhp->stream_index >= 0 )
-        {
-            video_stream_temp_t *vstp = &vtp[vdhp->stream_index];
-            /* Create the repeat control info. */
-            create_video_frame_order_list( vdhp, vohp, opt );
-            /* Exclude invisible frames from the output handler. */
-            create_video_visible_frame_list( vdhp, vohp, vstp->invisible_count );
-        }
         for( int stream_index = 0; stream_index < adhp->nb_streams; stream_index++ )
         {
             audio_stream_info_t *asip = adhp->stream_info_list[stream_index];
@@ -3495,15 +3475,11 @@ static int parse_index
                 asip->frame_list   = astp->audio_info;
                 asip->frame_count  = astp->audio_sample_count;
                 asip->frame_length = astp->variable_frame_length ? 0 : astp->audio_info[1].length;
+                asip->sample_rate  = astp->audio_sample_rate;
                 decide_audio_seek_method( lwhp, asip, astp->audio_sample_count );
             }
         }
-        if( adhp->stream_index >= 0 )
-        {
-            audio_stream_temp_t *astp = &atp[adhp->stream_index];
-            if( opt->av_sync && vdhp->stream_index >= 0 )
-                lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, astp->audio_sample_rate );
-        }
+        lwlibav_post_process( lwhp, vdhp, vohp, adhp, aohp, &opt->post_process );
         if( vdhp->stream_index != active_video_index || adhp->stream_index != active_audio_index )
         {
             /* Update the active stream indexes when specifying different stream indexes. */
@@ -3619,6 +3595,32 @@ fail:
     if( lwhp->file_path )
         lw_freep( &lwhp->file_path );
     return -1;
+}
+
+void lwlibav_post_process
+(
+    lwlibav_file_handler_t         *lwhp,
+    lwlibav_video_decode_handler_t *vdhp,
+    lwlibav_video_output_handler_t *vohp,
+    lwlibav_audio_decode_handler_t *adhp,
+    lwlibav_audio_output_handler_t *aohp,
+    lwlibav_post_process_option_t  *post_opt
+)
+{
+    if( vdhp->stream_index >= 0 )
+    {
+        video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
+        /* Create the repeat control info. */
+        create_video_frame_order_list( vdhp, vohp, post_opt );
+        /* Exclude invisible frames from the output handler. */
+        create_video_visible_frame_list( vdhp, vohp, vsip->invisible_count );
+    }
+    if( adhp->stream_index >= 0 )
+    {
+        audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
+        if( post_opt->av_sync && vdhp->stream_index >= 0 )
+            lwhp->av_gap = calculate_av_gap( vdhp, vohp, adhp, asip->sample_rate );
+    }
 }
 
 int lwlibav_import_av_index_entry

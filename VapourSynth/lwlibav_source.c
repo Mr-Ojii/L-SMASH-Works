@@ -336,21 +336,21 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     set_preferred_decoder_names_on_buf( hp->preferred_decoder_names_buf, preferred_decoder_names );
     /* Set options. */
     lwlibav_option_t opt;
-    opt.file_path         = file_path;
-    opt.cache_dir         = cache_dir;
-    opt.threads           = threads >= 0 ? threads : 0;
-    opt.av_sync           = 0;
-    opt.no_create_index   = !cache_index;
-    opt.index_file_path   = index_file_path;
-    opt.force_video       = (stream_index >= 0);
-    opt.force_video_index = stream_index >= 0 ? stream_index : -1;
-    opt.force_audio       = 0;
-    opt.force_audio_index = -2;
-    opt.apply_repeat_flag = apply_repeat_flag;
-    opt.field_dominance   = CLIP_VALUE( field_dominance, 0, 2 );    /* 0: Obey source flags, 1: TFF, 2: BFF */
-    opt.vfr2cfr.active    = fps_num > 0 && fps_den > 0 ? 1 : 0;
-    opt.vfr2cfr.fps_num   = fps_num;
-    opt.vfr2cfr.fps_den   = fps_den;
+    opt.file_path                      = file_path;
+    opt.cache_dir                      = cache_dir;
+    opt.threads                        = threads >= 0 ? threads : 0;
+    opt.no_create_index                = !cache_index;
+    opt.index_file_path                = index_file_path;
+    opt.force_video                    = (stream_index >= 0);
+    opt.force_video_index              = stream_index >= 0 ? stream_index : -1;
+    opt.force_audio                    = 0;
+    opt.force_audio_index              = -2;
+    opt.post_process.av_sync           = 0;
+    opt.post_process.apply_repeat_flag = apply_repeat_flag;
+    opt.post_process.field_dominance   = CLIP_VALUE( field_dominance, 0, 2 );    /* 0: Obey source flags, 1: TFF, 2: BFF */
+    opt.post_process.vfr2cfr.active    = fps_num > 0 && fps_den > 0 ? 1 : 0;
+    opt.post_process.vfr2cfr.fps_num   = fps_num;
+    opt.post_process.vfr2cfr.fps_den   = fps_den;
     lwlibav_video_set_seek_mode              ( vdhp, CLIP_VALUE( seek_mode,      0, 2 ) );
     lwlibav_video_set_forward_seek_threshold ( vdhp, CLIP_VALUE( seek_threshold, 1, 999 ) );
     lwlibav_video_set_preferred_decoder_names( vdhp, tokenize_preferred_decoder_names( hp->preferred_decoder_names_buf ) );
@@ -403,7 +403,7 @@ void VS_CC vs_lwlibavsource_create( const VSMap *in, VSMap *out, void *user_data
     hp->vi[0].numFrames = vohp->frame_count;
     hp->vi[0].fpsNum    = 25;
     hp->vi[0].fpsDen    = 1;
-    lwlibav_video_setup_timestamp_info( lwhp, vdhp, vohp, &hp->vi[0].fpsNum, &hp->vi[0].fpsDen, opt.apply_repeat_flag );
+    lwlibav_video_setup_timestamp_info( lwhp, vdhp, vohp, &hp->vi[0].fpsNum, &hp->vi[0].fpsDen, opt.post_process.apply_repeat_flag );
     /* Set up decoders for this stream. */
     if( prepare_video_decoding( hp, out, core, vsapi ) < 0 )
     {

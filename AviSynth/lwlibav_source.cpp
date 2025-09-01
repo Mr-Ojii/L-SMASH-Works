@@ -156,7 +156,7 @@ LWLibavVideoSource::LWLibavVideoSource
     /* Set average framerate. */
     int64_t fps_num = 25;
     int64_t fps_den = 1;
-    lwlibav_video_setup_timestamp_info( &lwh, vdhp, vohp, &fps_num, &fps_den, opt->apply_repeat_flag );
+    lwlibav_video_setup_timestamp_info( &lwh, vdhp, vohp, &fps_num, &fps_den, opt->post_process.apply_repeat_flag );
     vi.fps_numerator   = static_cast<unsigned>(fps_num);
     vi.fps_denominator = static_cast<unsigned>(fps_den);
     vi.num_frames      = vohp->frame_count;
@@ -364,21 +364,21 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     const char* cdir                    = args[16].AsString();
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
-    opt.file_path         = source;
-    opt.cache_dir         = cdir;
-    opt.threads           = threads >= 0 ? threads : 0;
-    opt.av_sync           = 0;
-    opt.no_create_index   = no_create_index;
-    opt.index_file_path   = index_file_path;
-    opt.force_video       = (stream_index >= 0);
-    opt.force_video_index = stream_index >= 0 ? stream_index : -1;
-    opt.force_audio       = 0;
-    opt.force_audio_index = -2;
-    opt.apply_repeat_flag = apply_repeat_flag;
-    opt.field_dominance   = CLIP_VALUE( field_dominance, 0, 2 );    /* 0: Obey source flags, 1: TFF, 2: BFF */
-    opt.vfr2cfr.active    = fps_num > 0 && fps_den > 0 ? 1 : 0;
-    opt.vfr2cfr.fps_num   = fps_num;
-    opt.vfr2cfr.fps_den   = fps_den;
+    opt.file_path                      = source;
+    opt.cache_dir                      = cdir;
+    opt.threads                        = threads >= 0 ? threads : 0;
+    opt.no_create_index                = no_create_index;
+    opt.index_file_path                = index_file_path;
+    opt.force_video                    = (stream_index >= 0);
+    opt.force_video_index              = stream_index >= 0 ? stream_index : -1;
+    opt.force_audio                    = 0;
+    opt.force_audio_index              = -2;
+    opt.post_process.av_sync           = 0;
+    opt.post_process.apply_repeat_flag = apply_repeat_flag;
+    opt.post_process.field_dominance   = CLIP_VALUE( field_dominance, 0, 2 );    /* 0: Obey source flags, 1: TFF, 2: BFF */
+    opt.post_process.vfr2cfr.active    = fps_num > 0 && fps_den > 0 ? 1 : 0;
+    opt.post_process.vfr2cfr.fps_num   = fps_num;
+    opt.post_process.vfr2cfr.fps_den   = fps_den;
     seek_mode              = CLIP_VALUE( seek_mode, 0, 2 );
     forward_seek_threshold = CLIP_VALUE( forward_seek_threshold, 1, 999 );
     direct_rendering      &= (pixel_format == AV_PIX_FMT_NONE);
@@ -402,21 +402,21 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     const char* cdir                    = args[9].AsString();
     /* Set LW-Libav options. */
     lwlibav_option_t opt;
-    opt.file_path         = source;
-    opt.cache_dir         = cdir;
-    opt.threads           = 0;
-    opt.av_sync           = av_sync;
-    opt.no_create_index   = no_create_index;
-    opt.index_file_path   = index_file_path;
-    opt.force_video       = 0;
-    opt.force_video_index = -1;
-    opt.force_audio       = (stream_index >= 0);
-    opt.force_audio_index = stream_index >= 0 ? stream_index : -1;
-    opt.apply_repeat_flag = 0;
-    opt.field_dominance   = 0;
-    opt.vfr2cfr.active    = 0;
-    opt.vfr2cfr.fps_num   = 0;
-    opt.vfr2cfr.fps_den   = 0;
+    opt.file_path                      = source;
+    opt.cache_dir                      = cdir;
+    opt.threads                        = 0;
+    opt.no_create_index                = no_create_index;
+    opt.index_file_path                = index_file_path;
+    opt.force_video                    = 0;
+    opt.force_video_index              = -1;
+    opt.force_audio                    = (stream_index >= 0);
+    opt.force_audio_index              = stream_index >= 0 ? stream_index : -1;
+    opt.post_process.av_sync           = av_sync;
+    opt.post_process.apply_repeat_flag = 0;
+    opt.post_process.field_dominance   = 0;
+    opt.post_process.vfr2cfr.active    = 0;
+    opt.post_process.vfr2cfr.fps_num   = 0;
+    opt.post_process.vfr2cfr.fps_den   = 0;
     set_av_log_level( ff_loglevel );
     return new LWLibavAudioSource( &opt, layout_string, sample_rate, preferred_decoder_names, env );
 }

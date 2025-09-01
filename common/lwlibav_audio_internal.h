@@ -46,6 +46,7 @@ typedef struct
     int                  dv_in_avi_stream_index;
     /* */
     uint32_t             frame_length;
+    int                  sample_rate;
 } audio_stream_info_t;
 
 struct lwlibav_audio_decode_handler_tag

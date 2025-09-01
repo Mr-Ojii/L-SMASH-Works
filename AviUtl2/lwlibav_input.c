@@ -202,21 +202,21 @@ static void *open_file( char *file_path, reader_option_t *opt )
     hp->uType = MB_ICONERROR | MB_OK;
     /* Set options. */
     lwlibav_option_t lwlibav_opt;
-    lwlibav_opt.file_path         = file_path;
-    lwlibav_opt.cache_dir         = opt->cache_dir_name;
-    lwlibav_opt.threads           = opt->threads;
-    lwlibav_opt.av_sync           = opt->av_sync;
-    lwlibav_opt.no_create_index   = opt->no_create_index;
-    lwlibav_opt.index_file_path   = NULL;
-    lwlibav_opt.force_video       = opt->force_video;
-    lwlibav_opt.force_video_index = opt->force_video_index;
-    lwlibav_opt.force_audio       = opt->force_audio;
-    lwlibav_opt.force_audio_index = opt->force_audio_index;
-    lwlibav_opt.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
-    lwlibav_opt.field_dominance   = opt->video_opt.field_dominance;
-    lwlibav_opt.vfr2cfr.active    = 0;
-    lwlibav_opt.vfr2cfr.fps_num   = 60000;
-    lwlibav_opt.vfr2cfr.fps_den   = 1001;
+    lwlibav_opt.file_path                      = file_path;
+    lwlibav_opt.cache_dir                      = opt->cache_dir_name;
+    lwlibav_opt.threads                        = opt->threads;
+    lwlibav_opt.no_create_index                = opt->no_create_index;
+    lwlibav_opt.index_file_path                = NULL;
+    lwlibav_opt.force_video                    = opt->force_video;
+    lwlibav_opt.force_video_index              = opt->force_video_index;
+    lwlibav_opt.force_audio                    = opt->force_audio;
+    lwlibav_opt.force_audio_index              = opt->force_audio_index;
+    lwlibav_opt.post_process.av_sync           = opt->av_sync;
+    lwlibav_opt.post_process.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
+    lwlibav_opt.post_process.field_dominance   = opt->video_opt.field_dominance;
+    lwlibav_opt.post_process.vfr2cfr.active    = 0;
+    lwlibav_opt.post_process.vfr2cfr.fps_num   = 60000;
+    lwlibav_opt.post_process.vfr2cfr.fps_den   = 1001;
     lwlibav_video_set_preferred_decoder_names( hp->vdhp, opt->preferred_decoder_names );
     lwlibav_audio_set_preferred_decoder_names( hp->adhp, opt->preferred_decoder_names );
     /* Set up progress indicator. */
