@@ -160,6 +160,15 @@ void lwlibav_audio_set_log_handler
     adhp->lh = *lh;
 }
 
+void lwlibav_audio_set_stream_index
+(
+    lwlibav_audio_decode_handler_t *adhp,
+    int                             stream_index
+)
+{
+    adhp->stream_index = stream_index;
+}
+
 /*****************************************************************************
  * Getters
  *****************************************************************************/

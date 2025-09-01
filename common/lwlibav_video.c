@@ -205,6 +205,15 @@ void lwlibav_video_set_get_buffer_func
     vdhp->stream_info_list[vdhp->stream_index]->exh.get_buffer = vdhp->ctx->get_buffer2;
 }
 
+void lwlibav_video_set_stream_index
+(
+    lwlibav_video_decode_handler_t *vdhp,
+    int                             stream_index
+)
+{
+    vdhp->stream_index = stream_index;
+}
+
 /*****************************************************************************
  * Getters
  *****************************************************************************/

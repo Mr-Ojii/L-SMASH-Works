@@ -114,6 +114,12 @@ void lwlibav_video_set_get_buffer_func
     lwlibav_video_decode_handler_t *vdhp
 );
 
+void lwlibav_video_set_stream_index
+(
+    lwlibav_video_decode_handler_t *vdhp,
+    int                             stream_index
+);
+
 /*****************************************************************************
  * Getters
  *****************************************************************************/

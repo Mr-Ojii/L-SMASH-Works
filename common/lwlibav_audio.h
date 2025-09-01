@@ -80,6 +80,13 @@ void lwlibav_audio_set_codec_context
     AVCodecContext                 *ctx
 );
 
+
+void lwlibav_audio_set_stream_index
+(
+    lwlibav_audio_decode_handler_t *adhp,
+    int                             stream_index
+);
+
 /*****************************************************************************
  * Getters
  *****************************************************************************/
