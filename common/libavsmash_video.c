@@ -1048,7 +1048,7 @@ uint32_t libavsmash_ts_to_sample_number
         if( composition_sample_number == 0 )
             return 0;
     }
-    for( composition_sample_number++;
+    for( ;
          composition_sample_number <= vdhp->sample_count;
          composition_sample_number++ )
     {
@@ -1058,7 +1058,7 @@ uint32_t libavsmash_ts_to_sample_number
         current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
         if( current_pts >= target_pts )
         {
-            sample_number = composition_sample_number - 1;
+            sample_number = composition_sample_number;
             break;
         }
     }
