@@ -746,7 +746,7 @@ int func_set_track( INPUT_HANDLE ih, int type, int index )
     if( type == TRACK_TYPE_VIDEO )
     {
         if( hp->get_video_track ) {
-            int ret = hp->get_video_track( hp, video_opt, index );
+            int ret = hp->get_video_track( hp, reader_opt, index );
             
             if( hp->destroy_video_disposable )
                 hp->destroy_video_disposable( hp->video_private );
@@ -758,7 +758,7 @@ int func_set_track( INPUT_HANDLE ih, int type, int index )
     else if( type == TRACK_TYPE_AUDIO )
     {
         if( hp->get_audio_track ) {
-            int ret = hp->get_audio_track( hp, audio_opt, index );
+            int ret = hp->get_audio_track( hp, reader_opt, index );
 
             if( hp->destroy_audio_disposable )
                 hp->destroy_audio_disposable( hp->audio_private );

@@ -395,7 +395,7 @@ static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
     return 0;
 }
 
-static int get_video_track_by_index( lsmash_handler_t *h, video_option_t *opt, int index )
+static int get_video_track_by_index( lsmash_handler_t *h, reader_option_t *opt, int index )
 {
     index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
@@ -409,18 +409,18 @@ static int get_video_track_by_index( lsmash_handler_t *h, video_option_t *opt, i
     /* Set video options. */
     libavsmash_video_decode_handler_t *vdhp = hp->vdhp;
     libavsmash_video_output_handler_t *vohp = hp->vohp;
-    libavsmash_video_set_seek_mode             ( vdhp, opt->seek_mode );
-    libavsmash_video_set_forward_seek_threshold( vdhp, opt->forward_seek_threshold );
+    libavsmash_video_set_seek_mode             ( vdhp, opt->video_opt.seek_mode );
+    libavsmash_video_set_forward_seek_threshold( vdhp, opt->video_opt.forward_seek_threshold );
     vohp->vfr2cfr = 0;
     vohp->cfr_num = 60000;
     vohp->cfr_den = 1001;
     /* TODO: Maybe, the number of output frames should be set up here. */
-    if( prepare_video_decoding( h, opt ) != 0 )
+    if( prepare_video_decoding( h, &opt->video_opt ) != 0 )
         return -1;
     return index - 1;
 }
 
-static int get_audio_track_by_index( lsmash_handler_t *h, audio_option_t *opt, int index )
+static int get_audio_track_by_index( lsmash_handler_t *h, reader_option_t *opt, int index )
 {
     index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
@@ -431,7 +431,7 @@ static int get_audio_track_by_index( lsmash_handler_t *h, audio_option_t *opt, i
         libavsmash_audio_close_codec_context( hp->adhp );
         return -1;
     }
-    if( prepare_audio_decoding( h, opt ) != 0 )
+    if( prepare_audio_decoding( h, &opt->audio_opt ) != 0 )
         return -1;
     return index - 1;
 }

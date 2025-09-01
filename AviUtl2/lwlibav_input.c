@@ -260,7 +260,7 @@ static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
     return 0;
 }
 
-static int get_video_track( lsmash_handler_t *h, video_option_t *opt, int index )
+static int get_video_track( lsmash_handler_t *h, reader_option_t *opt, int index )
 {
     index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
@@ -271,15 +271,16 @@ static int get_video_track( lsmash_handler_t *h, video_option_t *opt, int index 
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
-    if( prepare_video_decoding( h, opt ) < 0 )
+    if( prepare_video_decoding( h, &opt->video_opt ) < 0 )
         return -1;
     return index - 1;
 }
 
-static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index )
+static int get_audio_track( lsmash_handler_t *h, reader_option_t *opt, int index )
 {
     index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->audio_private;
+
     if( lwlibav_audio_get_desired_track( hp->lwh.file_path, hp->adhp, hp->lwh.threads ) < 0 )
         return -1;
     lw_log_handler_t *lhp = lwlibav_audio_get_log_handler( hp->adhp );
@@ -287,7 +288,7 @@ static int get_audio_track( lsmash_handler_t *h, audio_option_t *opt, int index 
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
-    if( prepare_audio_decoding( h, opt ) < 0 )
+    if( prepare_audio_decoding( h, &opt->audio_opt ) < 0 )
         return -1;
     return index - 1;
 }

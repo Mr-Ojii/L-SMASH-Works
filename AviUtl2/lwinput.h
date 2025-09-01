@@ -143,8 +143,8 @@ typedef struct
     void *(*open_file)             ( char *file_name, reader_option_t *opt );
     int   (*find_video)            ( lsmash_handler_t *h, video_option_t *opt );
     int   (*find_audio)            ( lsmash_handler_t *h, audio_option_t *opt );
-    int   (*get_video_track)       ( lsmash_handler_t *h, video_option_t *opt, int index );
-    int   (*get_audio_track)       ( lsmash_handler_t *h, audio_option_t *opt, int index );
+    int   (*get_video_track)       ( lsmash_handler_t *h, reader_option_t *opt, int index );
+    int   (*get_audio_track)       ( lsmash_handler_t *h, reader_option_t *opt, int index );
     void  (*destroy_disposable)    ( void *private_stuff );
     int   (*read_video)            ( lsmash_handler_t *h, int sample_number, void *buf );
     int   (*read_audio)            ( lsmash_handler_t *h, int start, int wanted_length, void *buf );
@@ -169,7 +169,7 @@ struct lsmash_handler_tag
     int                  framerate_num;
     int                  framerate_den;
     uint32_t             video_sample_count;
-    int  (*get_video_track)         ( lsmash_handler_t *h, video_option_t *opt, int index );
+    int  (*get_video_track)         ( lsmash_handler_t *h, reader_option_t *opt, int index );
     int  (*read_video)              ( lsmash_handler_t *h, int sample_number, void *buf );
     int  (*is_keyframe)             ( lsmash_handler_t *h, int sample_number );
     void (*video_cleanup)           ( lsmash_handler_t *h );
@@ -182,7 +182,7 @@ struct lsmash_handler_tag
     int                  audio_track_count;
     WAVEFORMATEXTENSIBLE audio_format;
     uint32_t             audio_pcm_sample_count;
-    int  (*get_audio_track)         ( lsmash_handler_t *h, audio_option_t *opt, int index );
+    int  (*get_audio_track)         ( lsmash_handler_t *h, reader_option_t *opt, int index );
     int  (*read_audio)              ( lsmash_handler_t *h, int start, int wanted_length, void *buf );
     int  (*delay_audio)             ( lsmash_handler_t *h, int *start, int wanted_length, int audio_delay );
     void (*audio_cleanup)           ( lsmash_handler_t *h );

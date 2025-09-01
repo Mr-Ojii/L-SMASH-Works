@@ -307,7 +307,7 @@ static int find_video
 static int get_video_track
 (
     lsmash_handler_t *h,
-    video_option_t   *opt,
+    reader_option_t   *opt,
     int              index
 )
 {
@@ -317,7 +317,7 @@ static int get_video_track
     hp->av_frame = av_frame_alloc();
     if( !hp->av_frame )
         return -1;
-    return prepare_video_decoding( h, opt );
+    return prepare_video_decoding( h, &opt->video_opt );
 }
 
 static int read_video
