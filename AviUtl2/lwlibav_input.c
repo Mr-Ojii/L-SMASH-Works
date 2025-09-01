@@ -264,6 +264,19 @@ static int get_video_track( lsmash_handler_t *h, reader_option_t *opt, int index
 {
     index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
+
+    /* Set stream index */
+    int stream_index = lwlibav_video_get_stream_index_from_index( hp->vdhp, index );
+    lwlibav_video_set_stream_index( hp->vdhp, stream_index );
+    lwlibav_post_process_option_t post_opt;
+    post_opt.av_sync           = opt->av_sync;
+    post_opt.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
+    post_opt.field_dominance   = opt->video_opt.field_dominance;
+    post_opt.vfr2cfr.active    = 0;
+    post_opt.vfr2cfr.fps_num   = 60000;
+    post_opt.vfr2cfr.fps_den   = 1001;
+    lwlibav_post_process( &hp->lwh, hp->vdhp, hp->vohp, hp->adhp, hp->aohp, &post_opt );
+
     if( lwlibav_video_get_desired_track( hp->lwh.file_path, hp->vdhp, hp->lwh.threads ) < 0 )
         return -1;
     lw_log_handler_t *lhp = lwlibav_video_get_log_handler( hp->vdhp );
@@ -280,6 +293,18 @@ static int get_audio_track( lsmash_handler_t *h, reader_option_t *opt, int index
 {
     index++; /* 1-origin */
     libav_handler_t *hp = (libav_handler_t *)h->audio_private;
+
+    /* Set stream index */
+    int stream_index = lwlibav_audio_get_stream_index_from_index( hp->adhp, index );
+    lwlibav_audio_set_stream_index( hp->adhp, stream_index );
+    lwlibav_post_process_option_t post_opt;
+    post_opt.av_sync           = opt->av_sync;
+    post_opt.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
+    post_opt.field_dominance   = opt->video_opt.field_dominance;
+    post_opt.vfr2cfr.active    = 0;
+    post_opt.vfr2cfr.fps_num   = 60000;
+    post_opt.vfr2cfr.fps_den   = 1001;
+    lwlibav_post_process( &hp->lwh, hp->vdhp, hp->vohp, hp->adhp, hp->aohp, &post_opt );
 
     if( lwlibav_audio_get_desired_track( hp->lwh.file_path, hp->adhp, hp->lwh.threads ) < 0 )
         return -1;
