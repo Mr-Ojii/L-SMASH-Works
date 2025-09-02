@@ -129,14 +129,13 @@ static int get_track_count_of_type( libavsmash_handler_t *hp, uint32_t type )
     return 0;
 }
 
-static int get_track_of_type_by_index( lsmash_handler_t *h, uint32_t type, int index )
+static int get_track_of_type_by_index( libavsmash_handler_t *hp, uint32_t type, int index )
 {
     int ret;
     lw_log_handler_t *lhp;
     uint32_t track_id;
     if( type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK )
     {
-        libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
         lhp = libavsmash_video_get_log_handler( hp->vdhp );
         if( ( track_id = libavsmash_video_get_track_id_from_index( hp->vdhp, index ) ) <= 0 )
             return -1;
@@ -144,7 +143,6 @@ static int get_track_of_type_by_index( lsmash_handler_t *h, uint32_t type, int i
     }
     else
     {
-        libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
         lhp = libavsmash_audio_get_log_handler( hp->adhp );
         if( ( track_id = libavsmash_audio_get_track_id_from_index( hp->adhp, index ) ) <= 0 )
             return -1;
@@ -398,7 +396,7 @@ static int get_video_track_by_index( lsmash_handler_t *h, reader_option_t *opt, 
 {
     index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
-    if( get_track_of_type_by_index( h, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index ) != 0 )
+    if( get_track_of_type_by_index( hp, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index ) != 0 )
     {
         uint32_t track_id = libavsmash_video_get_track_id( hp->vdhp );
         lsmash_destruct_timeline( hp->root, track_id );
@@ -423,7 +421,7 @@ static int get_audio_track_by_index( lsmash_handler_t *h, reader_option_t *opt, 
 {
     index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
-    if( get_track_of_type_by_index( h, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index ) != 0 )
+    if( get_track_of_type_by_index( hp, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index ) != 0 )
     {
         uint32_t track_id = libavsmash_audio_get_track_id( hp->adhp );
         lsmash_destruct_timeline( hp->root, track_id );
