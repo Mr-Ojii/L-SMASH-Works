@@ -498,7 +498,7 @@ retry_seek:;
     /* Seek to audio keyframe.
      * Note: av_seek_frame() for DV in AVI Type-1 requires stream_index = 0. */
     int flags = (asip->lw_seek_flags & SEEK_POS_BASED) ? AVSEEK_FLAG_BYTE : asip->lw_seek_flags == 0 ? AVSEEK_FLAG_FRAME : 0;
-    int stream_index = adhp->dv_in_avi == 1 ? 0 : adhp->stream_index;
+    int stream_index = adhp->dv_in_avi == 1 ? asip->dv_in_avi_stream_index : adhp->stream_index;
     if( av_seek_frame( adhp->format, stream_index, rap_pos, flags | AVSEEK_FLAG_BACKWARD ) < 0 )
         av_seek_frame( adhp->format, stream_index, rap_pos, flags | AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_ANY );
     /* Seek to the target audio frame and get it. */
