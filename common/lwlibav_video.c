@@ -1516,7 +1516,7 @@ uint32_t lwlibav_ts_to_frame_number
         if( ts != AV_NOPTS_VALUE )
         {
             current_ts = ((double)(ts - vsip->min_ts) * time_base.num) / time_base.den;
-            if( current_ts >= target_ts )
+            if( current_ts > target_ts )
             {
                 uint32_t prev_composition_frame_number = composition_frame_number;
                 while( lwlibav_get_ts( vdhp, --prev_composition_frame_number ) == AV_NOPTS_VALUE );
