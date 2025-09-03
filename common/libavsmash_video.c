@@ -1056,7 +1056,7 @@ uint32_t libavsmash_ts_to_sample_number
         if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
             return 0;
         current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
-        if( current_pts >= target_pts )
+        if( current_pts > target_pts )
         {
             sample_number = composition_sample_number - 1;
             break;
