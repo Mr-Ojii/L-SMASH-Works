@@ -2248,6 +2248,7 @@ static int create_index
             {
                 dv_in_avi_init     = 1;
                 adhp->dv_in_avi    = 1;
+                vdhp->dv_in_avi    = 1;
                 if( vdhp->stream_index == -1 )
                     vdhp->stream_index = pkt.stream_index;
             }
@@ -3032,8 +3033,8 @@ static int parse_index
             if( adhp->dv_in_avi == -1 && codec_id == AV_CODEC_ID_DVVIDEO )
             {
                 adhp->dv_in_avi = 1;
+                vdhp->dv_in_avi = 1;
                 if( vdhp->stream_index == -1 )
-
                     vdhp->stream_index = stream_index;
             }
 

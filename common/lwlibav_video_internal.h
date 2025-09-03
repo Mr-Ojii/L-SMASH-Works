@@ -83,7 +83,7 @@ struct lwlibav_video_decode_handler_tag
     lw_log_handler_t      lh;
     AVCodecContext       *ctx;
     int                   av_seek_flags;
-    int                   dv_in_avi;          /* unused */
+    int                   dv_in_avi;                  /* 1 = 'DV in AVI Type-1', 0 = otherwise */
     const char          **preferred_decoder_names;
     int                   prefer_hw_decoder;
     AVFrame              *frame_buffer;

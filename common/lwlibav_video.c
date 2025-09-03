@@ -410,7 +410,8 @@ void lwlibav_video_setup_timestamp_info
     return;
 use_lavf_frame_rate:
     if( !(stream->avg_frame_rate.num && stream->avg_frame_rate.den)
-     || (stream->avg_frame_rate.den != 1 && stream->avg_frame_rate.den != 1001 && (stream->r_frame_rate.den == 1 || stream->r_frame_rate.den == 1001)) )
+     || (stream->avg_frame_rate.den != 1 && stream->avg_frame_rate.den != 1001 && (stream->r_frame_rate.den == 1 || stream->r_frame_rate.den == 1001))
+     || vdhp->dv_in_avi )
     {
         *framerate_num = (int64_t)stream->r_frame_rate.num;
         *framerate_den = (int64_t)stream->r_frame_rate.den;
