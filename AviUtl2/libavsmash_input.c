@@ -133,20 +133,20 @@ static int get_track_of_type_by_index( libavsmash_handler_t *hp, uint32_t type, 
 {
     int ret;
     lw_log_handler_t *lhp;
-    uint32_t track_id;
+    uint32_t track_number;
     if( type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK )
     {
         lhp = libavsmash_video_get_log_handler( hp->vdhp );
-        if( ( track_id = libavsmash_video_get_track_id_from_index( hp->vdhp, index ) ) <= 0 )
+        if( ( track_number = libavsmash_video_get_track_number_from_index( hp->vdhp, index ) ) <= 0 )
             return -1;
-        ret = libavsmash_video_get_track( hp->vdhp, track_id );
+        ret = libavsmash_video_get_track( hp->vdhp, track_number );
     }
     else
     {
         lhp = libavsmash_audio_get_log_handler( hp->adhp );
-        if( ( track_id = libavsmash_audio_get_track_id_from_index( hp->adhp, index ) ) <= 0 )
+        if( ( track_number = libavsmash_audio_get_track_number_from_index( hp->adhp, index ) ) <= 0 )
             return -1;
-        ret = libavsmash_audio_get_track( hp->adhp, track_id );
+        ret = libavsmash_audio_get_track( hp->adhp, track_number );
     }
     lhp->level = LW_LOG_WARNING;
     return ret;

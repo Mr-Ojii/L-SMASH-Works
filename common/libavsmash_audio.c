@@ -324,14 +324,14 @@ int libavsmash_audio_get_track_count
     return libavsmash_get_track_count_by_media_type( adhp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, lhp );
 }
 
-uint32_t libavsmash_audio_get_track_id_from_index
+uint32_t libavsmash_audio_get_track_number_from_index
 (
     libavsmash_audio_decode_handler_t *adhp,
     uint32_t                           index
 )
 {
     lw_log_handler_t *lhp = libavsmash_audio_get_log_handler( adhp );
-    return libavsmash_get_track_id_from_index_by_media_type( adhp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index, lhp );
+    return libavsmash_get_track_number_from_index_by_media_type( adhp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index, lhp );
 }
 
 int libavsmash_audio_get_track

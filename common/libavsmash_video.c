@@ -368,14 +368,14 @@ int libavsmash_video_get_track_count
     return libavsmash_get_track_count_by_media_type( vdhp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, lhp );
 }
 
-uint32_t libavsmash_video_get_track_id_from_index
+uint32_t libavsmash_video_get_track_number_from_index
 (
     libavsmash_video_decode_handler_t *vdhp,
     uint32_t                           index
 )
 {
     lw_log_handler_t *lhp = libavsmash_video_get_log_handler( vdhp );
-    return libavsmash_get_track_id_from_index_by_media_type( vdhp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index, lhp );
+    return libavsmash_get_track_number_from_index_by_media_type( vdhp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index, lhp );
 }
 
 int libavsmash_video_get_track

@@ -168,7 +168,7 @@ int libavsmash_audio_get_track_count
     libavsmash_audio_decode_handler_t *adhp
 );
 
-uint32_t libavsmash_audio_get_track_id_from_index
+uint32_t libavsmash_audio_get_track_number_from_index
 (
     libavsmash_audio_decode_handler_t *adhp,
     uint32_t                           index

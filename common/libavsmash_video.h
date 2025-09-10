@@ -203,7 +203,7 @@ uint64_t libavsmash_video_get_min_cts
     libavsmash_video_decode_handler_t *vdhp
 );
 
-uint32_t libavsmash_video_get_track_id_from_index
+uint32_t libavsmash_video_get_track_number_from_index
 (
     libavsmash_video_decode_handler_t *vdhp,
     uint32_t                           index

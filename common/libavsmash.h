@@ -91,7 +91,7 @@ uint32_t libavsmash_get_track_count_by_media_type
     lw_log_handler_t *lhp
 );
 
-uint32_t libavsmash_get_track_id_from_index_by_media_type
+uint32_t libavsmash_get_track_number_from_index_by_media_type
 (
     lsmash_root_t    *root,
     uint32_t          type,

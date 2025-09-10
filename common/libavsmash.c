@@ -149,7 +149,7 @@ fail:
     return 0;
 }
 
-uint32_t libavsmash_get_track_id_from_index_by_media_type
+uint32_t libavsmash_get_track_number_from_index_by_media_type
 (
     lsmash_root_t    *root,
     uint32_t          type,
@@ -187,7 +187,7 @@ uint32_t libavsmash_get_track_id_from_index_by_media_type
         if( media_param.handler_type == type )
             count++;
         if( count == index )
-            return track_id;
+            return i;
     }
     return 0;
 fail:
