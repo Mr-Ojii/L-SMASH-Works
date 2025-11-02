@@ -887,6 +887,7 @@ static void compute_stream_duration
         first_duration     = info[curr].dts - info[prev].dts;
         stream_timebase    = first_duration;
         vsip->strict_cfr   = (first_duration != 0);
+        vsip->flex_cfr     = (first_duration != 0);
         curr = prev;
         while( 1 )
         {
@@ -907,6 +908,9 @@ static void compute_stream_duration
                              info[curr].dts, curr );
                 goto fail;
             }
+            target_ts = round((i - 1) * (double)avg_frame_rate.den / avg_frame_rate.num * vsip->time_base.den / vsip->time_base.num) + first_ts;
+            if( vsip->flex_cfr && info[curr].dts != target_ts )
+                vsip->flex_cfr = 0;
             if( vsip->strict_cfr && duration != first_duration )
                 vsip->strict_cfr = 0;
             stream_timebase   = get_gcd( stream_timebase, duration );
