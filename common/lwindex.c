@@ -920,10 +920,9 @@ static void compute_stream_duration
     vsip->actual_time_base.num = (int)(vsip->time_base.num * stream_timebase);
     vsip->actual_time_base.den = vsip->time_base.den;
     vsip->stream_duration      = (largest_ts - first_ts) + (largest_ts - second_largest_ts);
-    char buf[128];
-    sprintf( buf, "(flex %sFR, strict %sFR) Framerate: %d/%d", vsip->flex_cfr ? "C" : "V", vsip->strict_cfr ? "C" : "V",
+    lw_log_show( lh, LW_LOG_INFO,
+             "(flex %sFR, strict %sFR) Framerate: %d/%d", vsip->flex_cfr ? "C" : "V", vsip->strict_cfr ? "C" : "V",
              avg_frame_rate.num, avg_frame_rate.den );
-    MessageBoxA( NULL, buf, "Stream Frame Rate", MB_OK );
     return;
 fail:
     vsip->stream_duration = stream_duration;
