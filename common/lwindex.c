@@ -2081,7 +2081,7 @@ static int create_index
 {
     /*
         # Structure of Libav reader index file
-        <LibavReaderIndexFile=17>
+        <LibavReaderIndexFile=17M>
         <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
         <FileHash=0x0123456789abcdef>
@@ -2170,7 +2170,7 @@ static int create_index
         };
         fprintf( index, "<LSMASHWorksIndexVersion=%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 ">\n",
                  lwindex_version[0], lwindex_version[1], lwindex_version[2], lwindex_version[3] );
-        fprintf( index, "<LibavReaderIndexFile=%d>\n", LWINDEX_INDEX_FILE_VERSION );
+        fprintf( index, "<LibavReaderIndexFile=%dM>\n", LWINDEX_INDEX_FILE_VERSION );
         fprintf( index, "<InputFilePath>%s</InputFilePath>\n", lwhp->file_path );
 #ifdef _WIN32
         wchar_t *wname = NULL;
@@ -3579,7 +3579,7 @@ int lwlibav_construct_index
         if( 4 == fscanf( index, "<LSMASHWorksIndexVersion=%" SCNu8 ".%" SCNu8 ".%" SCNu8 ".%" SCNu8 ">\n",
                          &lwindex_version[0], &lwindex_version[1], &lwindex_version[2], &lwindex_version[3] )
          && ((lwindex_version[0] << 24) | (lwindex_version[1] << 16) | (lwindex_version[2] << 8) | lwindex_version[3]) == LWINDEX_VERSION
-         && 1 == fscanf( index, "<LibavReaderIndexFile=%d>\n", &index_file_version )
+         && 1 == fscanf( index, "<LibavReaderIndexFile=%dM>\n", &index_file_version )
          && index_file_version == LWINDEX_INDEX_FILE_VERSION
          && parse_index( lwhp, vdhp, vohp, adhp, aohp, opt, index ) == 0 )
         {
