@@ -168,6 +168,7 @@ struct lsmash_handler_tag
     BITMAPINFOHEADER     video_format;
     int                  framerate_num;
     int                  framerate_den;
+    int                  prohibit_time_to_frame;
     uint32_t             video_sample_count;
     int  (*get_video_track)         ( lsmash_handler_t *h, reader_option_t *opt, int index );
     int  (*read_video)              ( lsmash_handler_t *h, int sample_number, void *buf );

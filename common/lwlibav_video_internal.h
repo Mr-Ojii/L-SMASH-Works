@@ -70,7 +70,9 @@ typedef struct
     int64_t              min_ts;
     AVRational           actual_time_base;
     int                  strict_cfr;
+    int                  flex_cfr;
     uint32_t             invisible_count;
+    AVRational           avg_frame_rate;
 } video_stream_info_t;
 
 struct lwlibav_video_decode_handler_tag

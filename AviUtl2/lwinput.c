@@ -807,7 +807,7 @@ bool func_info_get( INPUT_HANDLE ih, INPUT_INFO *iip )
     if( hp->video_reader != READER_NONE )
     {
         iip->flag             |= INPUT_INFO_FLAG_VIDEO;
-        if( hp->time_to_frame )
+        if( hp->time_to_frame && !hp->prohibit_time_to_frame )
             iip->flag         |= INPUT_INFO_TIME_TO_FRAME;
         iip->rate              = hp->framerate_num;
         iip->scale             = hp->framerate_den;

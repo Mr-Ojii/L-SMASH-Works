@@ -819,9 +819,10 @@ static int64_t calculate_av_gap
 static void compute_stream_duration
 (
     lwlibav_file_handler_t         *lwhp,
-    lwlibav_video_decode_handler_t *vdhp,
+    lw_log_handler_t               *lh,
     video_stream_info_t            *vsip,
-    int64_t                         stream_duration
+    int64_t                         stream_duration,
+    AVRational                      avg_frame_rate
 )
 {
     video_frame_info_t *info = vsip->frame_list;
@@ -830,6 +831,7 @@ static void compute_stream_duration
     int64_t  second_largest_ts;
     uint64_t first_duration;
     uint64_t stream_timebase;
+    uint64_t target_ts;
     if( !(lwhp->format_flags & AVFMT_TS_DISCONT)
      && (vsip->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
@@ -839,16 +841,20 @@ static void compute_stream_duration
         first_duration     = info[2].pts - info[1].pts;
         stream_timebase    = first_duration;
         vsip->strict_cfr   = (first_duration != 0);
+        vsip->flex_cfr     = (first_duration != 0);
         for( uint32_t i = 2; i <= vsip->frame_count; i++ )
         {
             uint64_t duration = info[i].pts - info[i - 1].pts;
             if( duration == 0 )
             {
-                lw_log_show( &vdhp->lh, LW_LOG_WARNING,
+                lw_log_show( lh, LW_LOG_WARNING,
                              "Detected PTS %" PRId64 " duplication at frame %" PRIu32,
                              info[i].pts, i );
                 goto fail;
             }
+            target_ts = round((i - 1) * (double)avg_frame_rate.den / avg_frame_rate.num * vsip->time_base.den / vsip->time_base.num) + first_ts;
+            if( vsip->flex_cfr && info[i].pts != target_ts )
+                vsip->flex_cfr = 0;
             if( vsip->strict_cfr && duration != first_duration )
                 vsip->strict_cfr = 0;
             stream_timebase   = get_gcd( stream_timebase, duration );
@@ -896,7 +902,7 @@ static void compute_stream_duration
             uint64_t duration = info[curr].dts - info[prev].dts;
             if( duration == 0 )
             {
-                lw_log_show( &vdhp->lh, LW_LOG_WARNING,
+                lw_log_show( lh, LW_LOG_WARNING,
                              "Detected DTS %" PRId64 " duplication at frame %" PRIu32,
                              info[curr].dts, curr );
                 goto fail;
@@ -914,6 +920,10 @@ static void compute_stream_duration
     vsip->actual_time_base.num = (int)(vsip->time_base.num * stream_timebase);
     vsip->actual_time_base.den = vsip->time_base.den;
     vsip->stream_duration      = (largest_ts - first_ts) + (largest_ts - second_largest_ts);
+    char buf[128];
+    sprintf( buf, "(flex %sFR, strict %sFR) Framerate: %d/%d", vsip->flex_cfr ? "C" : "V", vsip->strict_cfr ? "C" : "V",
+             avg_frame_rate.num, avg_frame_rate.den );
+    MessageBoxA( NULL, buf, "Stream Frame Rate", MB_OK );
     return;
 fail:
     vsip->stream_duration = stream_duration;
@@ -2083,6 +2093,7 @@ static int create_index
         Key=1,Pic=1,POC=0,Repeat=1,Field=0,Width=1920,Height=1080,Format=yuv420p,ColorSpace=5
         </LibavReaderIndex>
         <StreamDuration=0,0>5000</StreamDuration>
+        <StreamAvgFrameRate=0,0>24000/1001</StreamAvgFrameRate>
         <StreamIndexEntries=0,0,1>
         POS=0,TS=2002,Flags=1,Size=1024,Distance=0
         </StreamIndexEntries>
@@ -2684,8 +2695,15 @@ static int create_index
         AVStream *stream = format_ctx->streams[stream_index];
         if( stream->codecpar->codec_type == AVMEDIA_TYPE_VIDEO
          || (stream->codecpar->codec_type == AVMEDIA_TYPE_AUDIO && adhp->stream_index != -2) )
+        {
             print_index( index, "<StreamDuration=%d,%d>%" PRId64 "</StreamDuration>\n",
                          stream_index, stream->codecpar->codec_type, stream->duration );
+            print_index( index, "<StreamAvgFrameRate=%d,%d>%d/%d</StreamAvgFrameRate>\n",
+                         stream_index,
+                         stream->codecpar->codec_type,
+                         stream->avg_frame_rate.num,
+                         stream->avg_frame_rate.den );
+        }
     }
     if( !strcmp( lwhp->format_name, "asf" ) )
     {
@@ -2830,6 +2848,7 @@ static int create_index
     {
         video_stream_info_t *vsip = vdhp->stream_info_list[stream_index];
         video_stream_temp_t *vstp = &vtp[stream_index];
+        AVStream *stream = format_ctx->streams[stream_index];
         if( vstp->video_info && vstp->video_sample_count > 0 )
         {
             vsip->keyframe_list = (uint8_t *)lw_malloc_zero( (vstp->video_sample_count + 1) * sizeof(uint8_t) );
@@ -2842,7 +2861,7 @@ static int create_index
             if( decide_video_seek_method( lwhp, vdhp, vsip, vstp->video_sample_count ) )
                 goto fail_index;
             /* Compute the stream duration. */
-            compute_stream_duration( lwhp, vdhp, vsip, format_ctx->streams[ vdhp->stream_index ]->duration );
+            compute_stream_duration( lwhp, &vdhp->lh, vsip, stream->duration, stream->avg_frame_rate );
         }
     }
     for( int stream_index = 0; stream_index < adhp->nb_streams; stream_index++ )
@@ -3249,6 +3268,13 @@ static int parse_index
             vdhp->stream_info_list[stream_index]->stream_duration = stream_duration;
         if( !fgets( buf, sizeof(buf), index ) )
             goto fail_parsing;
+        if( sscanf( buf, "<StreamAvgFrameRate=%d,%d>%d/%d</StreamAvgFrameRate>",
+                    &stream_index, &codec_type,
+                    &vdhp->stream_info_list[stream_index]->avg_frame_rate.num,
+                    &vdhp->stream_info_list[stream_index]->avg_frame_rate.den ) != 4 )
+            goto fail_parsing;
+        if( !fgets( buf, sizeof(buf), index ) )
+            goto fail_parsing;
     }
     /* Parse AVIndexEntry. */
     while( !strncmp( buf, "<StreamIndexEntries=", strlen( "<StreamIndexEntries=" ) ) )
@@ -3422,7 +3448,7 @@ static int parse_index
                 if( decide_video_seek_method( lwhp, vdhp, vsip, vstp->video_sample_count ) )
                     goto fail_parsing;
                 /* Compute the stream duration. */
-                compute_stream_duration( lwhp, vdhp, vsip, vsip->stream_duration );
+                compute_stream_duration( lwhp, &vdhp->lh, vsip, vsip->stream_duration, vsip->avg_frame_rate );
             }
         }
         for( int stream_index = 0; stream_index < adhp->nb_streams; stream_index++ )
@@ -3611,6 +3637,7 @@ void lwlibav_post_process
     if( vdhp->stream_index >= 0 )
     {
         video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
+        vohp->prohibit_ts_to_frame = vsip->flex_cfr;
         /* Create the repeat control info. */
         create_video_frame_order_list( vdhp, vohp, post_opt );
         /* Exclude invisible frames from the output handler. */
