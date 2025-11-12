@@ -2084,7 +2084,7 @@ static int create_index
 {
     /*
         # Structure of Libav reader index file
-        <LibavReaderIndexFile=17M>
+        <LibavReaderIndexFile=18M>
         <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
         <FileHash=0x0123456789abcdef>
