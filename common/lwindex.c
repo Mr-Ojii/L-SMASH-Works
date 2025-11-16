@@ -2159,6 +2159,7 @@ static int create_index
             goto fail_index;
     }
 
+    int32_t stream_count_pos = 0;
     int32_t video_index_pos = 0;
     int32_t audio_index_pos = 0;
     if( index )
@@ -2189,6 +2190,7 @@ static int create_index
 #endif
         fprintf( index, "<FileSize=%" PRId64 ">\n", file_stat.st_size );
         fprintf( index, "<FileHash=0x%016" PRIx64 ">\n", xxhash_file( lwhp->file_path, file_stat.st_size ) );
+        stream_count_pos = ftell( index );
         fprintf( index, "<StreamCount=%u>\n", format_ctx->nb_streams );
         fprintf( index, "<LibavReaderIndex=0x%08x,%d,%s>\n", lwhp->format_flags, lwhp->raw_demuxer, lwhp->format_name );
         video_index_pos = ftell( index );
@@ -2248,6 +2250,65 @@ static int create_index
             av_packet_unref( &pkt );
             goto fail_index;
         }
+
+        /* format_ctx->nb_streams may be updated in files such as m2ts. */
+        if( vdhp->nb_streams < format_ctx->nb_streams )
+        {
+            if( index )
+            {
+                int32_t current_pos = ftell( index );
+                fseek( index, stream_count_pos, SEEK_SET );
+                fprintf( index, "<StreamCount=%u>\n", format_ctx->nb_streams );
+                fseek( index, current_pos, SEEK_SET );
+            }
+
+            video_stream_temp_t *new_vtp = (video_stream_temp_t *)realloc(vtp, (format_ctx->nb_streams) * sizeof(video_stream_temp_t) );
+            if( !new_vtp )
+                goto fail_index;
+
+            video_stream_info_t **temp = realloc( vdhp->stream_info_list, format_ctx->nb_streams * sizeof(video_stream_info_t *) );
+            if( !temp )
+                goto fail_index;
+            for( int i = vdhp->nb_streams; i < format_ctx->nb_streams; i++ )
+            {
+                temp[i] = (video_stream_info_t *)lw_malloc_zero( sizeof(video_stream_info_t) );
+                if( !temp[i] )
+                {
+                    for( int j = vdhp->nb_streams; j < i; j++ )
+                        lw_freep( &temp[j] );
+                    lw_freep( &new_vtp );
+                    goto fail_index;
+                }
+            }
+            vdhp->stream_info_list = temp;
+            vtp = new_vtp;
+            vdhp->nb_streams = format_ctx->nb_streams;
+        }
+        if( adhp->nb_streams < format_ctx->nb_streams )
+        {
+            audio_stream_temp_t *new_atp = (audio_stream_temp_t *)realloc(atp, (format_ctx->nb_streams) * sizeof(audio_stream_temp_t) );
+            if( !new_atp )
+                goto fail_index;
+
+            audio_stream_info_t **temp = realloc( adhp->stream_info_list, format_ctx->nb_streams * sizeof(audio_stream_info_t *) );
+            if( !temp )
+                goto fail_index;
+            for( int i = adhp->nb_streams; i < format_ctx->nb_streams; i++ )
+            {
+                temp[i] = (audio_stream_info_t *)lw_malloc_zero( sizeof(audio_stream_info_t) );
+                if( !temp[i] )
+                {
+                    for( int j = adhp->nb_streams; j < i; j++ )
+                        lw_freep( &temp[j] );
+                    lw_freep( &new_atp );
+                    goto fail_index;
+                }
+            }
+            adhp->stream_info_list = temp;
+            atp = new_atp;
+            adhp->nb_streams = format_ctx->nb_streams;
+        }
+
         if( pkt_ctx->codec_type == AVMEDIA_TYPE_VIDEO )
         {
             if( pkt_ctx->pix_fmt == AV_PIX_FMT_NONE
