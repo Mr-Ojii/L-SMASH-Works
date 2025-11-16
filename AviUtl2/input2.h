@@ -1,8 +1,22 @@
 //----------------------------------------------------------------------------------
 //	入力プラグイン ヘッダーファイル for AviUtl ExEdit2
 //	By ＫＥＮくん
-//  Modified for C99 by Mr-Ojii on 2025-08-16
+//	Modified for C99 by Mr-Ojii on 2025-11-16
 //----------------------------------------------------------------------------------
+
+//	入力プラグインは下記の関数を外部公開すると呼び出されます
+//
+//	入力プラグイン構造体のポインタを渡す関数 (必須)
+//		INPUT_PLUGIN_TABLE* GetInputPluginTable(void)
+// 
+//	プラグインDLL初期化関数 (任意)
+//		bool InitializePlugin(DWORD version) ※versionは本体のバージョン番号
+// 
+//	プラグインDLL終了関数 (任意)
+//		void UninitializePlugin()
+// 
+//	ログ出力機能初期化関数 (任意) ※logger2.h
+//		void InitializeLogger(LOG_HANDLE* logger)
 
 static const int INPUT_INFO_FLAG_VIDEO = 1;
 static const int INPUT_INFO_FLAG_AUDIO = 2;
