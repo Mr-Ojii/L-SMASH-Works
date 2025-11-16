@@ -98,12 +98,18 @@ INPUT_PLUGIN_TABLE input_plugin_table =
     func_time_to_frame,
 };
 
+EXTERN_C bool __declspec(dllexport) __stdcall InitializePlugin( DWORD version )
+{
+    return func_init();
+}
+
+EXTERN_C void __declspec(dllexport) __stdcall UninitializePlugin( void )
+{
+    func_exit();
+}
+
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
-    // In AviUtl ExEdit2, func_init is obsolete.
-    // In the sample code, it is called in DLL_PROCESS_ATTACH, but since the program freezes, it is called here.
-    func_init();
-
     return &input_plugin_table;
 }
 
@@ -1284,10 +1290,6 @@ BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
     { 
         case DLL_PROCESS_ATTACH:
             hModuleDLL = hinstDLL;
-            break;
-        case DLL_PROCESS_DETACH:
-            if (lpReserved != NULL) break;
-            func_exit();
             break;
     }
     return TRUE;
