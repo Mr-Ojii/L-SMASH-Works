@@ -2265,6 +2265,9 @@ static int create_index
             video_stream_temp_t *new_vtp = (video_stream_temp_t *)realloc(vtp, (format_ctx->nb_streams) * sizeof(video_stream_temp_t) );
             if( !new_vtp )
                 goto fail_index;
+            memset( &new_vtp[ vdhp->nb_streams ], 0, (format_ctx->nb_streams - vdhp->nb_streams) * sizeof(video_stream_temp_t) );
+            for( int i = vdhp->nb_streams; i < format_ctx->nb_streams; i++ )
+                new_vtp[i].last_keyframe_pts = AV_NOPTS_VALUE;
 
             video_stream_info_t **temp = realloc( vdhp->stream_info_list, format_ctx->nb_streams * sizeof(video_stream_info_t *) );
             if( !temp )
@@ -2289,6 +2292,7 @@ static int create_index
             audio_stream_temp_t *new_atp = (audio_stream_temp_t *)realloc(atp, (format_ctx->nb_streams) * sizeof(audio_stream_temp_t) );
             if( !new_atp )
                 goto fail_index;
+            memset( &new_atp[ adhp->nb_streams ], 0, (format_ctx->nb_streams - adhp->nb_streams) * sizeof(audio_stream_temp_t) );
 
             audio_stream_info_t **temp = realloc( adhp->stream_info_list, format_ctx->nb_streams * sizeof(audio_stream_info_t *) );
             if( !temp )
