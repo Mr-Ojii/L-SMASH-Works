@@ -165,7 +165,7 @@
                 Parsing all frames is very important for frame accurate seek.
             + Apply repeat flag : check box (default : checked)
                 Reconstruct frames by the flags specified in video stream if checked and usable.
-                Note that this option is ignored when VFR->CFR conversion is enabled.
+                Note that this option is ignored in VFR videos.
             + Field dominance : combo box (default : Obey source flags)
                 Which field, top or bottom, is displayed first.
                 This settings is enabled only if one or more of the following conditions is true.
