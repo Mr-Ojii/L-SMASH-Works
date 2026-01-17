@@ -136,4 +136,4 @@ $RECYCLE.BIN/
 *.lnk
 
 # build dependencies directories
-/build*_msvc/
+/build*/
