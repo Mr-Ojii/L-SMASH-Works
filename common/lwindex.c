@@ -979,7 +979,7 @@ static void create_video_frame_order_list
     video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
     if( !(vsip->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
         goto disable_repeat;
-    if( post_opt->vfr2cfr.active )
+    if( post_opt->vfr2cfr.active || ( post_opt->use_ts_to_frame && !vohp->prohibit_ts_to_frame ) )
         post_opt->apply_repeat_flag = 0;
     video_frame_info_t *info                      = vsip->frame_list;
     uint32_t            frame_count               = vsip->frame_count;
