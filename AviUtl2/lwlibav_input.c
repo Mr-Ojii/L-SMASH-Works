@@ -113,7 +113,7 @@ static libav_handler_t *alloc_handler
     return hp;
 }
 
-static int prepare_video_decoding( lsmash_handler_t *h, video_option_t *opt )
+static int prepare_video_decoding( lsmash_handler_t *h, video_option_t *opt, lwlibav_post_process_option_t *post_opt )
 {
     libav_handler_t *hp = (libav_handler_t *)h->video_private;
     lwlibav_video_decode_handler_t *vdhp = hp->vdhp;
@@ -130,7 +130,7 @@ static int prepare_video_decoding( lsmash_handler_t *h, video_option_t *opt )
     hp->uType = MB_OK;
     int64_t fps_num = 25;
     int64_t fps_den = 1;
-    lwlibav_video_setup_timestamp_info( &hp->lwh, vdhp, vohp, &fps_num, &fps_den, opt->apply_repeat_flag );
+    lwlibav_video_setup_timestamp_info( &hp->lwh, vdhp, vohp, &fps_num, &fps_den, post_opt->apply_repeat_flag );
     h->framerate_num          = (int)fps_num;
     h->framerate_den          = (int)fps_den;
     h->video_sample_count     = vohp->frame_count;
@@ -215,6 +215,7 @@ static void *open_file( char *file_path, reader_option_t *opt )
     lwlibav_opt.post_process.av_sync           = opt->av_sync;
     lwlibav_opt.post_process.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
     lwlibav_opt.post_process.field_dominance   = opt->video_opt.field_dominance;
+    lwlibav_opt.post_process.use_ts_to_frame   = 1;
     lwlibav_opt.post_process.vfr2cfr.active    = 0;
     lwlibav_opt.post_process.vfr2cfr.fps_num   = 60000;
     lwlibav_opt.post_process.vfr2cfr.fps_den   = 1001;
@@ -273,6 +274,7 @@ static int get_video_track( lsmash_handler_t *h, reader_option_t *opt, int index
     post_opt.av_sync           = opt->av_sync;
     post_opt.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
     post_opt.field_dominance   = opt->video_opt.field_dominance;
+    post_opt.use_ts_to_frame   = 1;
     post_opt.vfr2cfr.active    = 0;
     post_opt.vfr2cfr.fps_num   = 60000;
     post_opt.vfr2cfr.fps_den   = 1001;
@@ -285,7 +287,7 @@ static int get_video_track( lsmash_handler_t *h, reader_option_t *opt, int index
     lhp->level    = LW_LOG_WARNING;
     lhp->priv     = &hp->uType;
     lhp->show_log = au_message_box_desktop;
-    if( prepare_video_decoding( h, &opt->video_opt ) < 0 )
+    if( prepare_video_decoding( h, &opt->video_opt, &post_opt ) < 0 )
         return -1;
     return index - 1;
 }
@@ -302,6 +304,7 @@ static int get_audio_track( lsmash_handler_t *h, reader_option_t *opt, int index
     post_opt.av_sync           = opt->av_sync;
     post_opt.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
     post_opt.field_dominance   = opt->video_opt.field_dominance;
+    post_opt.use_ts_to_frame   = 1;
     post_opt.vfr2cfr.active    = 0;
     post_opt.vfr2cfr.fps_num   = 60000;
     post_opt.vfr2cfr.fps_den   = 1001;

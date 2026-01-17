@@ -214,6 +214,7 @@ static void *open_file( char *file_path, reader_option_t *opt )
     lwlibav_opt.post_process.av_sync           = opt->av_sync;
     lwlibav_opt.post_process.apply_repeat_flag = opt->video_opt.apply_repeat_flag;
     lwlibav_opt.post_process.field_dominance   = opt->video_opt.field_dominance;
+    lwlibav_opt.post_process.use_ts_to_frame   = 0;
     lwlibav_opt.post_process.vfr2cfr.active    = opt->video_opt.vfr2cfr.active;
     lwlibav_opt.post_process.vfr2cfr.fps_num   = opt->video_opt.vfr2cfr.framerate_num;
     lwlibav_opt.post_process.vfr2cfr.fps_den   = opt->video_opt.vfr2cfr.framerate_den;

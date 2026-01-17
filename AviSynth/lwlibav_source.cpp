@@ -376,6 +376,7 @@ AVSValue __cdecl CreateLWLibavVideoSource( AVSValue args, void *user_data, IScri
     opt.post_process.av_sync           = 0;
     opt.post_process.apply_repeat_flag = apply_repeat_flag;
     opt.post_process.field_dominance   = CLIP_VALUE( field_dominance, 0, 2 );    /* 0: Obey source flags, 1: TFF, 2: BFF */
+    opt.post_process.use_ts_to_frame   = 0;
     opt.post_process.vfr2cfr.active    = fps_num > 0 && fps_den > 0 ? 1 : 0;
     opt.post_process.vfr2cfr.fps_num   = fps_num;
     opt.post_process.vfr2cfr.fps_den   = fps_den;
@@ -414,6 +415,7 @@ AVSValue __cdecl CreateLWLibavAudioSource( AVSValue args, void *user_data, IScri
     opt.post_process.av_sync           = av_sync;
     opt.post_process.apply_repeat_flag = 0;
     opt.post_process.field_dominance   = 0;
+    opt.post_process.use_ts_to_frame   = 0;
     opt.post_process.vfr2cfr.active    = 0;
     opt.post_process.vfr2cfr.fps_num   = 0;
     opt.post_process.vfr2cfr.fps_den   = 0;

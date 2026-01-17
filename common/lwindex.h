@@ -34,6 +34,7 @@ typedef struct
     int        av_sync;
     int        apply_repeat_flag;
     int        field_dominance;
+    int        use_ts_to_frame;
     struct
     {
         int      active;
