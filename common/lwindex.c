@@ -3585,12 +3585,12 @@ static int parse_index
         return 0;
     }
 fail_parsing:
-    if( vdhp->stream_index >= 0 )
+    if( vdhp->stream_info_list && vdhp->stream_index >= 0 )
     {
         video_stream_info_t *vsip = vdhp->stream_info_list[vdhp->stream_index];
         vsip->frame_list = NULL;
     }
-    if( adhp->stream_index >= 0 )
+    if( adhp->stream_info_list && adhp->stream_index >= 0 )
     {
         audio_stream_info_t *asip = adhp->stream_info_list[adhp->stream_index];
         asip->frame_list = NULL;
