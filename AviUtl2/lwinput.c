@@ -100,12 +100,20 @@ INPUT_PLUGIN_TABLE input_plugin_table =
 
 EXTERN_C bool __declspec(dllexport) __stdcall InitializePlugin( DWORD version )
 {
+    if ( version < REQUIRED_AVIUTL2_VERSION )
+        return false;
+
     return func_init();
 }
 
 EXTERN_C void __declspec(dllexport) __stdcall UninitializePlugin( void )
 {
     func_exit();
+}
+
+EXTERN_C DWORD RequiredVersion()
+{
+    return REQUIRED_AVIUTL2_VERSION;
 }
 
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
