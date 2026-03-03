@@ -23,6 +23,7 @@
  * Don't distribute it if its license is GPL. */
 
 #include "lwinput.h"
+#include "logger2.h"
 #include "resource.h"
 #include "../common/osdep.h"
 
@@ -63,6 +64,7 @@ static char plugin_information[512] = { 0 };
 static char* plugin_dir = NULL;
 static char* default_index_dir = NULL;
 static HMODULE hModuleDLL = NULL;
+static LOG_HANDLE* logger = NULL;
 
 static void get_plugin_information( void )
 {
@@ -116,6 +118,11 @@ EXTERN_C DWORD RequiredVersion()
     return REQUIRED_AVIUTL2_VERSION;
 }
 
+EXTERN_C void __declspec(dllexport) __stdcall InitializeLogger( LOG_HANDLE* logger_handle )
+{
+    logger = logger_handle;
+}
+
 EXTERN_C INPUT_PLUGIN_TABLE __declspec(dllexport) * __stdcall GetInputPluginTable( void )
 {
     return &input_plugin_table;
@@ -146,8 +153,32 @@ void au_message_box_desktop
     const char       *message
 )
 {
-    UINT uType = *(UINT *)lhp->priv;
-    MessageBoxA( HWND_DESKTOP, message, "lwinput", uType );
+    wchar_t *message_w = NULL;
+    lw_string_to_wchar( CP_ACP, message, &message_w );
+
+    if ( !message_w ) {
+        logger->error( logger, L"Memory allocation failure for log message." );
+        return;
+    }
+
+    switch ( level )
+    {
+        case LW_LOG_INFO:
+            logger->info( logger, message_w );
+            break;
+        case LW_LOG_WARNING:
+            logger->warn( logger, message_w );
+            break;
+        case LW_LOG_ERROR:
+        case LW_LOG_FATAL:
+            logger->error( logger, message_w );
+            break;
+        default:
+            logger->verbose( logger, message_w );
+            break;
+    }
+
+    lw_free( message_w );
 }
 
 static FILE *open_settings( const char* mode )
