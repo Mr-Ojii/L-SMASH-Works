@@ -452,11 +452,7 @@ static int read_video( lsmash_handler_t *h, int sample_number, void *buf )
         au_video_output_handler_t *au_vohp = (au_video_output_handler_t *)vohp->private_handler;
         memcpy( buf, au_vohp->back_ground, au_vohp->output_frame_size );
     }
-    int ret = libavsmash_video_get_frame( vdhp, vohp, sample_number );
-    if( ret != 0 && !(ret == 1 && sample_number == 1) )
-        /* Skip writing frame data into AviUtl's frame buffer.
-         * Apparently, AviUtl clears the frame buffer at the first frame.
-         * Therefore, don't skip in that case. */
+    if( libavsmash_video_get_frame( vdhp, vohp, sample_number ) < 0 )
         return 0;
     AVFrame *av_frame = libavsmash_video_get_frame_buffer( vdhp );
     return convert_colorspace( vohp, av_frame, buf );
