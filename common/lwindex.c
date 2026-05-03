@@ -2890,6 +2890,10 @@ static int create_index
             video_stream_temp_t *vstp = &vtp[stream_index];
             audio_stream_temp_t *astp = &atp[stream_index];
 
+            if ( ( codecpar->codec_type == AVMEDIA_TYPE_VIDEO && vstp->video_sample_count == 0 )
+              || ( codecpar->codec_type == AVMEDIA_TYPE_AUDIO && astp->audio_sample_count == 0 ) )
+                continue;
+
             lwlibav_extradata_handler_t *list = &helper->exh;
             void (*write_av_extradata)( FILE *, lwlibav_extradata_t * ) = codecpar->codec_type == AVMEDIA_TYPE_VIDEO
                                                                         ? write_video_extradata
