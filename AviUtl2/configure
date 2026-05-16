@@ -84,7 +84,7 @@ LDFLAGS="-L."
 DEPLIBS="liblsmash libavformat libavcodec libswscale libswresample libavutil"
 
 SRC_INPUT="lwinput.c libavsmash_input.c lwlibav_input.c avs_input.c                          \
-           vpy_input.c colorspace.c colorspace_simd.c                                        \
+           vpy_input.c vpy_input_v3.c vpy_input_v4.c colorspace.c colorspace_simd.c          \
            video_output.c audio_output.c progress_dlg.c                                      \
            ../common/libavsmash.c ../common/libavsmash_video.c ../common/libavsmash_audio.c  \
            ../common/lwlibav_dec.c ../common/lwlibav_video.c ../common/lwlibav_audio.c       \
