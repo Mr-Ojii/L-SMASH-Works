@@ -149,8 +149,8 @@ static AVS_Value initialize_avisynth( avs_handler_t *hp, char *input )
     }
     hp->clip = hp->func.avs_take_clip( res, hp->env );
     hp->vi   = hp->func.avs_get_video_info( hp->clip );
-    if( hp->vi->sample_type & AVS_SAMPLE_FLOAT )
-        res = invoke_filter( hp, res, "ConvertAudioTo16bit" );
+    if( ( hp->vi->sample_type & AVS_SAMPLE_INT8 ) || ( hp->vi->sample_type & AVS_SAMPLE_INT24 ) || ( hp->vi->sample_type & AVS_SAMPLE_INT32 ) )
+        res = invoke_filter( hp, res, "ConvertAudioToFloat" );
     return res;
 }
 
@@ -282,7 +282,10 @@ static int prepare_audio_decoding( lsmash_handler_t *h, audio_option_t *opt )
     Format->wBitsPerSample  = avs_bytes_per_channel_sample( hp->vi ) * 8;
     Format->nBlockAlign     = avs_bytes_per_audio_sample( hp->vi );
     Format->nAvgBytesPerSec = Format->nSamplesPerSec * Format->nBlockAlign;
-    Format->wFormatTag      = WAVE_FORMAT_PCM;
+    if( hp->vi->sample_type & AVS_SAMPLE_FLOAT )
+        Format->wFormatTag      = WAVE_FORMAT_IEEE_FLOAT;
+    else
+        Format->wFormatTag      = WAVE_FORMAT_PCM;
     Format->cbSize          = 0;
     return 0;
 }
