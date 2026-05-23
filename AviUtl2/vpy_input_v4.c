@@ -64,7 +64,6 @@ typedef struct
     /* VapourSynth */
     const VSSCRIPTAPI        *vssapi;
     const VSAPI              *vsapi;
-    VSScript                 *script;
     VSNode                   *node;
     const VSVideoInfo        *vi;
     /* Video stuff */
@@ -124,8 +123,8 @@ static void close_vsscript_dll
     assert( v4hp->library );
     if( v4hp->vsapi && v4hp->node )
         v4hp->vsapi->freeNode( v4hp->node );
-    if( v4hp->vssapi && v4hp->script )
-        v4hp->vssapi->freeScript( v4hp->script );
+    if( v4hp->vssapi && v4hp->vsscript.handle )
+        v4hp->vssapi->freeScript( v4hp->vsscript.handle );
     v4hp->vsscript.handle = NULL;
     FreeLibrary( v4hp->library );
 }
@@ -283,13 +282,13 @@ static vpy_handler_t *open_file
     VSCore *core = v4hp->vsapi->createCore(0);
     if( !core )
         goto fail;
-    v4hp->script = v4hp->vssapi->createScript( core );
-    if( !v4hp->script )
+    v4hp->vsscript.handle = v4hp->vssapi->createScript( core );
+    if( !v4hp->vsscript.handle )
         goto fail;
-    v4hp->vssapi->evalSetWorkingDir( v4hp->script, efSetWorkingDir );
-    if ( v4hp->vssapi->evaluateFile( v4hp->script, file_name ) < 0 )
+    v4hp->vssapi->evalSetWorkingDir( v4hp->vsscript.handle, efSetWorkingDir );
+    if ( v4hp->vssapi->evaluateFile( v4hp->vsscript.handle, file_name ) < 0 )
         goto fail;
-    v4hp->node = v4hp->vssapi->getOutputNode( v4hp->script, 0 );
+    v4hp->node = v4hp->vssapi->getOutputNode( v4hp->vsscript.handle, 0 );
     if( !v4hp->node )
         goto fail;
     v4hp->vi = v4hp->vsapi->getVideoInfo( v4hp->node );
