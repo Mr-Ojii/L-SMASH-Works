@@ -122,8 +122,10 @@ static void close_vsscript_dll
 )
 {
     assert( v4hp->library );
-    v4hp->node = NULL;
-    v4hp->script = NULL;
+    if( v4hp->vsapi && v4hp->node )
+        v4hp->vsapi->freeNode( v4hp->node );
+    if( v4hp->vssapi && v4hp->script )
+        v4hp->vssapi->freeScript( v4hp->script );
     v4hp->vsscript.handle = NULL;
     FreeLibrary( v4hp->library );
 }
@@ -293,8 +295,6 @@ static vpy_handler_t *open_file
     v4hp->vi = v4hp->vsapi->getVideoInfo( v4hp->node );
     return hp;
 fail:
-    if( v4hp && v4hp->vssapi && v4hp->script )
-        v4hp->vssapi->freeScript( v4hp->script );
     if( v4hp->library )
         close_vsscript_dll( v4hp );
     lw_free( v4hp );
