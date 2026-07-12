@@ -831,7 +831,8 @@ static void compute_stream_duration
     int64_t  second_largest_ts;
     uint64_t first_duration;
     uint64_t stream_timebase;
-    uint64_t target_ts;
+    uint64_t target_ts_floor, target_ts_ceil;
+    double target_ts_offset;
     if( !(lwhp->format_flags & AVFMT_TS_DISCONT)
      && (vsip->lw_seek_flags & (SEEK_PTS_BASED | SEEK_PTS_GENERATED)) )
     {
@@ -852,8 +853,10 @@ static void compute_stream_duration
                              info[i].pts, i );
                 goto fail;
             }
-            target_ts = round((i - 1) * (double)avg_frame_rate.den / avg_frame_rate.num * vsip->time_base.den / vsip->time_base.num) + first_ts;
-            if( vsip->flex_cfr && info[i].pts != target_ts )
+            target_ts_offset = (i - 1) * (double)avg_frame_rate.den / avg_frame_rate.num * vsip->time_base.den / vsip->time_base.num;
+            target_ts_floor = floor(target_ts_offset) + first_ts;
+            target_ts_ceil = ceil(target_ts_offset) + first_ts;
+            if( vsip->flex_cfr && info[i].pts != target_ts_floor && info[i].pts != target_ts_ceil )
                 vsip->flex_cfr = 0;
             if( vsip->strict_cfr && duration != first_duration )
                 vsip->strict_cfr = 0;
@@ -908,8 +911,10 @@ static void compute_stream_duration
                              info[curr].dts, curr );
                 goto fail;
             }
-            target_ts = round((i - 1) * (double)avg_frame_rate.den / avg_frame_rate.num * vsip->time_base.den / vsip->time_base.num) + first_ts;
-            if( vsip->flex_cfr && info[curr].dts != target_ts )
+            target_ts_offset = (i - 1) * (double)avg_frame_rate.den / avg_frame_rate.num * vsip->time_base.den / vsip->time_base.num;
+            target_ts_floor = floor(target_ts_offset) + first_ts;
+            target_ts_ceil = ceil(target_ts_offset) + first_ts;
+            if( vsip->flex_cfr && info[curr].dts != target_ts_floor && info[curr].dts != target_ts_ceil )
                 vsip->flex_cfr = 0;
             if( vsip->strict_cfr && duration != first_duration )
                 vsip->strict_cfr = 0;
