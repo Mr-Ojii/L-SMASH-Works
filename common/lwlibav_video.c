@@ -1453,8 +1453,10 @@ static void handle_decoder_pix_fmt
 )
 {
     assert( codecpar && codec );
-    if( codec->pix_fmts )
-        codecpar->format = (int)avcodec_find_best_pix_fmt_of_list( codec->pix_fmts, pix_fmt, 1, NULL );
+    const enum AVPixelFormat *pix_fmts;
+    int ret = avcodec_get_supported_config( NULL, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0, ( const void ** )&pix_fmts, NULL );
+    if( ret >= 0 && pix_fmts )
+        codecpar->format = (int)avcodec_find_best_pix_fmt_of_list( pix_fmts, pix_fmt, 1, NULL );
     else
         codecpar->format = (int)pix_fmt;
 }
