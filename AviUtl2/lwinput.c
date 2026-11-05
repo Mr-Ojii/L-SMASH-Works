@@ -552,11 +552,16 @@ static void delete_old_cache( void )
     if ( !_reader_opt->use_cache_dir || !_lwinput_opt.delete_old_cache )
         return;
 
-    wchar_t *cache_dir_name_w, *search_path, *file_path_buf;
-    lw_string_to_wchar( CP_UTF8, _reader_opt->cache_dir_name, &cache_dir_name_w );
+    wchar_t *cache_dir_name_w = NULL, *search_path = NULL, *file_path_buf = NULL;
+    if ( !_reader_opt->cache_dir_name
+      || !lw_string_to_wchar( CP_UTF8, _reader_opt->cache_dir_name, &cache_dir_name_w ) )
+        return;
+
     size_t cache_dir_name_w_size = wcslen( cache_dir_name_w ) + 1, search_path_size = cache_dir_name_w_size + 1, file_path_buf_size = cache_dir_name_w_size + 260;
     search_path = (wchar_t*)lw_malloc_zero( search_path_size * sizeof( wchar_t ) );
     file_path_buf = (wchar_t*)lw_malloc_zero( file_path_buf_size * sizeof( wchar_t ) );
+    if ( !search_path || !file_path_buf )
+        goto fail_delete_old_cache;
 
     wcscpy_s( search_path, search_path_size, cache_dir_name_w );
     wcscat_s( search_path, search_path_size, L"*" );
