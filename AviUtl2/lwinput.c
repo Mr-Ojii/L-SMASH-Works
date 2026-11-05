@@ -399,7 +399,7 @@ static void get_settings( lwinput_option_t *_lwinput_opt )
         /* use cache dir */
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "use_cache_dir=%d", &_reader_opt->use_cache_dir ) != 1 )
             _reader_opt->use_cache_dir = 1;
-            
+
         char user_index_dir[_MAX_PATH * 4] = { 0 };
         if( !fgets( buf, sizeof(buf), ini ) || sscanf( buf, "cache_dir_path=%s", user_index_dir ) != 1 )
             set_cache_dir( _reader_opt, "" );
@@ -561,11 +561,6 @@ static void delete_old_cache( void )
     wcscpy_s( search_path, search_path_size, cache_dir_name_w );
     wcscat_s( search_path, search_path_size, L"*" );
 
-    HWND hFind = INVALID_HANDLE_VALUE;
-    WIN32_FIND_DATAW win32fd;
-    if ( ( hFind = FindFirstFileW( search_path, &win32fd ) ) == INVALID_HANDLE_VALUE )
-        goto fail_delete_old_cache;
-
     SYSTEMTIME s_st;
     FILETIME f_st;
     ULARGE_INTEGER u_st, u_ft;
@@ -579,6 +574,11 @@ static void delete_old_cache( void )
     u_st.QuadPart /= to_day_ratio;
 
     if ( u_st.QuadPart == _lwinput_opt.cache_last_check_date )
+        goto fail_delete_old_cache;
+
+    HANDLE hFind = INVALID_HANDLE_VALUE;
+    WIN32_FIND_DATAW win32fd;
+    if ( ( hFind = FindFirstFileW( search_path, &win32fd ) ) == INVALID_HANDLE_VALUE )
         goto fail_delete_old_cache;
 
     _lwinput_opt.cache_last_check_date = u_st.QuadPart;
@@ -792,10 +792,10 @@ int func_set_track( INPUT_HANDLE ih, int type, int index )
     {
         if( hp->get_video_track ) {
             int ret = hp->get_video_track( hp, reader_opt, index );
-            
+
             if( hp->destroy_video_disposable )
                 hp->destroy_video_disposable( hp->video_private );
-            
+
             return ret;
         }
         return -1;
@@ -1285,9 +1285,9 @@ static INT_PTR CALLBACK dialog_proc
                     save_settings( &lwinput_opt_config );
 
                     EndDialog( hwnd, IDOK );
-                    
+
                     MESSAGE_BOX_DESKTOP( MB_OK, "Please relaunch AviUtl ExEdit2 for updating settings!" );
-                    
+
                     return TRUE;
                 }
                 default :
@@ -1325,8 +1325,8 @@ bool func_config( HWND hwnd, HINSTANCE dll_hinst )
 
 BOOL WINAPI DllMain( HINSTANCE hinstDLL, DWORD fdwReason, LPVOID lpReserved )
 {
-    switch( fdwReason ) 
-    { 
+    switch( fdwReason )
+    {
         case DLL_PROCESS_ATTACH:
             hModuleDLL = hinstDLL;
             break;
