@@ -382,9 +382,9 @@ static void close_file
     vpy_handler_t *hp
 )
 {
-    vpy_v3_handler_t *v3hp = (vpy_v3_handler_t *)hp->private_stuff;
     if( !hp )
         return;
+    vpy_v3_handler_t *v3hp = (vpy_v3_handler_t *)hp->private_stuff;
     if( v3hp && v3hp->library )
         close_vsscript_dll( v3hp );
     lw_free( v3hp );
