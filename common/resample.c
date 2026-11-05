@@ -70,7 +70,7 @@ int update_resampler_configuration(SwrContext *swr,
     av_opt_set_chlayout( swr, "in_chlayout",         in_channel_layout,  0 );
     av_opt_set_int(      swr, "in_sample_fmt",       in_sample_fmt,      0 );
     av_opt_set_int(      swr, "in_sample_rate",      in_sample_rate,     0 );
-    av_opt_set_chlayout( swr, "out_chalayout",       out_channel_layout, 0 );
+    av_opt_set_chlayout( swr, "out_chlayout",        out_channel_layout, 0 );
     av_opt_set_int(      swr, "out_sample_fmt",      out_sample_fmt,     0 );
     av_opt_set_int(      swr, "out_sample_rate",     out_sample_rate,    0 );
     av_opt_set_int(      swr, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP, 0 );
