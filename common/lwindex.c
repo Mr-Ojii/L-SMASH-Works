@@ -2390,8 +2390,11 @@ static int create_index
             lw_field_info_t field_info;
             if( helper->parser_ctx )
             {
-                if( helper->parser_ctx->picture_structure == AV_PICTURE_STRUCTURE_TOP_FIELD
-                 || helper->parser_ctx->picture_structure == AV_PICTURE_STRUCTURE_BOTTOM_FIELD )
+                /* The ProRes parser reports the field order of an interlaced frame via
+                 * picture_structure, but every ProRes packet contains both fields, i.e. it is always a frame coded picture. */
+                if( ( helper->parser_ctx->picture_structure == AV_PICTURE_STRUCTURE_TOP_FIELD
+                   || helper->parser_ctx->picture_structure == AV_PICTURE_STRUCTURE_BOTTOM_FIELD )
+                   && pkt_ctx->codec_id != AV_CODEC_ID_PRORES )
                 {
                     /* field coded picture */
                     if( helper->parser_ctx->picture_structure == AV_PICTURE_STRUCTURE_TOP_FIELD )
@@ -2580,7 +2583,7 @@ static int create_index
                     }
                     astp->audio_info = temp;
                 }
-                
+
                 if( pkt.stream_index == adhp->stream_index )
                 {
                     if( pkt_ctx->ch_layout.order == AV_CHANNEL_ORDER_UNSPEC )
@@ -2889,7 +2892,7 @@ static int create_index
             lwindex_helper_t *helper = get_index_helper( &indexer, stream );
             if( !helper || !helper->codec_ctx )
                 continue;
-            
+
             video_stream_info_t *vsip = vdhp->stream_info_list[stream_index];
             audio_stream_info_t *asip = adhp->stream_info_list[stream_index];
             video_stream_temp_t *vstp = &vtp[stream_index];
@@ -2904,7 +2907,7 @@ static int create_index
                                                                         ? write_video_extradata
                                                                         : write_audio_extradata;
             print_index( index, "<ExtraDataList=%d,%d,%d>\n", stream_index, codecpar->codec_type, list->entry_count );
-            
+
             for( int i = 0; i < list->entry_count; i++ )
                 write_av_extradata( index, &list->entries[i] );
             lwlibav_extradata_handler_t *exhp = codecpar->codec_type == AVMEDIA_TYPE_VIDEO ? &vsip->exh : &asip->exh;
