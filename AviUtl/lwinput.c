@@ -617,12 +617,8 @@ static void delete_old_cache( void )
         if ( win32fd.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY )
             continue;
 
-        wchar_t* p = win32fd.cFileName;
-        while( *p != L'\0' )
-                p++;
-        while( *p != L'.' )
-                p--;
-        if ( wcscmp( p, L".lwi" ) )
+        const wchar_t* p = wcsrchr( win32fd.cFileName, L'.' );
+        if ( !p || wcscmp( p, L".lwi" ) )
             continue;
 
         u_ft.HighPart = win32fd.ftLastAccessTime.dwHighDateTime;
