@@ -29,7 +29,6 @@ extern "C"
 {
 #endif  /* __cplusplus */
 #include <libavcodec/avcodec.h>
-#include <libavcodec/bsf.h>
 #include <libavutil/mem.h>
 #ifdef __cplusplus
 }
@@ -63,51 +62,37 @@ int do_qsv_decoder_workaround
     ctx->has_b_frames = 16; /* the maximum decoder latency for AVC and HEVC frame */
     if( ctx->codec_id != AV_CODEC_ID_H264 )
         return 0;
+    if( !ctx->extradata || ctx->extradata_size <= 0 )
+        return 0;
     /* Feed an initializer packet to the decoder since libavcodec does not append parameter sets to access units
      * containing no IDR NAL units. Here we append parameter sets before the fake IDR NAL unit. Without this,
-     * MFXVideoDECODE_DecodeHeader will return MFX_ERR_MORE_DATA. */
-    static const uint8_t fake_idr[] = { 0x00, 0x00, 0x00, 0x01, 0x65 }; /* valid for both start-code and size-field prefixes */
+     * MFXVideoDECODE_DecodeHeader will return MFX_ERR_MORE_DATA.
+     *
+     * The h264_qsv decoder applies the h264_mp4toannexb bitstream filter to input packets by itself.
+     * Therefore, feed the packet as-is if extradata is in AVCC format; the internal bitstream filter converts
+     * it into Annex B and prepends the parameter sets to this IDR NAL unit. Converting the packet manually
+     * here would make the internal bitstream filter parse Annex B data as AVCC and fail. */
+    static const uint8_t fake_idr[] = { 0x00, 0x00, 0x00, 0x01, 0x65 }; /* start code + IDR NAL unit header */
     int ret = -1;
     AVPacket initializer = { 0 };
     if( ctx->extradata[0] == 1 )
     {
-        /* Set up the bitstream filter. */
-        AVBSFContext            *bsf_ctx = NULL;
-        const AVBitStreamFilter *bsf     = av_bsf_get_by_name( "h264_mp4toannexb" );
-        if( !bsf || (ret = av_bsf_alloc( bsf, &bsf_ctx )) < 0 )
-            goto bsf_fail;
-        AVCodecParameters *codecpar = bsf_ctx->par_in;
-        if( (ret = avcodec_parameters_from_context( codecpar, ctx )) < 0 )
-            goto bsf_fail;
-        codecpar->extradata[4] |= 0x03; /* Force 4 byte length size fields. */
-        if( (ret = av_bsf_init( bsf_ctx )) < 0 )
-            goto bsf_fail;
-        /* Convert into AnnexB Byte Stream Format. */
-        uint8_t data[sizeof(fake_idr)];
-        memcpy( data, fake_idr, sizeof(fake_idr) );
-        initializer.data = data;
-        initializer.size = sizeof(fake_idr);
-        AVPacket *in_pkt = &initializer;
-        while( 1 )
-        {
-            if( (ret = av_bsf_send_packet( bsf_ctx, in_pkt )) < 0 )
-                goto bsf_fail;
-            ret = av_bsf_receive_packet( bsf_ctx, &initializer );
-            if( ret == AVERROR( EAGAIN ) || (in_pkt && ret == AVERROR_EOF) )
-                in_pkt = NULL;  /* Send a null packet. */
-            else if( ret < 0 )
-                goto bsf_fail;
-            else if( ret == 0 )
-                break;
-        }
-bsf_fail:
-        /* Tear down the bistream filter. */
-        av_bsf_free( &bsf_ctx );
-        if( ret < 0 )
-            goto fail;
+        /* AVCC format. Construct a packet containing only the fake IDR NAL unit.
+         * The internal h264_mp4toannexb bitstream filter prepends SPS/PPS from extradata to it. */
+        if( ctx->extradata_size < 5 )
+            return 0;                                       /* Invalid AVCDecoderConfigurationRecord. */
+        int length_size = (ctx->extradata[4] & 0x03) + 1;   /* Length in bytes of NAL unit length fields */
+        int idr_size    = (int)sizeof(fake_idr) - 4;        /* Skip the start code */
+        if( (ret = av_new_packet( &initializer, length_size + idr_size )) < 0 )
+            return ret;
+        memset( initializer.data, 0, length_size );
+        initializer.data[length_size - 1] = (uint8_t)idr_size;
+        memcpy( initializer.data + length_size, fake_idr + 4, idr_size );
     }
     else
     {
+        /* Annex B format. The internal bitstream filter passes packets through,
+         * so prepend the parameter sets in extradata to the fake IDR NAL unit ourselves. */
         if( (ret = av_new_packet( &initializer, ctx->extradata_size + sizeof(fake_idr) )) < 0 )
             return ret;
         memcpy( initializer.data, ctx->extradata, ctx->extradata_size );
@@ -115,12 +100,14 @@ bsf_fail:
     }
     /* Initialize the decoder. */
     AVFrame *picture = av_frame_alloc();
-    if( picture )
+    if( !picture )
     {
-        int got_picture;    /* unused */
-        ret = decode_video_packet( ctx, picture, &got_picture, &initializer );
-        av_frame_free( &picture );
+        ret = -1;
+        goto fail;
     }
+    int got_picture;    /* unused */
+    ret = decode_video_packet( ctx, picture, &got_picture, &initializer );
+    av_frame_free( &picture );
 fail:
     av_packet_unref( &initializer );
     return ret;
