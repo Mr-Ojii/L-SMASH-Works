@@ -2476,6 +2476,7 @@ static int create_index
                 vsip->max_height = pkt_ctx->height;
             if( vstp->video_sample_count + 1 == vstp->video_info_count )
             {
+                uint32_t old_count = vstp->video_info_count;
                 vstp->video_info_count <<= 1;
                 video_frame_info_t *temp = (video_frame_info_t *)realloc( vstp->video_info, vstp->video_info_count * sizeof(video_frame_info_t) );
                 if( !temp )
@@ -2483,6 +2484,7 @@ static int create_index
                     av_packet_unref( &pkt );
                     goto fail_index;
                 }
+                memset( &temp[old_count], 0, ( vstp->video_info_count - old_count ) * sizeof(video_frame_info_t) );
                 vstp->video_info = temp;
             }
             /* Set width, height and pixel_format for the current extradata. */
@@ -2574,6 +2576,7 @@ static int create_index
                     astp->audio_sample_rate = pkt_ctx->sample_rate;
                 if( astp->audio_sample_count + 1 == astp->audio_info_count )
                 {
+                    uint32_t old_count = astp->audio_info_count;
                     astp->audio_info_count <<= 1;
                     audio_frame_info_t *temp = (audio_frame_info_t *)realloc( astp->audio_info, astp->audio_info_count * sizeof(audio_frame_info_t) );
                     if( !temp )
@@ -2581,6 +2584,7 @@ static int create_index
                         av_packet_unref( &pkt );
                         goto fail_index;
                     }
+                    memset( &temp[old_count], 0, ( astp->audio_info_count - old_count ) * sizeof(audio_frame_info_t) );
                     astp->audio_info = temp;
                 }
 
@@ -3223,10 +3227,12 @@ static int parse_index
             }
             if( vstp->video_sample_count + 1 == vstp->video_info_count )
             {
+                uint32_t old_count = vstp->video_info_count;
                 vstp->video_info_count <<= 1;
                 video_frame_info_t *temp = (video_frame_info_t *)realloc( vstp->video_info, vstp->video_info_count * sizeof(video_frame_info_t) );
                 if( !temp )
                     goto fail_parsing;
+                memset( &temp[old_count], 0, ( vstp->video_info_count - old_count ) * sizeof(video_frame_info_t) );
                 vstp->video_info = temp;
             }
         }
@@ -3306,10 +3312,12 @@ static int parse_index
                 }
             if( astp->audio_sample_count + 1 == astp->audio_info_count )
             {
+                uint32_t old_count = astp->audio_info_count;
                 astp->audio_info_count <<= 1;
                 audio_frame_info_t *temp = (audio_frame_info_t *)realloc( astp->audio_info, astp->audio_info_count * sizeof(audio_frame_info_t) );
                 if( !temp )
                     goto fail_parsing;
+                memset( &temp[old_count], 0, ( astp->audio_info_count - old_count ) * sizeof(audio_frame_info_t) );
                 astp->audio_info = temp;
             }
             if( frame_length == -1 )
