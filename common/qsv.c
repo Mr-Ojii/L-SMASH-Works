@@ -41,16 +41,7 @@ int is_qsv_decoder
     const AVCodec *codec
 )
 {
-    if( codec )
-    {
-        const enum AVPixelFormat *pix_fmts;
-        int ret = avcodec_get_supported_config( NULL, codec, AV_CODEC_CONFIG_PIX_FORMAT, 0, ( const void ** )&pix_fmts, NULL );
-        if ( ret >= 0 && pix_fmts )
-            for( const enum AVPixelFormat *pix_fmt = pix_fmts; *pix_fmt != AV_PIX_FMT_NONE; pix_fmt++ )
-                if( *pix_fmt == AV_PIX_FMT_QSV )
-                    return 1;
-    }
-    return 0;
+    return codec && codec->wrapper_name && !strcmp( codec->wrapper_name, "qsv" );
 }
 
 /* Workarounds for Intel QuickSync Video Decoder through libavcodec */
