@@ -30,6 +30,7 @@ extern "C"
 #include <libavcodec/avcodec.h>         /* Decoder */
 #include <libavcodec/bsf.h>
 #include <libswresample/swresample.h>   /* Resampler/Buffer */
+#include <libavutil/avutil.h>           /* Version */
 #include <libavutil/mathematics.h>      /* Timebase rescaler */
 #include <libavutil/pixdesc.h>
 #ifdef __cplusplus
@@ -2089,7 +2090,10 @@ static int create_index
 {
     /*
         # Structure of Libav reader index file
-        <LibavReaderIndexFile=18M>
+        <LibavReaderIndexFile=19M>
+        <LibavformatVersionMajor=63>
+        <LibavcodecVersionMajor=63>
+        <LibavutilVersionMajor=61>
         <InputFilePath>foobar.omo</InputFilePath>
         <FileSize=1048576>
         <FileHash=0x0123456789abcdef>
@@ -2180,6 +2184,9 @@ static int create_index
         fprintf( index, "<LSMASHWorksIndexVersion=%" PRIu8 ".%" PRIu8 ".%" PRIu8 ".%" PRIu8 ">\n",
                  lwindex_version[0], lwindex_version[1], lwindex_version[2], lwindex_version[3] );
         fprintf( index, "<LibavReaderIndexFile=%dM>\n", LWINDEX_INDEX_FILE_VERSION );
+        fprintf( index, "<LibavformatVersionMajor=%u>\n", avformat_version() >> 16 );
+        fprintf( index, "<LibavcodecVersionMajor=%u>\n",  avcodec_version()  >> 16 );
+        fprintf( index, "<LibavutilVersionMajor=%u>\n",   avutil_version()   >> 16 );
         fprintf( index, "<InputFilePath>%s</InputFilePath>\n", lwhp->file_path );
 #ifdef _WIN32
         wchar_t *wname = NULL;
@@ -3664,11 +3671,20 @@ int lwlibav_construct_index
     {
         uint8_t lwindex_version[4] = { 0 };
         int index_file_version = 0;
+        unsigned int libavformat_major = 0;
+        unsigned int libavcodec_major  = 0;
+        unsigned int libavutil_major   = 0;
         if( 4 == fscanf( index, "<LSMASHWorksIndexVersion=%" SCNu8 ".%" SCNu8 ".%" SCNu8 ".%" SCNu8 ">\n",
                          &lwindex_version[0], &lwindex_version[1], &lwindex_version[2], &lwindex_version[3] )
          && ((lwindex_version[0] << 24) | (lwindex_version[1] << 16) | (lwindex_version[2] << 8) | lwindex_version[3]) == LWINDEX_VERSION
          && 1 == fscanf( index, "<LibavReaderIndexFile=%dM>\n", &index_file_version )
          && index_file_version == LWINDEX_INDEX_FILE_VERSION
+         && 1 == fscanf( index, "<LibavformatVersionMajor=%u>\n", &libavformat_major )
+         && 1 == fscanf( index, "<LibavcodecVersionMajor=%u>\n",  &libavcodec_major )
+         && 1 == fscanf( index, "<LibavutilVersionMajor=%u>\n",   &libavutil_major )
+         && libavformat_major == (avformat_version() >> 16)
+         && libavcodec_major  == (avcodec_version()  >> 16)
+         && libavutil_major   == (avutil_version()   >> 16)
          && parse_index( lwhp, vdhp, vohp, adhp, aohp, opt, index ) == 0 )
         {
             /* Opening and parsing the index file succeeded. */
