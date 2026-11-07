@@ -107,6 +107,13 @@ uint32_t libavsmash_get_track_by_media_type
     lw_log_handler_t *lhp
 );
 
+int libavsmash_are_tracks_supported
+(
+    lsmash_root_t    *root,
+    uint32_t          type,
+    lw_log_handler_t *lhp
+);
+
 int get_summaries
 (
     lsmash_root_t         *root,

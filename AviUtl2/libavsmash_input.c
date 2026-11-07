@@ -377,18 +377,28 @@ static void *open_file( char *file_name, reader_option_t *opt )
 static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
-    h->video_track_count = get_track_count_of_type( hp, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
-    if( h->video_track_count <= 0 )
+    int track_count = get_track_count_of_type( hp, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
+    if( track_count <= 0 )
         return -1;
+    /* Let LW-Libav handle the file if any video track is not supported by Libav+L-SMASH. */
+    lw_log_handler_t *lhp = libavsmash_video_get_log_handler( hp->vdhp );
+    if( libavsmash_are_tracks_supported( hp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, lhp ) <= 0 )
+        return -1;
+    h->video_track_count = track_count;
     return 0;
 }
 
 static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
 {
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
-    h->audio_track_count = get_track_count_of_type( hp, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
-    if( h->audio_track_count <= 0 )
+    int track_count = get_track_count_of_type( hp, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
+    if( track_count <= 0 )
         return -1;
+    /* Let LW-Libav handle the file if any audio track is not supported by Libav+L-SMASH. */
+    lw_log_handler_t *lhp = libavsmash_audio_get_log_handler( hp->adhp );
+    if( libavsmash_are_tracks_supported( hp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, lhp ) <= 0 )
+        return -1;
+    h->audio_track_count = track_count;
     return 0;
 }
 

@@ -159,7 +159,7 @@ uint32_t libavsmash_get_track_number_from_index_by_media_type
 {
     if( index == 0 )
         index++;
-    
+
     char error_string[128] = { 0 };
     lsmash_movie_parameters_t movie_param;
     lsmash_initialize_movie_parameters( &movie_param );
@@ -524,6 +524,74 @@ static enum AVCodecID get_codec_id_from_description
     }
     return AV_CODEC_ID_NONE;
 #undef ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE
+}
+
+/* Check whether a track is composed of sample descriptions that Libav+L-SMASH can handle.
+ * A track with no summaries, an unparsable summary or a CODEC unknown to L-SMASH Works is
+ * treated as unsupported so that a reader which can handle it (LW-Libav) can take over. */
+static int libavsmash_is_track_supported
+(
+    lsmash_root_t *root,
+    uint32_t       track_id
+)
+{
+    uint32_t summary_count = lsmash_count_summary( root, track_id );
+    if( summary_count == 0 )
+        return 0;
+    for( uint32_t i = 1; i <= summary_count; i++ )
+    {
+        lsmash_summary_t *summary = lsmash_get_summary( root, track_id, i );
+        if( !summary )
+            return 0;
+        int supported = get_codec_id_from_description( summary ) != AV_CODEC_ID_NONE;
+        lsmash_cleanup_summary( summary );
+        if( !supported )
+            return 0;
+    }
+    return 1;
+}
+
+int libavsmash_are_tracks_supported
+(
+    lsmash_root_t    *root,
+    uint32_t          type,
+    lw_log_handler_t *lhp
+)
+{
+    char error_string[128] = { 0 };
+    lsmash_movie_parameters_t movie_param;
+    lsmash_initialize_movie_parameters( &movie_param );
+    if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
+    {
+        strcpy( error_string, "Failed to get movie parameters.\n" );
+        goto fail;
+    }
+    uint32_t count = 0;
+    for( uint32_t i = 1; i <= movie_param.number_of_tracks; i++ )
+    {
+        uint32_t track_id = lsmash_get_track_ID( root, i );
+        if( track_id == 0 )
+        {
+            strcpy( error_string, "Failed to find track.\n" );
+            goto fail;
+        }
+        lsmash_media_parameters_t media_param;
+        lsmash_initialize_media_parameters( &media_param );
+        if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+        {
+            strcpy( error_string, "Failed to get media parameters.\n" );
+            goto fail;
+        }
+        if( media_param.handler_type != type )
+            continue;
+        count++;
+        if( !libavsmash_is_track_supported( root, track_id ) )
+            return 0;
+    }
+    return count ? 1 : 0;
+fail:
+    lw_log_show( lhp, LW_LOG_FATAL, "%s", error_string );
+    return -1;
 }
 
 static const AVCodec *libavsmash_find_decoder
