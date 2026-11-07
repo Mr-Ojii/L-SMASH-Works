@@ -3473,7 +3473,7 @@ static int parse_index
                                     &entry->extradata_size, &codec_id, &entry->codec_tag,
                                     &entry->width, &entry->height,
                                     pix_fmt, &entry->bits_per_sample ) != 7 )
-                            break;
+                            goto fail_parsing;
                         entry->pixel_format = av_get_pix_fmt( (const char *)pix_fmt );
                     }
                     else
@@ -3483,7 +3483,7 @@ static int parse_index
                                     &entry->extradata_size, &codec_id, &entry->codec_tag,
                                     &entry->channel_layout, &entry->sample_rate,
                                     sample_fmt, &entry->bits_per_sample, &entry->block_align ) != 8 )
-                            break;
+                            goto fail_parsing;
                         entry->sample_format = av_get_sample_fmt( (const char *)sample_fmt );
                     }
                     entry->codec_id = (enum AVCodecID)codec_id;
