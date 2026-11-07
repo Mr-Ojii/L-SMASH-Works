@@ -3397,7 +3397,7 @@ static int parse_index
                     int flags;
                     if( sscanf( buf, "POS=%" SCNd64 ",TS=%" SCNd64 ",Flags=%x,Size=%d,Distance=%d",
                                 &ie.pos, &ie.timestamp, (unsigned int *)&flags, &size, &ie.min_distance ) != 5 )
-                        break;
+                        goto fail_parsing;
                     ie.size  = size;
                     ie.flags = flags;
                     vsip->index_entries[i] = ie;
@@ -3419,7 +3419,7 @@ static int parse_index
                     int flags;
                     if( sscanf( buf, "POS=%" SCNd64 ",TS=%" SCNd64 ",Flags=%x,Size=%d,Distance=%d",
                                 &ie.pos, &ie.timestamp, (unsigned int *)&flags, &size, &ie.min_distance ) != 5 )
-                        break;
+                        goto fail_parsing;
                     ie.size  = size;
                     ie.flags = flags;
                     asip->index_entries[i] = ie;
