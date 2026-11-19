@@ -116,7 +116,7 @@ static libavsmash_handler_t *alloc_handler
 
 static int get_track_count_of_type( libavsmash_handler_t *hp, uint32_t type )
 {
-    if( type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK)
+    if( type == LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK)
     {
         libavsmash_video_set_root( hp->vdhp, hp->root );
         return libavsmash_video_get_track_count( hp->vdhp );
@@ -134,7 +134,7 @@ static int get_track_of_type_by_index( libavsmash_handler_t *hp, uint32_t type, 
     int ret;
     lw_log_handler_t *lhp;
     uint32_t track_number;
-    if( type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK )
+    if( type == LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK )
     {
         lhp = libavsmash_video_get_log_handler( hp->vdhp );
         if( ( track_number = libavsmash_video_get_track_number_from_index( hp->vdhp, index ) ) <= 0 )
@@ -159,7 +159,7 @@ static int get_ctd_shift
     uint32_t      *ctd_shift
 )
 {
-    if( lsmash_get_composition_to_decode_shift_from_media_timeline( root, track_id, ctd_shift ) )
+    if( lsmash_timeline_get_composition_to_decode_shift( root, track_id, ctd_shift ) )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get the timeline shift." );
         return -1;
@@ -177,9 +177,9 @@ static uint64_t get_empty_duration
 {
     /* Consider empty duration if the first edit is an empty edit. */
     lsmash_edit_t edit;
-    if( lsmash_get_explicit_timeline_map( root, track_id, 1, &edit ) )
+    if( lsmash_track_get_explicit_timeline_map( root, track_id, 1, &edit ) )
         return 0;
-    if( edit.duration && edit.start_time == ISOM_EDIT_MODE_EMPTY )
+    if( edit.duration && edit.start_time == LSMASH_ISOM_EDIT_MODE_EMPTY )
         return av_rescale_q( edit.duration,
                              (AVRational){ 1, movie_timescale },
                              (AVRational){ 1, media_timescale } );
@@ -193,11 +193,11 @@ static int64_t get_start_time
 )
 {
     /* Consider start time of this media if any non-empty edit is present. */
-    uint32_t edit_count = lsmash_count_explicit_timeline_map( root, track_id );
+    uint32_t edit_count = lsmash_track_get_explicit_timeline_map_count( root, track_id );
     for( uint32_t edit_number = 1; edit_number <= edit_count; edit_number++ )
     {
         lsmash_edit_t edit;
-        if( lsmash_get_explicit_timeline_map( root, track_id, edit_number, &edit ) )
+        if( lsmash_track_get_explicit_timeline_map( root, track_id, edit_number, &edit ) )
             return 0;
         if( edit.duration == 0 )
             return 0;   /* no edits */
@@ -377,12 +377,12 @@ static void *open_file( char *file_name, reader_option_t *opt )
 static int find_video( lsmash_handler_t *h, video_option_t *opt )
 {
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
-    int track_count = get_track_count_of_type( hp, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
+    int track_count = get_track_count_of_type( hp, LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
     if( track_count <= 0 )
         return -1;
     /* Let LW-Libav handle the file if any video track is not supported by Libav+L-SMASH. */
     lw_log_handler_t *lhp = libavsmash_video_get_log_handler( hp->vdhp );
-    if( libavsmash_are_tracks_supported( hp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, lhp ) <= 0 )
+    if( libavsmash_are_tracks_supported( hp->root, LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, lhp ) <= 0 )
         return -1;
     h->video_track_count = track_count;
     return 0;
@@ -391,12 +391,12 @@ static int find_video( lsmash_handler_t *h, video_option_t *opt )
 static int find_audio( lsmash_handler_t *h, audio_option_t *opt )
 {
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
-    int track_count = get_track_count_of_type( hp, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
+    int track_count = get_track_count_of_type( hp, LSMASH_ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
     if( track_count <= 0 )
         return -1;
     /* Let LW-Libav handle the file if any audio track is not supported by Libav+L-SMASH. */
     lw_log_handler_t *lhp = libavsmash_audio_get_log_handler( hp->adhp );
-    if( libavsmash_are_tracks_supported( hp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, lhp ) <= 0 )
+    if( libavsmash_are_tracks_supported( hp->root, LSMASH_ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, lhp ) <= 0 )
         return -1;
     h->audio_track_count = track_count;
     return 0;
@@ -406,10 +406,10 @@ static int get_video_track_by_index( lsmash_handler_t *h, reader_option_t *opt, 
 {
     index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->video_private;
-    if( get_track_of_type_by_index( hp, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index ) != 0 )
+    if( get_track_of_type_by_index( hp, LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index ) != 0 )
     {
         uint32_t track_id = libavsmash_video_get_track_id( hp->vdhp );
-        lsmash_destruct_timeline( hp->root, track_id );
+        lsmash_timeline_destroy( hp->root, track_id );
         libavsmash_video_close_codec_context( hp->vdhp );
         return -1;
     }
@@ -431,10 +431,10 @@ static int get_audio_track_by_index( lsmash_handler_t *h, reader_option_t *opt, 
 {
     index++; /* For L-SMASH, index is 1-origin. */
     libavsmash_handler_t *hp = (libavsmash_handler_t *)h->audio_private;
-    if( get_track_of_type_by_index( hp, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index ) != 0 )
+    if( get_track_of_type_by_index( hp, LSMASH_ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index ) != 0 )
     {
         uint32_t track_id = libavsmash_audio_get_track_id( hp->adhp );
-        lsmash_destruct_timeline( hp->root, track_id );
+        lsmash_timeline_destroy( hp->root, track_id );
         libavsmash_audio_close_codec_context( hp->adhp );
         return -1;
     }
@@ -446,7 +446,7 @@ static int get_audio_track_by_index( lsmash_handler_t *h, reader_option_t *opt, 
 static void destroy_disposable( void *private_stuff )
 {
     libavsmash_handler_t *hp = (libavsmash_handler_t *)private_stuff;
-    lsmash_discard_boxes( hp->root );
+    lsmash_file_discard_boxes( hp->root );
 }
 
 static int read_video( lsmash_handler_t *h, int sample_number, void *buf )
@@ -521,8 +521,8 @@ static void close_file( void *private_stuff )
     if( !hp )
         return;
     avformat_close_input( &hp->format_ctx );
-    lsmash_close_file( &hp->file_param );
-    lsmash_destroy_root( hp->root );
+    lsmash_file_close( &hp->file_param );
+    lsmash_root_destroy( hp->root );
     lw_free( hp );
 }
 

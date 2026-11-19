@@ -326,7 +326,7 @@ static uint32_t libavsmash_video_fetch_sample_count
 {
     if( !vdhp )
         return 0;
-    vdhp->sample_count = lsmash_get_sample_count_in_media_timeline( vdhp->root, vdhp->track_id );
+    vdhp->sample_count = lsmash_timeline_get_sample_count( vdhp->root, vdhp->track_id );
     return vdhp->sample_count;
 }
 
@@ -338,8 +338,8 @@ static uint32_t libavsmash_video_fetch_media_timescale
     if( !vdhp )
         return 0;
     lsmash_media_parameters_t media_param;
-    lsmash_initialize_media_parameters( &media_param );
-    if( lsmash_get_media_parameters( vdhp->root, vdhp->track_id, &media_param ) < 0 )
+    lsmash_media_init_parameters( &media_param );
+    if( lsmash_media_get_parameters( vdhp->root, vdhp->track_id, &media_param ) < 0 )
         return 0;
     vdhp->media_timescale = media_param.timescale;
     return vdhp->media_timescale;
@@ -352,7 +352,7 @@ static uint64_t libavsmash_video_fetch_media_duration
 {
     if( !vdhp )
         return 0;
-    vdhp->media_duration = lsmash_get_media_duration_from_media_timeline( vdhp->root, vdhp->track_id );
+    vdhp->media_duration = lsmash_timeline_get_media_duration( vdhp->root, vdhp->track_id );
     return vdhp->media_duration;
 }
 
@@ -365,7 +365,7 @@ int libavsmash_video_get_track_count
 )
 {
     lw_log_handler_t *lhp = libavsmash_video_get_log_handler( vdhp );
-    return libavsmash_get_track_count_by_media_type( vdhp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, lhp );
+    return libavsmash_get_track_count_by_media_type( vdhp->root, LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, lhp );
 }
 
 uint32_t libavsmash_video_get_track_number_from_index
@@ -375,7 +375,7 @@ uint32_t libavsmash_video_get_track_number_from_index
 )
 {
     lw_log_handler_t *lhp = libavsmash_video_get_log_handler( vdhp );
-    return libavsmash_get_track_number_from_index_by_media_type( vdhp->root, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index, lhp );
+    return libavsmash_get_track_number_from_index_by_media_type( vdhp->root, LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK, index, lhp );
 }
 
 int libavsmash_video_get_track
@@ -389,7 +389,7 @@ int libavsmash_video_get_track
         libavsmash_get_track_by_media_type
         (
             libavsmash_video_get_root( vdhp ),
-            ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK,
+            LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK,
             track_number,
             lhp
         );
@@ -479,7 +479,7 @@ int libavsmash_video_get_cts
     uint64_t                          *cts
 )
 {
-    return lsmash_get_cts_from_media_timeline( vdhp->root, vdhp->track_id, coded_sample_number, cts );
+    return lsmash_timeline_get_cts( vdhp->root, vdhp->track_id, coded_sample_number, cts );
 }
 
 int libavsmash_video_get_sample_duration
@@ -489,7 +489,7 @@ int libavsmash_video_get_sample_duration
     uint32_t                          *sample_duration
 )
 {
-    return lsmash_get_sample_delta_from_media_timeline( vdhp->root, vdhp->track_id, coded_sample_number, sample_duration );
+    return lsmash_timeline_get_sample_delta( vdhp->root, vdhp->track_id, coded_sample_number, sample_duration );
 }
 
 void libavsmash_video_clear_error
@@ -519,8 +519,8 @@ int libavsmash_video_setup_timestamp_info
 )
 {
     int err = -1;
-    uint64_t media_timescale = lsmash_get_media_timescale( vdhp->root, vdhp->track_id );
-    uint64_t media_duration  = lsmash_get_media_duration_from_media_timeline( vdhp->root, vdhp->track_id );
+    uint64_t media_timescale = lsmash_media_get_timescale( vdhp->root, vdhp->track_id );
+    uint64_t media_duration  = lsmash_timeline_get_media_duration( vdhp->root, vdhp->track_id );
     if( media_duration == 0 )
         media_duration = INT32_MAX;
     if( vdhp->sample_count == 1 )
@@ -534,7 +534,7 @@ int libavsmash_video_setup_timestamp_info
     }
     lw_log_handler_t *lhp = &vdhp->config.lh;
     lsmash_media_ts_list_t ts_list;
-    if( lsmash_get_media_timestamps( vdhp->root, vdhp->track_id, &ts_list ) < 0 )
+    if( lsmash_timeline_get_media_timestamps( vdhp->root, vdhp->track_id, &ts_list ) < 0 )
     {
         lw_log_show( lhp, LW_LOG_ERROR, "Failed to get timestamps." );
         goto setup_finish;
@@ -545,9 +545,9 @@ int libavsmash_video_setup_timestamp_info
         goto setup_finish;
     }
     uint32_t composition_sample_delay;
-    if( lsmash_get_max_sample_delay( &ts_list, &composition_sample_delay ) < 0 )
+    if( lsmash_timeline_get_max_sample_delay( &ts_list, &composition_sample_delay ) < 0 )
     {
-        lsmash_delete_media_timestamps( &ts_list );
+        lsmash_timeline_cleanup_media_timestamps( &ts_list );
         lw_log_show( lhp, LW_LOG_ERROR, "Failed to get composition delay." );
         goto setup_finish;
     }
@@ -558,13 +558,13 @@ int libavsmash_video_setup_timestamp_info
         vdhp->order_converter = (order_converter_t *)lw_malloc_zero( (ts_list.sample_count + 1) * sizeof(order_converter_t) );
         if( !vdhp->order_converter )
         {
-            lsmash_delete_media_timestamps( &ts_list );
+            lsmash_timeline_cleanup_media_timestamps( &ts_list );
             lw_log_show( lhp, LW_LOG_ERROR, "Failed to allocate memory." );
             goto setup_finish;
         }
         for( uint32_t i = 0; i < ts_list.sample_count; i++ )
             ts_list.timestamp[i].dts = i + 1;
-        lsmash_sort_timestamps_composition_order( &ts_list );
+        lsmash_timeline_sort_timestamps_composition_order( &ts_list );
         for( uint32_t i = 0; i < ts_list.sample_count; i++ )
             vdhp->order_converter[i + 1].composition_to_decoding = (uint32_t)ts_list.timestamp[i].dts;
     }
@@ -579,7 +579,7 @@ int libavsmash_video_setup_timestamp_info
         uint64_t duration = ts_list.timestamp[i].cts - ts_list.timestamp[i - 1].cts;
         if( duration == 0 )
         {
-            lsmash_delete_media_timestamps( &ts_list );
+            lsmash_timeline_cleanup_media_timestamps( &ts_list );
             lw_log_show( lhp, LW_LOG_WARNING, "Detected CTS duplication at frame %" PRIu32, i );
             err = 0;
             goto setup_finish;
@@ -593,7 +593,7 @@ int libavsmash_video_setup_timestamp_info
     uint64_t media_timescale_for_calc_frame_rate = media_timescale;
     uint64_t reduce = reduce_fraction( &media_timescale_for_calc_frame_rate, &composition_timebase );
     uint64_t composition_duration = ((largest_cts - ts_list.timestamp[0].cts) + (largest_cts - second_largest_cts)) / reduce;
-    lsmash_delete_media_timestamps( &ts_list );
+    lsmash_timeline_cleanup_media_timestamps( &ts_list );
     double avg_frame_rate = (vdhp->sample_count * ((double)media_timescale_for_calc_frame_rate / composition_duration));
     if( strict_cfr || !lw_try_rational_framerate( avg_frame_rate, framerate_num, framerate_den, composition_timebase ) )
     {
@@ -623,7 +623,7 @@ setup_finish:;
     else
         vohp->frame_count = libavsmash_video_get_sample_count( vdhp );
     uint32_t min_cts_sample_number = get_decoding_sample_number( vdhp->order_converter, 1 );
-    vdhp->config.error = lsmash_get_cts_from_media_timeline( vdhp->root, vdhp->track_id, min_cts_sample_number, &vdhp->min_cts );
+    vdhp->config.error = lsmash_timeline_get_cts( vdhp->root, vdhp->track_id, min_cts_sample_number, &vdhp->min_cts );
     return err;
 }
 
@@ -640,7 +640,7 @@ static int decode_video_sample
     int ret = get_sample( vdhp->root, vdhp->track_id, sample_number, config, &pkt );
     if( ret )
         return ret;
-    if( pkt.flags != ISOM_SAMPLE_RANDOM_ACCESS_FLAG_NONE )
+    if( pkt.flags != LSMASH_ISOM_SAMPLE_RANDOM_ACCESS_FLAG_NONE )
     {
         pkt.flags = AV_PKT_FLAG_KEY;
         vdhp->last_rap_number = sample_number;
@@ -669,14 +669,14 @@ static int find_random_accessible_point
 {
     if( decoding_sample_number == 0 )
         decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
-    lsmash_random_access_flag ra_flags;
+    lsmash_random_access_flag_t ra_flags;
     uint32_t distance;  /* distance from the closest random accessible point to the previous. */
     uint32_t number_of_leadings;
-    if( lsmash_get_closest_random_accessible_point_detail_from_media_timeline( vdhp->root, vdhp->track_id,
+    if( lsmash_timeline_get_closest_random_accessible_point_detail( vdhp->root, vdhp->track_id,
                                                                                decoding_sample_number, rap_number,
                                                                                &ra_flags, &number_of_leadings, &distance ) < 0 )
         *rap_number = 1;
-    int roll_recovery = !!(ra_flags & ISOM_SAMPLE_RANDOM_ACCESS_FLAG_GDR);
+    int roll_recovery = !!(ra_flags & LSMASH_ISOM_SAMPLE_RANDOM_ACCESS_FLAG_GDR);
     int is_leading    = number_of_leadings && (decoding_sample_number - *rap_number <= number_of_leadings);
     if( (roll_recovery || is_leading) && *rap_number > distance )
         *rap_number -= distance;
@@ -686,8 +686,8 @@ static int find_random_accessible_point
     {
         lsmash_sample_t sample;
         lsmash_sample_t rap_sample;
-        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0
-         || lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, *rap_number, &rap_sample ) < 0 )
+        if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0
+         || lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, *rap_number, &rap_sample ) < 0 )
         {
             /* Fatal error. */
             *rap_number = vdhp->last_rap_number;
@@ -698,7 +698,7 @@ static int find_random_accessible_point
         uint32_t sample_index = sample.index;
         for( uint32_t i = decoding_sample_number - 1; i; i-- )
         {
-            if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, i, &sample ) < 0 )
+            if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, i, &sample ) < 0 )
             {
                 /* Fatal error. */
                 *rap_number = vdhp->last_rap_number;
@@ -847,7 +847,7 @@ static int get_requested_picture
         /* Get the index of the decoder configuration. */
         lsmash_sample_t sample;
         uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, vdhp->first_valid_frame_number );
-        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
+        if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
             goto video_fail;
         config_index = sample.index;
         /* Copy the first valid video frame data. */
@@ -948,7 +948,7 @@ static uint32_t libavsmash_vfr2cfr
     if( vdhp->last_sample_number <= vdhp->sample_count )
     {
         uint32_t last_decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, vdhp->last_sample_number );
-        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, last_decoding_sample_number, &sample ) < 0 )
+        if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, last_decoding_sample_number, &sample ) < 0 )
             return 0;
         current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
         if( target_pts == current_pts )
@@ -963,7 +963,7 @@ static uint32_t libavsmash_vfr2cfr
              composition_sample_number-- )
         {
             uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
-            if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
+            if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
                 return 0;
             current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
             prev_pts = current_pts;
@@ -979,7 +979,7 @@ static uint32_t libavsmash_vfr2cfr
          composition_sample_number++ )
     {
         uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
-        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
+        if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
             return 0;
         current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
         if( current_pts >= target_pts )
@@ -1025,7 +1025,7 @@ uint32_t libavsmash_ts_to_sample_number
     if( vdhp->last_sample_number <= vdhp->sample_count )
     {
         uint32_t last_decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, vdhp->last_sample_number );
-        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, last_decoding_sample_number, &sample ) < 0 )
+        if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, last_decoding_sample_number, &sample ) < 0 )
             return 0;
         current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
         if( target_pts == current_pts )
@@ -1039,7 +1039,7 @@ uint32_t libavsmash_ts_to_sample_number
              composition_sample_number-- )
         {
             uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
-            if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
+            if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
                 return 0;
             current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
             if( current_pts <= target_pts )
@@ -1053,7 +1053,7 @@ uint32_t libavsmash_ts_to_sample_number
          composition_sample_number++ )
     {
         uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
-        if( lsmash_get_sample_info_from_media_timeline( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
+        if( lsmash_timeline_get_sample_info( vdhp->root, vdhp->track_id, decoding_sample_number, &sample ) < 0 )
             return 0;
         current_pts = (double)(sample.cts - vdhp->min_cts) / vdhp->media_timescale;
         if( current_pts > target_pts )
@@ -1134,7 +1134,7 @@ int libavsmash_video_create_keyframe_list
     {
         uint32_t decoding_sample_number = get_decoding_sample_number( vdhp->order_converter, composition_sample_number );
         uint32_t rap_number;
-        if( lsmash_get_closest_random_accessible_point_from_media_timeline( vdhp->root,
+        if( lsmash_timeline_get_closest_random_accessible_point( vdhp->root,
                                                                             vdhp->track_id,
                                                                             decoding_sample_number, &rap_number ) < 0 )
             continue;

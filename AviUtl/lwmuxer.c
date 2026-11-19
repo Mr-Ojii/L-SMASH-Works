@@ -320,9 +320,9 @@ static uint64_t get_empty_duration( lsmash_root_t *root, uint32_t track_ID, uint
 {
     /* Consider empty duration if the first edit is an empty edit. */
     lsmash_edit_t edit;
-    if( lsmash_get_explicit_timeline_map( root, track_ID, 1, &edit ) )
+    if( lsmash_track_get_explicit_timeline_map( root, track_ID, 1, &edit ) )
         return 0;
-    if( edit.duration && edit.start_time == ISOM_EDIT_MODE_EMPTY )
+    if( edit.duration && edit.start_time == LSMASH_ISOM_EDIT_MODE_EMPTY )
         return av_rescale_q( edit.duration,
                              (AVRational){ 1, movie_timescale },
                              (AVRational){ 1, media_timescale } );
@@ -332,11 +332,11 @@ static uint64_t get_empty_duration( lsmash_root_t *root, uint32_t track_ID, uint
 static int64_t get_start_time( lsmash_root_t *root, uint32_t track_ID )
 {
     /* Consider start time of this media if any non-empty edit is present. */
-    uint32_t edit_count = lsmash_count_explicit_timeline_map( root, track_ID );
+    uint32_t edit_count = lsmash_track_get_explicit_timeline_map_count( root, track_ID );
     for( uint32_t edit_number = 1; edit_number <= edit_count; edit_number++ )
     {
         lsmash_edit_t edit;
-        if( lsmash_get_explicit_timeline_map( root, track_ID, edit_number, &edit ) )
+        if( lsmash_track_get_explicit_timeline_map( root, track_ID, edit_number, &edit ) )
             return 0;
         if( edit.duration == 0 )
             return 0;   /* no edits */
@@ -352,12 +352,12 @@ static void get_first_track_of_type( input_movie_t *input, uint32_t number_of_tr
     uint32_t i;
     for( i = 1; i <= number_of_tracks; i++ )
     {
-        track_ID = lsmash_get_track_ID( input->root, i );
+        track_ID = lsmash_track_get_id( input->root, i );
         if( track_ID == 0 )
             return;
         lsmash_media_parameters_t media_param;
-        lsmash_initialize_media_parameters( &media_param );
-        if( lsmash_get_media_parameters( input->root, track_ID, &media_param ) )
+        lsmash_media_init_parameters( &media_param );
+        if( lsmash_media_get_parameters( input->root, track_ID, &media_param ) )
         {
             DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get media parameters." );
             return;
@@ -368,40 +368,40 @@ static void get_first_track_of_type( input_movie_t *input, uint32_t number_of_tr
     if( i > number_of_tracks )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to find %s track.",
-                                   type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK ? "video" : "audio" );
+                                   type == LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK ? "video" : "audio" );
         return;
     }
-    type = (type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK) ? VIDEO_TRACK : AUDIO_TRACK;
+    type = (type == LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK) ? VIDEO_TRACK : AUDIO_TRACK;
     input_track_t *in_track = &input->track[type];
     in_track->track_ID = track_ID;
-    lsmash_initialize_track_parameters( &in_track->track_param );
-    if( lsmash_get_track_parameters( input->root, track_ID, &in_track->track_param ) )
+    lsmash_track_init_parameters( &in_track->track_param );
+    if( lsmash_track_get_parameters( input->root, track_ID, &in_track->track_param ) )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get track parameters." );
         return;
     }
-    lsmash_initialize_media_parameters( &in_track->media_param );
-    if( lsmash_get_media_parameters( input->root, track_ID, &in_track->media_param ) )
+    lsmash_media_init_parameters( &in_track->media_param );
+    if( lsmash_media_get_parameters( input->root, track_ID, &in_track->media_param ) )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get media parameters." );
         return;
     }
-    if( lsmash_construct_timeline( input->root, track_ID ) )
+    if( lsmash_timeline_construct( input->root, track_ID ) )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get construct timeline." );
         return;
     }
-    if( lsmash_get_last_sample_delta_from_media_timeline( input->root, track_ID, &in_track->last_sample_delta ) )
+    if( lsmash_timeline_get_last_sample_delta( input->root, track_ID, &in_track->last_sample_delta ) )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get the last sample delta." );
         return;
     }
-    if( lsmash_get_composition_to_decode_shift_from_media_timeline( input->root, track_ID, &in_track->ctd_shift ) )
+    if( lsmash_timeline_get_composition_to_decode_shift( input->root, track_ID, &in_track->ctd_shift ) )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get the timeline shift." );
         return;
     }
-    in_track->number_of_summaries = lsmash_count_summary( input->root, in_track->track_ID );
+    in_track->number_of_summaries = lsmash_codec_get_summary_count( input->root, in_track->track_ID );
     if( in_track->number_of_summaries == 0 )
     {
         DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to find valid summaries." );
@@ -415,7 +415,7 @@ static void get_first_track_of_type( input_movie_t *input, uint32_t number_of_tr
     }
     for( i = 0; i < in_track->number_of_summaries; i++ )
     {
-        lsmash_summary_t *summary = lsmash_get_summary( input->root, in_track->track_ID, i + 1 );
+        lsmash_summary_t *summary = lsmash_codec_get_summary( input->root, in_track->track_ID, i + 1 );
         if( !summary )
         {
             MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get a summary." );
@@ -426,7 +426,7 @@ static void get_first_track_of_type( input_movie_t *input, uint32_t number_of_tr
     }
     in_track->empty_duration    = get_empty_duration( input->root, track_ID, input->movie_param.timescale, in_track->media_param.timescale );
     in_track->skip_duration     = get_start_time( input->root, track_ID ) + in_track->ctd_shift;
-    in_track->number_of_samples = lsmash_get_sample_count_in_media_timeline( input->root, track_ID );
+    in_track->number_of_samples = lsmash_timeline_get_sample_count( input->root, track_ID );
     in_track->active            = 1;
 }
 
@@ -441,17 +441,17 @@ static int setup_movie_order_converter( input_movie_t *input )
 {
     input_track_t *in_video_track = &input->track[VIDEO_TRACK];
     lsmash_media_ts_list_t ts_list;
-    if( lsmash_get_media_timestamps( input->root, in_video_track->track_ID, &ts_list ) )
+    if( lsmash_timeline_get_media_timestamps( input->root, in_video_track->track_ID, &ts_list ) )
         return -1;
     if( ts_list.sample_count != in_video_track->number_of_samples )
     {
-        lsmash_delete_media_timestamps( &ts_list );
+        lsmash_timeline_cleanup_media_timestamps( &ts_list );
         return -1;
     }
     uint32_t composition_sample_delay;
-    if( lsmash_get_max_sample_delay( &ts_list, &composition_sample_delay ) )
+    if( lsmash_timeline_get_max_sample_delay( &ts_list, &composition_sample_delay ) )
     {
-        lsmash_delete_media_timestamps( &ts_list );
+        lsmash_timeline_cleanup_media_timestamps( &ts_list );
         return -1;
     }
     if( composition_sample_delay )
@@ -460,16 +460,16 @@ static int setup_movie_order_converter( input_movie_t *input )
         input->order_converter = lw_malloc_zero( (ts_list.sample_count + 1) * sizeof(order_converter_t) );
         if( !input->order_converter )
         {
-            lsmash_delete_media_timestamps( &ts_list );
+            lsmash_timeline_cleanup_media_timestamps( &ts_list );
             return -1;
         }
         for( uint32_t i = 0; i < ts_list.sample_count; i++ )
             ts_list.timestamp[i].dts = i + 1;
-        lsmash_sort_timestamps_composition_order( &ts_list );
+        lsmash_timeline_sort_timestamps_composition_order( &ts_list );
         for( uint32_t i = 0; i < ts_list.sample_count; i++ )
             input->order_converter[i + 1].composition_to_decoding = ts_list.timestamp[i].dts;
     }
-    lsmash_delete_media_timestamps( &ts_list );
+    lsmash_timeline_cleanup_media_timestamps( &ts_list );
     return 0;
 }
 
@@ -487,28 +487,28 @@ static int open_input_movie( lsmash_handler_t *hp, FILE_INFO *fi, int file_id )
     }
     input_array[hp->number_of_inputs] = input;
     /* Open an input file. */
-    input->root = lsmash_create_root();
+    input->root = lsmash_root_create();
     if( !input->root )
         return -1;
-    if( lsmash_open_file( fi->name, 1, &input->file_param ) < 0 )
+    if( lsmash_file_open( fi->name, 1, &input->file_param ) < 0 )
         return -1;
-    lsmash_file_t *file = lsmash_set_file( input->root, &input->file_param );
+    lsmash_file_t *file = lsmash_file_set( input->root, &input->file_param );
     if( !file )
         return -1;
-    if( lsmash_read_file( file, &input->file_param ) < 0 )
+    if( lsmash_file_read( file, &input->file_param ) < 0 )
         return -1;
-    lsmash_initialize_movie_parameters( &input->movie_param );
-    lsmash_get_movie_parameters( input->root, &input->movie_param );
+    lsmash_movie_init_parameters( &input->movie_param );
+    lsmash_movie_get_parameters( input->root, &input->movie_param );
     uint32_t number_of_tracks = input->movie_param.number_of_tracks;
     if( number_of_tracks == 0 )
         return -1;
     /* Get video track. */
-    get_first_track_of_type( input, number_of_tracks, ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
+    get_first_track_of_type( input, number_of_tracks, LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK );
     /* Get audio track. If absent, ignore audio track. */
-    get_first_track_of_type( input, number_of_tracks, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
+    get_first_track_of_type( input, number_of_tracks, LSMASH_ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK );
     if( !input->track[VIDEO_TRACK].active && !input->track[AUDIO_TRACK].active )
         return -1;
-    lsmash_discard_boxes( input->root );
+    lsmash_file_discard_boxes( input->root );
     if( input->track[VIDEO_TRACK].active
      && setup_movie_order_converter( input ) )
         return -1;
@@ -541,13 +541,13 @@ static int get_composition_delay( lsmash_root_t *root, uint32_t track_ID,
                                   uint32_t ctd_shift, uint64_t *composition_delay )
 {
     lsmash_sample_t sample;
-    if( lsmash_get_sample_info_from_media_timeline( root, track_ID, media_start_sample_number, &sample ) )
+    if( lsmash_timeline_get_sample_info( root, track_ID, media_start_sample_number, &sample ) )
         return -1;
     uint64_t min_dts = sample.dts;
     uint64_t min_cts = sample.cts + ctd_shift;
     for( uint32_t i = media_start_sample_number; i <= media_end_sample_number; i++ )
     {
-        if( lsmash_get_sample_info_from_media_timeline( root, track_ID, i, &sample ) )
+        if( lsmash_timeline_get_sample_info( root, track_ID, i, &sample ) )
             return -1;
         min_cts = MIN( min_cts, sample.cts + ctd_shift );
         if( min_cts <= sample.dts )
@@ -586,7 +586,7 @@ static int setup_exported_range_of_sequence( lsmash_handler_t *hp, input_movie_t
          * If the closest random accessible point is placed in outside of a presentation,
          * the portion that includes it should be skipped by edit list. */
         uint32_t rap_number;
-        if( lsmash_get_closest_random_accessible_point_from_media_timeline( input->root, in_video_track->track_ID, video_sequence->presentation_start_sample_number, &rap_number )
+        if( lsmash_timeline_get_closest_random_accessible_point( input->root, in_video_track->track_ID, video_sequence->presentation_start_sample_number, &rap_number )
          || rap_number > video_sequence->presentation_start_sample_number )
             /* Any random accessible point is not found. */
             video_sequence->media_start_sample_number = video_sequence->presentation_start_sample_number;
@@ -637,14 +637,14 @@ static int setup_exported_range_of_sequence( lsmash_handler_t *hp, input_movie_t
             video_pts_offset    = -composition_delay;
             video_skip_duration = 0;
         }
-        if( lsmash_get_cts_from_media_timeline( input->root, in_video_track->track_ID, video_sequence->presentation_start_sample_number, &video_presentation_start_time )
-         || lsmash_get_cts_from_media_timeline( input->root, in_video_track->track_ID, video_sequence->presentation_end_sample_number,   &video_presentation_end_time   ) )
+        if( lsmash_timeline_get_cts( input->root, in_video_track->track_ID, video_sequence->presentation_start_sample_number, &video_presentation_start_time )
+         || lsmash_timeline_get_cts( input->root, in_video_track->track_ID, video_sequence->presentation_end_sample_number,   &video_presentation_end_time   ) )
             return -1;
         if( presentation_end_sample_number < in_video_track->number_of_samples )
         {
             video_sequence->presentation_end_next_sample_number = get_decoding_sample_number( input->order_converter, presentation_end_sample_number + 1 );
             uint64_t next_cts;
-            if( lsmash_get_cts_from_media_timeline( input->root, in_video_track->track_ID, video_sequence->presentation_end_next_sample_number, &next_cts ) )
+            if( lsmash_timeline_get_cts( input->root, in_video_track->track_ID, video_sequence->presentation_end_next_sample_number, &next_cts ) )
                 return -1;
             if( next_cts <= video_presentation_end_time )
                 return -1;
@@ -688,7 +688,7 @@ static int setup_exported_range_of_sequence( lsmash_handler_t *hp, input_movie_t
     do
     {
         uint64_t cts;
-        if( lsmash_get_cts_from_media_timeline( input->root, in_audio_track->track_ID, sample_number, &cts ) )
+        if( lsmash_timeline_get_cts( input->root, in_audio_track->track_ID, sample_number, &cts ) )
         {
             if( sample_number == 0 )
                 /* Empty duration might be needed for this sequence. */
@@ -751,7 +751,7 @@ static int setup_exported_range_of_sequence( lsmash_handler_t *hp, input_movie_t
         /* Get pre-roll info.
          * Here, if an error occurs, ignore that since it is not so fatal. */
         lsmash_sample_property_t prop;
-        if( !lsmash_get_sample_property_from_media_timeline( input->root, in_audio_track->track_ID, sample_number, &prop ) )
+        if( !lsmash_timeline_get_sample_property( input->root, in_audio_track->track_ID, sample_number, &prop ) )
             media_start_sample_number -= media_start_sample_number > prop.pre_roll.distance ? prop.pre_roll.distance : 0;
     }
     audio_sequence->input                            = input;
@@ -762,7 +762,7 @@ static int setup_exported_range_of_sequence( lsmash_handler_t *hp, input_movie_t
     audio_sequence->current_sample_number            = audio_sequence->media_start_sample_number;
     audio_sequence->number_of_samples                = audio_sequence->media_end_sample_number - audio_sequence->media_start_sample_number + 1;
     hp->number_of_samples[AUDIO_TRACK]              += audio_sequence->number_of_samples;
-    return lsmash_get_cts_from_media_timeline( input->root, in_audio_track->track_ID,
+    return lsmash_timeline_get_cts( input->root, in_audio_track->track_ID,
                                                audio_sequence->media_start_sample_number, &audio_sequence->smallest_cts );
 }
 
@@ -887,19 +887,19 @@ static int setup_sequence_order_converter( sequence_t *sequence, uint32_t *compo
     input_movie_t *input = sequence->input;
     input_track_t *in_video_track = &input->track[VIDEO_TRACK];
     lsmash_media_ts_list_t ts_list;
-    if( lsmash_get_media_timestamps( input->root, in_video_track->track_ID, &ts_list ) )
+    if( lsmash_timeline_get_media_timestamps( input->root, in_video_track->track_ID, &ts_list ) )
         return -1;
     if( ts_list.sample_count != in_video_track->number_of_samples )
     {
-        lsmash_delete_media_timestamps( &ts_list );
+        lsmash_timeline_cleanup_media_timestamps( &ts_list );
         return -1;
     }
     ts_list.sample_count = sequence->number_of_samples;
     for( uint32_t i = sequence->media_start_sample_number - 1, j = 0; i < sequence->media_end_sample_number; )
         ts_list.timestamp[j++].cts = ts_list.timestamp[i++].cts;
-    if( lsmash_get_max_sample_delay( &ts_list, composition_sample_delay ) )
+    if( lsmash_timeline_get_max_sample_delay( &ts_list, composition_sample_delay ) )
     {
-        lsmash_delete_media_timestamps( &ts_list );
+        lsmash_timeline_cleanup_media_timestamps( &ts_list );
         return -1;
     }
     if( *composition_sample_delay )
@@ -908,26 +908,26 @@ static int setup_sequence_order_converter( sequence_t *sequence, uint32_t *compo
         sequence->order_converter = lw_malloc_zero( (ts_list.sample_count + 1) * sizeof(order_converter_t) );
         if( !sequence->order_converter )
         {
-            lsmash_delete_media_timestamps( &ts_list );
+            lsmash_timeline_cleanup_media_timestamps( &ts_list );
             return -1;
         }
         for( uint32_t i = 0; i < ts_list.sample_count; i++ )
             ts_list.timestamp[i].dts = i + 1;
-        lsmash_sort_timestamps_composition_order( &ts_list );
+        lsmash_timeline_sort_timestamps_composition_order( &ts_list );
         for( uint32_t i = 0; i < ts_list.sample_count; i++ )
             sequence->order_converter[i + 1].composition_to_decoding = ts_list.timestamp[i].dts;
     }
-    lsmash_delete_media_timestamps( &ts_list );
+    lsmash_timeline_cleanup_media_timestamps( &ts_list );
     return 0;
 }
 
 static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
 {
     output_movie_t *output = hp->output;
-    output->root = lsmash_create_root();
+    output->root = lsmash_root_create();
     if( !output->root )
         return -1;
-    if( lsmash_open_file( file_name, 0, &output->file_param ) < 0 )
+    if( lsmash_file_open( file_name, 0, &output->file_param ) < 0 )
         return -1;
     sequence_t *sequence = &hp->sequence[VIDEO_TRACK][0];
     input_movie_t *input = sequence->input;
@@ -937,14 +937,14 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
     output->file_param.brands        = input->file_param.brands;
     if( fp->ex_data_ptr && ((option_t *)fp->ex_data_ptr)->import_chapter )
         for( uint32_t i = 0; i < output->file_param.brand_count; i++ )
-            if( output->file_param.brands[i] == ISOM_BRAND_TYPE_QT  || output->file_param.brands[i] == ISOM_BRAND_TYPE_M4A
-             || output->file_param.brands[i] == ISOM_BRAND_TYPE_M4B || output->file_param.brands[i] == ISOM_BRAND_TYPE_M4P
-             || output->file_param.brands[i] == ISOM_BRAND_TYPE_M4V )
+            if( output->file_param.brands[i] == LSMASH_ISOM_BRAND_TYPE_QT  || output->file_param.brands[i] == LSMASH_ISOM_BRAND_TYPE_M4A
+             || output->file_param.brands[i] == LSMASH_ISOM_BRAND_TYPE_M4B || output->file_param.brands[i] == LSMASH_ISOM_BRAND_TYPE_M4P
+             || output->file_param.brands[i] == LSMASH_ISOM_BRAND_TYPE_M4V )
             {
                 hp->ref_chap_available = 1;
                 break;
             }
-    if( !lsmash_set_file( output->root, &output->file_param ) )
+    if( !lsmash_file_set( output->root, &output->file_param ) )
         return -1;
 #ifdef DEBUG
     char log_file_name[MAX_PATH + 10];
@@ -959,8 +959,8 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
         return -1;
     }
     lsmash_movie_parameters_t movie_param;
-    lsmash_initialize_movie_parameters( &movie_param );
-    lsmash_set_movie_parameters( output->root, &movie_param );
+    lsmash_movie_init_parameters( &movie_param );
+    lsmash_movie_set_parameters( output->root, &movie_param );
     output->number_of_tracks = hp->with_video + hp->with_audio;
     for( uint32_t i = 0; i < 2; i++ )
     {
@@ -968,7 +968,7 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
         if( !in_track->active )
             continue;
         output_track_t *out_track = &output->track[i];
-        out_track->track_ID = lsmash_create_track( output->root, in_track->media_param.handler_type );
+        out_track->track_ID = lsmash_track_create( output->root, in_track->media_param.handler_type );
         if( !out_track->track_ID )
         {
             DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to create a track." );
@@ -979,12 +979,12 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
         out_track->media_param = in_track->media_param;
         out_track->track_param.track_ID  = out_track->track_ID;
         out_track->media_param.timescale = out_track->media_timescale;
-        if( lsmash_set_track_parameters( output->root, out_track->track_ID, &out_track->track_param ) )
+        if( lsmash_track_set_parameters( output->root, out_track->track_ID, &out_track->track_param ) )
         {
             DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to set track parameters." );
             return -1;
         }
-        if( lsmash_set_media_parameters( output->root, out_track->track_ID, &out_track->media_param ) )
+        if( lsmash_media_set_parameters( output->root, out_track->track_ID, &out_track->media_param ) )
         {
             DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to set media parameters." );
             return -1;
@@ -1007,7 +1007,7 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
         input_track_t *in_track = &input->track[VIDEO_TRACK];
         uint32_t decoding_sample_number = get_decoding_sample_number( sequence->order_converter, 1 )
                                         + sequence->media_start_sample_number - 1;
-        if( lsmash_get_cts_from_media_timeline( input->root, in_track->track_ID, decoding_sample_number, &sequence->smallest_cts ) )
+        if( lsmash_timeline_get_cts( input->root, in_track->track_ID, decoding_sample_number, &sequence->smallest_cts ) )
         {
             DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "Failed to get the smallest CTS within a video sequence." );
             return -1;
@@ -1044,7 +1044,7 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
         {
             uint32_t second_largest_cts_sample_number = get_decoding_sample_number( sequence->order_converter, sequence->number_of_samples - 1 )
                                                       + sequence->media_start_sample_number - 1;
-            if( lsmash_get_cts_from_media_timeline( input->root, in_track->track_ID, second_largest_cts_sample_number, &cts ) )
+            if( lsmash_timeline_get_cts( input->root, in_track->track_ID, second_largest_cts_sample_number, &cts ) )
             {
                 MessageBoxA( HWND_DESKTOP, "Failed to get the second largest CTS from an input track.", "lwmuxer", MB_ICONERROR | MB_OK );
                 return -1;
@@ -1053,7 +1053,7 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
         }
         uint32_t largest_cts_sample_number = get_decoding_sample_number( sequence->order_converter, sequence->number_of_samples )
                                            + sequence->media_start_sample_number - 1;
-        if( lsmash_get_cts_from_media_timeline( input->root, in_track->track_ID, largest_cts_sample_number, &cts ) )
+        if( lsmash_timeline_get_cts( input->root, in_track->track_ID, largest_cts_sample_number, &cts ) )
         {
             MessageBoxA( HWND_DESKTOP, "Failed to get the largest CTS from an input track.", "lwmuxer", MB_ICONERROR | MB_OK );
             return -1;
@@ -1065,7 +1065,7 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
         else
         {
             uint32_t sample_delta;
-            if( lsmash_get_sample_delta_from_media_timeline( input->root, in_track->track_ID, sequence->media_end_sample_number, &sample_delta ) )
+            if( lsmash_timeline_get_sample_delta( input->root, in_track->track_ID, sequence->media_end_sample_number, &sample_delta ) )
             {
                 MessageBoxA( HWND_DESKTOP, "Failed to get sample delta.", "lwmuxer", MB_ICONERROR | MB_OK );
                 return -1;
@@ -1079,7 +1079,7 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
     }
     uint32_t decoding_sample_number = get_decoding_sample_number( sequence->order_converter, composition_sample_delay + 1 )
                                     + sequence->media_start_sample_number - 1;
-    if( lsmash_get_cts_from_media_timeline( input->root, in_track->track_ID, decoding_sample_number, &hp->composition_delay_time ) )
+    if( lsmash_timeline_get_cts( input->root, in_track->track_ID, decoding_sample_number, &hp->composition_delay_time ) )
     {
         MessageBoxA( HWND_DESKTOP, "Failed to get CTS from an input track.", "lwmuxer", MB_ICONERROR | MB_OK );
         return -1;
@@ -1090,14 +1090,14 @@ static int open_output_file( lsmash_handler_t *hp, FILTER *fp, char *file_name )
 
 static uint32_t get_identical_summary( output_movie_t *output, output_track_t *out_track, lsmash_summary_t *summary )
 {
-    uint32_t number_of_summaries = lsmash_count_summary( output->root, out_track->track_ID );
+    uint32_t number_of_summaries = lsmash_codec_get_summary_count( output->root, out_track->track_ID );
     for( uint32_t index = 1; index <= number_of_summaries; index++ )
     {
-        lsmash_summary_t *out_summary = lsmash_get_summary( output->root, out_track->track_ID, index );
+        lsmash_summary_t *out_summary = lsmash_codec_get_summary( output->root, out_track->track_ID, index );
         if( !out_summary )
             continue;
-        int ret = lsmash_compare_summary( summary, out_summary );
-        lsmash_cleanup_summary( out_summary );
+        int ret = lsmash_codec_compare_summary( summary, out_summary );
+        lsmash_codec_destroy_summary( out_summary );
         if( ret == 0 )
             return index;
     }
@@ -1113,11 +1113,11 @@ static uint32_t get_output_sample_description_index( output_movie_t *output, out
         if( in_summary->out_mapped_index == 0 )
         {
             /* Append a new sample description entry. */
-            in_summary->out_mapped_index = lsmash_add_sample_entry( output->root, out_track->track_ID, in_summary->summary );
+            in_summary->out_mapped_index = lsmash_codec_add_sample_entry( output->root, out_track->track_ID, in_summary->summary );
             if( in_summary->out_mapped_index == 0 )
             {
                 DEBUG_MESSAGE_BOX_DESKTOP( MB_ICONERROR | MB_OK, "failed to append a new summary" );
-                lsmash_cleanup_summary( in_summary->summary );
+                lsmash_codec_destroy_summary( in_summary->summary );
                 in_summary->summary = NULL;
                 in_summary->active  = 0;
             }
@@ -1170,7 +1170,7 @@ static int do_mux( lsmash_handler_t *hp )
                 if( sequence[type]->presentation_end_next_sample_number )
                 {
                     uint64_t next_cts;
-                    if( lsmash_get_cts_from_media_timeline( input->root, in_track->track_ID, sequence[type]->presentation_end_next_sample_number, &next_cts ) )
+                    if( lsmash_timeline_get_cts( input->root, in_track->track_ID, sequence[type]->presentation_end_next_sample_number, &next_cts ) )
                     {
                         MessageBoxA( HWND_DESKTOP, "Failed to get CTS from an output track.", "lwmuxer", MB_ICONERROR | MB_OK );
                         break;
@@ -1207,7 +1207,7 @@ static int do_mux( lsmash_handler_t *hp )
                 sequence[type]->start_skip_duration *= in_track->timescale_integrator;
                 sequence[type]->end_skip_duration   *= in_track->timescale_integrator;
             }
-            sample[type] = lsmash_get_sample_from_media_timeline( input->root, in_track->track_ID, sequence[type]->current_sample_number );
+            sample[type] = lsmash_timeline_get_sample( input->root, in_track->track_ID, sequence[type]->current_sample_number );
             if( sample[type] )
             {
                 /* CTS generation */
@@ -1221,7 +1221,7 @@ static int do_mux( lsmash_handler_t *hp )
                     uint32_t decoding_sample_number = get_decoding_sample_number( sequence[type]->order_converter, sequence_sample_number )
                                                     + sequence[type]->media_start_sample_number - 1;
                     uint64_t reordered_ts;
-                    if( lsmash_get_cts_from_media_timeline( input->root, in_track->track_ID, decoding_sample_number, &reordered_ts ) )
+                    if( lsmash_timeline_get_cts( input->root, in_track->track_ID, decoding_sample_number, &reordered_ts ) )
                     {
                         MessageBoxA( HWND_DESKTOP, "Failed to get CTS from an input track.", "lwmuxer", MB_ICONERROR | MB_OK );
                         break;
@@ -1238,7 +1238,7 @@ static int do_mux( lsmash_handler_t *hp )
             }
             else
             {
-                if( lsmash_check_sample_existence_in_media_timeline( input->root, in_track->track_ID, sequence[type]->current_sample_number ) )
+                if( lsmash_timeline_check_sample_existence( input->root, in_track->track_ID, sequence[type]->current_sample_number ) )
                 {
                     MessageBoxA( HWND_DESKTOP, "Failed to get a sample.", "lwmuxer", MB_ICONERROR | MB_OK );
                     break;
@@ -1258,9 +1258,9 @@ static int do_mux( lsmash_handler_t *hp )
             sample[type]->index = get_output_sample_description_index( output, out_track, in_track, sample[type]->index );
             uint64_t sample_cts = sample[type]->cts;    /* sample might be deleted internally after appending. */
             uint32_t sample_delta;
-            if( lsmash_get_sample_delta_from_media_timeline( input->root, in_track->track_ID, sequence[type]->current_sample_number, &sample_delta ) )
+            if( lsmash_timeline_get_sample_delta( input->root, in_track->track_ID, sequence[type]->current_sample_number, &sample_delta ) )
             {
-                lsmash_delete_sample( sample[type] );
+                lsmash_sample_destroy( sample[type] );
                 MessageBoxA( HWND_DESKTOP, "Failed to get sample delta.", "lwmuxer", MB_ICONERROR | MB_OK );
                 break;
             }
@@ -1278,9 +1278,9 @@ static int do_mux( lsmash_handler_t *hp )
             if( sample[type]->index )
             {
                 /* Append the current sample into output movie. */
-                if( lsmash_append_sample( output->root, out_track->track_ID, sample[type] ) )
+                if( lsmash_sample_append( output->root, out_track->track_ID, sample[type] ) )
                 {
-                    lsmash_delete_sample( sample[type] );
+                    lsmash_sample_destroy( sample[type] );
                     MessageBoxA( HWND_DESKTOP, "Failed to append a sample.", "lwmuxer", MB_ICONERROR | MB_OK );
                     break;
                 }
@@ -1290,7 +1290,7 @@ static int do_mux( lsmash_handler_t *hp )
             else
             {
                 /* Drop the current invalid sample that doesn't have usable sample_description_index. */
-                lsmash_delete_sample( sample[type] );
+                lsmash_sample_destroy( sample[type] );
                 --total_num_samples;
             }
             sample[type]                      = NULL;
@@ -1320,7 +1320,7 @@ static int do_mux( lsmash_handler_t *hp )
     /* Flush the rest of internally pooled samples and add the last sample_delta. */
     for( uint32_t i = 0; i < 2; i++ )
         if( output->track[i].active
-         && lsmash_flush_pooled_samples( output->root, output->track[i].track_ID, sequence[i]->last_sample_delta ) )
+         && lsmash_media_flush_pooled_samples( output->root, output->track[i].track_ID, sequence[i]->last_sample_delta ) )
             MessageBoxA( HWND_DESKTOP, "Failed to flush samples.", "lwmuxer", MB_ICONERROR | MB_OK );
     int abort = progress_dlg.abort;
     close_progress_dlg( &progress_dlg );
@@ -1330,13 +1330,13 @@ static int do_mux( lsmash_handler_t *hp )
 static int construct_timeline_maps( lsmash_handler_t *hp )
 {
     output_movie_t *output = hp->output;
-    uint32_t movie_timescale = lsmash_get_movie_timescale( output->root );
+    uint32_t movie_timescale = lsmash_movie_get_timescale( output->root );
     for( uint32_t i = 0; i < 2; i++ )
     {
         if( !output->track[i].active || !hp->sequence[i] )
             continue;
         output_track_t *out_track = &output->track[i];
-        uint32_t media_timescale = lsmash_get_media_timescale( output->root, out_track->track_ID );
+        uint32_t media_timescale = lsmash_media_get_timescale( output->root, out_track->track_ID );
         if( media_timescale == 0 )
             continue;
         double timescale_convert_multiplier = (double)movie_timescale / media_timescale;
@@ -1349,9 +1349,9 @@ static int construct_timeline_maps( lsmash_handler_t *hp )
             {
                 /* Set up an empty edit for this sequence. */
                 edit.duration   = sequence->empty_duration * timescale_convert_multiplier;
-                edit.start_time = ISOM_EDIT_MODE_EMPTY;
-                edit.rate       = ISOM_EDIT_MODE_NORMAL;
-                if( lsmash_create_explicit_timeline_map( output->root, out_track->track_ID, edit ) )
+                edit.start_time = LSMASH_ISOM_EDIT_MODE_EMPTY;
+                edit.rate       = LSMASH_ISOM_EDIT_MODE_NORMAL;
+                if( lsmash_track_append_explicit_timeline_map( output->root, out_track->track_ID, edit ) )
                     MessageBoxA( HWND_DESKTOP, "Failed to create an empty edit of an output track.", "lwmuxer", MB_ICONERROR | MB_OK );
             }
             if( sequence->number_of_samples )
@@ -1359,8 +1359,8 @@ static int construct_timeline_maps( lsmash_handler_t *hp )
                 /* Set up a normal edit for this sequence. */
                 edit.duration   = (sequence->presentation_end_time - sequence->presentation_start_time) * timescale_convert_multiplier;
                 edit.start_time = sequence->presentation_start_time;
-                edit.rate       = ISOM_EDIT_MODE_NORMAL;
-                if( lsmash_create_explicit_timeline_map( output->root, out_track->track_ID, edit ) )
+                edit.rate       = LSMASH_ISOM_EDIT_MODE_NORMAL;
+                if( lsmash_track_append_explicit_timeline_map( output->root, out_track->track_ID, edit ) )
                 {
                     MessageBoxA( HWND_DESKTOP, "Failed to create the timeline map of an output track.", "lwmuxer", MB_ICONERROR | MB_OK );
                     continue;
@@ -1412,7 +1412,7 @@ static int write_reference_chapter( lsmash_handler_t *hp, FILTER *fp )
     if( !opt || !opt->import_chapter )
         return 0;
     uint32_t track_ID = hp->output->track[ hp->with_video ? VIDEO_TRACK : AUDIO_TRACK ].track_ID;
-    return lsmash_create_reference_chapter_track( hp->output->root, track_ID, opt->chapter_file );
+    return lsmash_chapter_create_reference_chapter_track( hp->output->root, track_ID, opt->chapter_file );
 }
 
 static int write_chapter_list( lsmash_handler_t *hp, FILTER *fp )
@@ -1420,7 +1420,7 @@ static int write_chapter_list( lsmash_handler_t *hp, FILTER *fp )
     option_t *opt = (option_t *)fp->ex_data_ptr;
     if( !opt || !opt->import_chapter )
         return 0;
-    return lsmash_set_tyrant_chapter( hp->output->root, opt->chapter_file, 0 );
+    return lsmash_chapter_set_tyrant_chapter( hp->output->root, opt->chapter_file, 0 );
 }
 
 static int moov_to_front_callback( void *param, uint64_t written_movie_size, uint64_t total_movie_size )
@@ -1433,14 +1433,14 @@ static int moov_to_front_callback( void *param, uint64_t written_movie_size, uin
 static int finish_movie( output_movie_t *output, int optimize_pd )
 {
     if( !optimize_pd )
-        return lsmash_finish_movie( output->root, NULL );
+        return lsmash_movie_finish( output->root, NULL );
     progress_dlg_t progress_dlg;
     init_progress_dlg( &progress_dlg, "lwmuxer.auf", IDD_PROGRESS_UNABORTABLE );
     lsmash_adhoc_remux_t moov_to_front;
     moov_to_front.func        = moov_to_front_callback;
     moov_to_front.buffer_size = 4*1024*1024;    /* 4MiB */
     moov_to_front.param       = &progress_dlg;
-    int ret = lsmash_finish_movie( output->root, &moov_to_front );
+    int ret = lsmash_movie_finish( output->root, &moov_to_front );
     close_progress_dlg( &progress_dlg );
     return ret;
 }
@@ -1452,8 +1452,8 @@ static void cleanup_handler( lsmash_handler_t *hp )
     output_movie_t *output = hp->output;
     if( output )
     {
-        lsmash_close_file( &output->file_param );
-        lsmash_destroy_root( output->root );
+        lsmash_file_close( &output->file_param );
+        lsmash_root_destroy( output->root );
     }
     if( hp->input )
         for( uint32_t i = 0; i < hp->number_of_inputs; i++ )
@@ -1463,15 +1463,15 @@ static void cleanup_handler( lsmash_handler_t *hp )
             {
                 if( input->order_converter )
                     free( input->order_converter );
-                lsmash_close_file( &input->file_param );
-                lsmash_destroy_root( input->root );
+                lsmash_file_close( &input->file_param );
+                lsmash_root_destroy( input->root );
                 for( uint32_t j = 0; j < 2; j++ )
                 {
                     input_track_t *in_track = &input->track[j];
                     if( in_track->summaries )
                     {
                         for( uint32_t k = 0; k < in_track->number_of_summaries; k++ )
-                            lsmash_cleanup_summary( in_track->summaries[k].summary );
+                            lsmash_codec_destroy_summary( in_track->summaries[k].summary );
                         free( in_track->summaries );
                     }
                 }
@@ -1564,7 +1564,7 @@ static INT_PTR CALLBACK dialog_proc( HWND hwnd, UINT message, WPARAM wparam, LPA
                         return FALSE;
                     }
                     ShowWindow( hwnd, SW_HIDE );
-                    if( lsmash_convert_ansi_to_utf8( file_name_ansi, file_name_utf8, sizeof(file_name_utf8) ) == 0 )
+                    if( lsmash_win32_convert_ansi_to_utf8( file_name_ansi, file_name_utf8, sizeof(file_name_utf8) ) == 0 )
                     {
                         MessageBoxA( HWND_DESKTOP, "Failed to convert the output file name to UTF-8.", "lwmuxer", MB_ICONERROR  | MB_OK );
                         return FALSE;

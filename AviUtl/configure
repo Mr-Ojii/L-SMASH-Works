@@ -188,9 +188,9 @@ fi
 
 # -- check lsmash -----------------------------------------------------------------------------
 log_echo "checking for liblsmash..."
-if ! cc_check "$CFLAGS" "$LDFLAGS $LIBS $XLIBS" "lsmash.h" "lsmash_create_root();" ; then
+if ! cc_check "$CFLAGS" "$LDFLAGS $LIBS $XLIBS" "lsmash.h" "lsmash_root_create();" ; then
     log_echo "error: liblsmash checking failed"
-    error_exit "lsmash.h might not be installed or some libs missing."
+    error_exit "lsmash.h might not be installed or some libs missing. liblsmash 3.x (3.0.1 or later) is required."
 fi
 
 # -- check libav ------------------------------------------------------------------------------

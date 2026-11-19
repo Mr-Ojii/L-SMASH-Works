@@ -271,7 +271,7 @@ static uint32_t libavsmash_audio_fetch_sample_count
 {
     if( !adhp )
         return 0;
-    adhp->frame_count = lsmash_get_sample_count_in_media_timeline( adhp->root, adhp->track_id );
+    adhp->frame_count = lsmash_timeline_get_sample_count( adhp->root, adhp->track_id );
     return adhp->frame_count;
 }
 
@@ -283,8 +283,8 @@ static uint32_t libavsmash_audio_fetch_media_timescale
     if( !adhp )
         return 0;
     lsmash_media_parameters_t media_param;
-    lsmash_initialize_media_parameters( &media_param );
-    if( lsmash_get_media_parameters( adhp->root, adhp->track_id, &media_param ) < 0 )
+    lsmash_media_init_parameters( &media_param );
+    if( lsmash_media_get_parameters( adhp->root, adhp->track_id, &media_param ) < 0 )
         return 0;
     adhp->media_timescale = media_param.timescale;
     return adhp->media_timescale;
@@ -297,7 +297,7 @@ static uint64_t libavsmash_audio_fetch_media_duration
 {
     if( !adhp )
         return 0;
-    adhp->media_duration = lsmash_get_media_duration_from_media_timeline( adhp->root, adhp->track_id );
+    adhp->media_duration = lsmash_timeline_get_media_duration( adhp->root, adhp->track_id );
     return adhp->media_duration;
 }
 
@@ -307,7 +307,7 @@ static uint64_t libavsmash_audio_fetch_min_cts
     libavsmash_audio_decode_handler_t *adhp
 )
 {
-    if( !adhp || lsmash_get_cts_from_media_timeline( adhp->root, adhp->track_id, 1, &adhp->min_cts ) < 0 )
+    if( !adhp || lsmash_timeline_get_cts( adhp->root, adhp->track_id, 1, &adhp->min_cts ) < 0 )
         return UINT64_MAX;
     return adhp->min_cts;
 }
@@ -321,7 +321,7 @@ int libavsmash_audio_get_track_count
 )
 {
     lw_log_handler_t *lhp = libavsmash_audio_get_log_handler( adhp );
-    return libavsmash_get_track_count_by_media_type( adhp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, lhp );
+    return libavsmash_get_track_count_by_media_type( adhp->root, LSMASH_ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, lhp );
 }
 
 uint32_t libavsmash_audio_get_track_number_from_index
@@ -331,7 +331,7 @@ uint32_t libavsmash_audio_get_track_number_from_index
 )
 {
     lw_log_handler_t *lhp = libavsmash_audio_get_log_handler( adhp );
-    return libavsmash_get_track_number_from_index_by_media_type( adhp->root, ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index, lhp );
+    return libavsmash_get_track_number_from_index_by_media_type( adhp->root, LSMASH_ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK, index, lhp );
 }
 
 int libavsmash_audio_get_track
@@ -345,7 +345,7 @@ int libavsmash_audio_get_track
         libavsmash_get_track_by_media_type
         (
             libavsmash_audio_get_root( adhp ),
-            ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK,
+            LSMASH_ISOM_MEDIA_HANDLER_TYPE_AUDIO_TRACK,
             track_number,
             lhp
         );
@@ -472,7 +472,7 @@ static int get_frame_length
 )
 {
     lsmash_sample_t sample;
-    if( lsmash_get_sample_info_from_media_timeline( adhp->root, adhp->track_id, frame_number, &sample ) < 0 )
+    if( lsmash_timeline_get_sample_info( adhp->root, adhp->track_id, frame_number, &sample ) < 0 )
         return -1;
     *esp = &adhp->config.entries[ sample.index - 1 ].extended;
     extended_summary_t *es = *esp;
@@ -481,7 +481,7 @@ static int get_frame_length
         /* variable frame length
          * Guess the frame length from sample duration. */
         uint32_t frame_length_32;
-        if( lsmash_get_sample_delta_from_media_timeline( adhp->root, adhp->track_id, frame_number, &frame_length_32 ) < 0 )
+        if( lsmash_timeline_get_sample_delta( adhp->root, adhp->track_id, frame_number, &frame_length_32 ) < 0 )
             return -1;
         int64_t temp_frame_length = av_rescale( frame_length_32, es->sample_rate, adhp->media_timescale );
         if( temp_frame_length < 0 )
@@ -557,7 +557,7 @@ static uint64_t get_preroll_samples
 )
 {
     lsmash_sample_property_t prop;
-    if( lsmash_get_sample_property_from_media_timeline( adhp->root, adhp->track_id, *frame_number, &prop ) < 0 )
+    if( lsmash_timeline_get_sample_property( adhp->root, adhp->track_id, *frame_number, &prop ) < 0 )
         return 0;
     if( prop.pre_roll.distance == 0 )
     {

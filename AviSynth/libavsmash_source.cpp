@@ -232,7 +232,7 @@ LSMASHVideoSource::LSMASHVideoSource
     vohp->free_private_handler = as_free_video_output_handler;
     get_video_track( source, track_number, env );
     prepare_video_decoding( vdhp, vohp, format_ctx.get(), threads, direct_rendering, pixel_format, vi, env );
-    lsmash_discard_boxes( libavsmash_video_get_root( vdhp ) );
+    lsmash_file_discard_boxes( libavsmash_video_get_root( vdhp ) );
 
     has_at_least_v8 = true;
     try { env->CheckVersion(8); }
@@ -252,8 +252,8 @@ LSMASHVideoSource::~LSMASHVideoSource()
     libavsmash_video_decode_handler_t *vdhp = this->vdhp.get();
     lsmash_root_t *root = libavsmash_video_get_root( vdhp );
     lw_free( libavsmash_video_get_preferred_decoder_names( vdhp ) );
-    lsmash_close_file( &file_param );
-    lsmash_destroy_root( root );
+    lsmash_file_close( &file_param );
+    lsmash_root_destroy( root );
 }
 
 PVideoFrame __stdcall LSMASHVideoSource::GetFrame( int n, IScriptEnvironment *env )
@@ -293,11 +293,11 @@ uint32_t LSMASHAudioSource::open_file( const char *source, IScriptEnvironment *e
 static int64_t get_start_time( lsmash_root_t *root, uint32_t track_ID )
 {
     /* Consider start time of this media if any non-empty edit is present. */
-    uint32_t edit_count = lsmash_count_explicit_timeline_map( root, track_ID );
+    uint32_t edit_count = lsmash_track_get_explicit_timeline_map_count( root, track_ID );
     for( uint32_t edit_number = 1; edit_number <= edit_count; edit_number++ )
     {
         lsmash_edit_t edit;
-        if( lsmash_get_explicit_timeline_map( root, track_ID, edit_number, &edit ) )
+        if( lsmash_track_get_explicit_timeline_map( root, track_ID, edit_number, &edit ) )
             return 0;
         if( edit.duration == 0 )
             return 0;   /* no edits */
@@ -342,34 +342,34 @@ static void count_output_audio_samples
     if( skip_priming )
     {
         uint32_t media_timescale = libavsmash_audio_get_media_timescale( adhp );
-        uint32_t itunes_metadata_count = lsmash_count_itunes_metadata( root );
+        uint32_t itunes_metadata_count = lsmash_itunes_get_metadata_count( root );
         for( uint32_t i = 1; i <= itunes_metadata_count; i++ )
         {
             lsmash_itunes_metadata_t metadata;
-            if( lsmash_get_itunes_metadata( root, i, &metadata ) < 0 )
+            if( lsmash_itunes_get_metadata( root, i, &metadata ) < 0 )
                 continue;
-            if( metadata.item != ITUNES_METADATA_ITEM_CUSTOM
-             || (metadata.type != ITUNES_METADATA_TYPE_STRING && metadata.type != ITUNES_METADATA_TYPE_BINARY)
+            if( metadata.item != LSMASH_ITUNES_METADATA_ITEM_CUSTOM
+             || (metadata.type != LSMASH_ITUNES_METADATA_TYPE_STRING && metadata.type != LSMASH_ITUNES_METADATA_TYPE_BINARY)
              || !metadata.meaning || !metadata.name
              || memcmp( "com.apple.iTunes", metadata.meaning, strlen( metadata.meaning ) )
              || memcmp( "iTunSMPB", metadata.name, strlen( metadata.name ) ) )
             {
-                lsmash_cleanup_itunes_metadata( &metadata );
+                lsmash_itunes_cleanup_metadata( &metadata );
                 continue;
             }
             char *value = nullptr;
-            if( metadata.type == ITUNES_METADATA_TYPE_STRING )
+            if( metadata.type == LSMASH_ITUNES_METADATA_TYPE_STRING )
             {
                 size_t length = strlen( metadata.value.string );
                 if( length >= 116 )
                     value = duplicate_as_string( metadata.value.string, length );
             }
-            else    /* metadata.type == ITUNES_METADATA_TYPE_BINARY */
+            else    /* metadata.type == LSMASH_ITUNES_METADATA_TYPE_BINARY */
             {
                 if( metadata.value.binary.size >= 116 )
                     value = duplicate_as_string( metadata.value.binary.data, metadata.value.binary.size );
             }
-            lsmash_cleanup_itunes_metadata( &metadata );
+            lsmash_itunes_cleanup_metadata( &metadata );
             if( !value )
                 continue;
             uint32_t dummy[9];
@@ -393,7 +393,7 @@ static void count_output_audio_samples
         if( aohp->skip_decoded_samples == 0 )
         {
             uint32_t ctd_shift;
-            if( lsmash_get_composition_to_decode_shift_from_media_timeline( root, track_id, &ctd_shift ) )
+            if( lsmash_timeline_get_composition_to_decode_shift( root, track_id, &ctd_shift ) )
                 env->ThrowError( "LSMASHAudioSource: failed to get the timeline shift." );
             start_time = ctd_shift + get_start_time( root, track_id );
             aohp->skip_decoded_samples = av_rescale( start_time, aohp->output_sample_rate, media_timescale );
@@ -448,7 +448,7 @@ LSMASHAudioSource::LSMASHAudioSource
     libavsmash_audio_set_preferred_decoder_names( adhp, tokenize_preferred_decoder_names() );
     get_audio_track( source, track_number, env );
     prepare_audio_decoding( adhp, aohp, format_ctx.get(), layout_string, sample_rate, skip_priming, vi, env );
-    lsmash_discard_boxes( libavsmash_audio_get_root( adhp ) );
+    lsmash_file_discard_boxes( libavsmash_audio_get_root( adhp ) );
 }
 
 LSMASHAudioSource::~LSMASHAudioSource()
@@ -456,8 +456,8 @@ LSMASHAudioSource::~LSMASHAudioSource()
     libavsmash_audio_decode_handler_t *adhp = this->adhp.get();
     lsmash_root_t *root = libavsmash_audio_get_root( adhp );
     lw_free( libavsmash_audio_get_preferred_decoder_names( adhp ) );
-    lsmash_close_file( &file_param );
-    lsmash_destroy_root( root );
+    lsmash_file_close( &file_param );
+    lsmash_root_destroy( root );
 }
 
 void __stdcall LSMASHAudioSource::GetAudio( void *buf, int64_t start, int64_t wanted_length, IScriptEnvironment *env )

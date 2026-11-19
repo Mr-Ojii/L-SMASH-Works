@@ -61,28 +61,28 @@ lsmash_root_t *libavsmash_open_file
 )
 {
     /* L-SMASH */
-    lsmash_root_t *root = lsmash_create_root();
+    lsmash_root_t *root = lsmash_root_create();
     if( !root )
         return NULL;
     char error_string[96] = { 0 };
-    if( lsmash_open_file( file_name, 1, file_param ) < 0 )
+    if( lsmash_file_open( file_name, 1, file_param ) < 0 )
     {
         strcpy( error_string, "Failed to open an input file.\n" );
         goto open_fail;
     }
-    lsmash_file_t *fh = lsmash_set_file( root, file_param );
+    lsmash_file_t *fh = lsmash_file_set( root, file_param );
     if( !fh )
     {
         strcpy( error_string, "Failed to add an input file into a ROOT.\n" );
         goto open_fail;
     }
-    if( lsmash_read_file( fh, file_param ) < 0 )
+    if( lsmash_file_read( fh, file_param ) < 0 )
     {
         strcpy( error_string, "Failed to read an input file\n" );
         goto open_fail;
     }
-    lsmash_initialize_movie_parameters( movie_param );
-    lsmash_get_movie_parameters( root, movie_param );
+    lsmash_movie_init_parameters( movie_param );
+    lsmash_movie_get_parameters( root, movie_param );
     if( movie_param->number_of_tracks == 0 )
     {
         strcpy( error_string, "The number of tracks equals 0.\n" );
@@ -103,8 +103,8 @@ lsmash_root_t *libavsmash_open_file
 open_fail:
     if( *p_format_ctx )
         avformat_close_input( p_format_ctx );
-    lsmash_close_file( file_param );
-    lsmash_destroy_root( root );
+    lsmash_file_close( file_param );
+    lsmash_root_destroy( root );
     lw_log_show( lhp, LW_LOG_FATAL, "%s", error_string );
     return NULL;
 }
@@ -118,8 +118,8 @@ uint32_t libavsmash_get_track_count_by_media_type
 {
     char error_string[128] = { 0 };
     lsmash_movie_parameters_t movie_param;
-    lsmash_initialize_movie_parameters( &movie_param );
-    if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
+    lsmash_movie_init_parameters( &movie_param );
+    if( lsmash_movie_get_parameters( root, &movie_param ) < 0 )
     {
         strcpy( error_string, "Failed to get movie paramters.\n" );
         goto fail;
@@ -127,15 +127,15 @@ uint32_t libavsmash_get_track_count_by_media_type
     uint32_t count = 0;
     for( uint32_t i = 1; i <= movie_param.number_of_tracks; i++ )
     {
-        uint32_t track_id = lsmash_get_track_ID( root, i );
+        uint32_t track_id = lsmash_track_get_id( root, i );
         if( track_id == 0 )
         {
             strcpy( error_string, "Failed to find track.\n" );
             goto fail;
         }
         lsmash_media_parameters_t media_param;
-        lsmash_initialize_media_parameters( &media_param );
-        if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+        lsmash_media_init_parameters( &media_param );
+        if( lsmash_media_get_parameters( root, track_id, &media_param ) < 0 )
         {
             strcpy( error_string, "Failed to get media parameters.\n" );
             goto fail;
@@ -162,8 +162,8 @@ uint32_t libavsmash_get_track_number_from_index_by_media_type
 
     char error_string[128] = { 0 };
     lsmash_movie_parameters_t movie_param;
-    lsmash_initialize_movie_parameters( &movie_param );
-    if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
+    lsmash_movie_init_parameters( &movie_param );
+    if( lsmash_movie_get_parameters( root, &movie_param ) < 0 )
     {
         strcpy( error_string, "Failed to get movie paramters.\n" );
         goto fail;
@@ -171,15 +171,15 @@ uint32_t libavsmash_get_track_number_from_index_by_media_type
     uint32_t count = 0;
     for( uint32_t i = 1; i <= movie_param.number_of_tracks; i++ )
     {
-        uint32_t track_id = lsmash_get_track_ID( root, i );
+        uint32_t track_id = lsmash_track_get_id( root, i );
         if( track_id == 0 )
         {
             strcpy( error_string, "Failed to find track.\n" );
             goto fail;
         }
         lsmash_media_parameters_t media_param;
-        lsmash_initialize_media_parameters( &media_param );
-        if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+        lsmash_media_init_parameters( &media_param );
+        if( lsmash_media_get_parameters( root, track_id, &media_param ) < 0 )
         {
             strcpy( error_string, "Failed to get media parameters.\n" );
             goto fail;
@@ -204,14 +204,14 @@ uint32_t libavsmash_get_track_by_media_type
 )
 {
     char error_string[128] = { 0 };
-    const char *media_type_str = type == ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK ? "video" : "audio";
+    const char *media_type_str = type == LSMASH_ISOM_MEDIA_HANDLER_TYPE_VIDEO_TRACK ? "video" : "audio";
     uint32_t track_id;
     lsmash_media_parameters_t media_param;
     if( track_number == 0 )
     {
         /* Get the first track. */
         lsmash_movie_parameters_t movie_param;
-        if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
+        if( lsmash_movie_get_parameters( root, &movie_param ) < 0 )
         {
             strcpy( error_string, "Failed to get movie paramters3.\n" );
             goto fail;
@@ -219,14 +219,14 @@ uint32_t libavsmash_get_track_by_media_type
         uint32_t i;
         for( i = 1; i <= movie_param.number_of_tracks; i++ )
         {
-            track_id = lsmash_get_track_ID( root, i );
+            track_id = lsmash_track_get_id( root, i );
             if( track_id == 0 )
             {
                 sprintf( error_string, "Failed to find %s track.\n", media_type_str );
                 goto fail;
             }
-            lsmash_initialize_media_parameters( &media_param );
-            if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+            lsmash_media_init_parameters( &media_param );
+            if( lsmash_media_get_parameters( root, track_id, &media_param ) < 0 )
             {
                 strcpy( error_string, "Failed to get media parameters.\n" );
                 goto fail;
@@ -243,14 +243,14 @@ uint32_t libavsmash_get_track_by_media_type
     else
     {
         /* Get the desired track. */
-        track_id = lsmash_get_track_ID( root, track_number );
+        track_id = lsmash_track_get_id( root, track_number );
         if( track_id == 0 )
         {
             sprintf( error_string, "Failed to find %s track %" PRIu32 ".\n", media_type_str, track_number );
             goto fail;
         }
-        lsmash_initialize_media_parameters( &media_param );
-        if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+        lsmash_media_init_parameters( &media_param );
+        if( lsmash_media_get_parameters( root, track_id, &media_param ) < 0 )
         {
             strcpy( error_string, "Failed to get media parameters.\n" );
             goto fail;
@@ -261,7 +261,7 @@ uint32_t libavsmash_get_track_by_media_type
             goto fail;
         }
     }
-    if( lsmash_construct_timeline( root, track_id ) < 0 )
+    if( lsmash_timeline_construct( root, track_id ) < 0 )
     {
         sprintf( error_string, "Failed to get construct timeline of %s track.\n", media_type_str );
         goto fail;
@@ -280,7 +280,7 @@ int get_summaries
 )
 {
     char error_string[96] = { 0 };
-    uint32_t summary_count = lsmash_count_summary( root, track_ID );
+    uint32_t summary_count = lsmash_codec_get_summary_count( root, track_ID );
     if( summary_count == 0 )
     {
         strcpy( error_string, "Failed to find valid summaries.\n" );
@@ -294,7 +294,7 @@ int get_summaries
     }
     for( uint32_t i = 0; i < summary_count; i++ )
     {
-        lsmash_summary_t *summary = lsmash_get_summary( root, track_ID, i + 1 );
+        lsmash_summary_t *summary = lsmash_codec_get_summary( root, track_ID, i + 1 );
         if( !summary )
             continue;
         summaries[i].summary = summary;
@@ -315,82 +315,82 @@ static enum AVCodecID get_codec_id_from_description
 {
     lsmash_codec_type_t sample_type = summary->sample_type;
 #define ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( codec_id, codec_type )        \
-    else if( lsmash_check_codec_type_identical( sample_type, codec_type ) ) \
+    else if( lsmash_codec_check_codec_type_identical( sample_type, codec_type ) ) \
         return codec_id
     if( summary->summary_type == LSMASH_SUMMARY_TYPE_VIDEO )
     {
-        if( lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_RAW_VIDEO ) )
+        if( lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_RAW_VIDEO ) )
         {
             lsmash_video_summary_t *video = (lsmash_video_summary_t *)summary;
-            if( video->depth == QT_VIDEO_DEPTH_24RGB
-             || video->depth == QT_VIDEO_DEPTH_32ARGB
-             || video->depth == QT_VIDEO_DEPTH_GRAYSCALE_1 )
+            if( video->depth == LSMASH_QT_VIDEO_DEPTH_24RGB
+             || video->depth == LSMASH_QT_VIDEO_DEPTH_32ARGB
+             || video->depth == LSMASH_QT_VIDEO_DEPTH_GRAYSCALE_1 )
                 return AV_CODEC_ID_RAWVIDEO;
             return AV_CODEC_ID_NONE;
         }
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H264,     ISOM_CODEC_TYPE_AVC1_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H264,     ISOM_CODEC_TYPE_AVC3_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_HEVC,     ISOM_CODEC_TYPE_HVC1_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_HEVC,     ISOM_CODEC_TYPE_HEV1_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_VC1,      ISOM_CODEC_TYPE_VC_1_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DIRAC,    ISOM_CODEC_TYPE_DRAC_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     QT_CODEC_TYPE_APCH_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     QT_CODEC_TYPE_APCN_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     QT_CODEC_TYPE_APCS_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     QT_CODEC_TYPE_APCO_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     QT_CODEC_TYPE_AP4H_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     QT_CODEC_TYPE_AP4X_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RAWVIDEO,   QT_CODEC_TYPE_DVOO_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVC_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVCP_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVPP_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DV5N_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DV5P_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVH2_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVH3_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVH5_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVH6_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVHP_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    QT_CODEC_TYPE_DVHQ_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_FLIC,       QT_CODEC_TYPE_FLIC_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H261,       QT_CODEC_TYPE_H261_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H263,       QT_CODEC_TYPE_H263_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MJPEG,      QT_CODEC_TYPE_JPEG_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MJPEG,      QT_CODEC_TYPE_MJPA_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MJPEGB,     QT_CODEC_TYPE_MJPB_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PNG,        QT_CODEC_TYPE_PNG_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_QTRLE,      QT_CODEC_TYPE_RLE_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RPZA,       QT_CODEC_TYPE_RPZA_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_TARGA,      QT_CODEC_TYPE_TGA_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_TIFF,       QT_CODEC_TYPE_TIFF_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    QT_CODEC_TYPE_ULRA_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    QT_CODEC_TYPE_ULRG_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    QT_CODEC_TYPE_ULY0_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    QT_CODEC_TYPE_ULY2_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    QT_CODEC_TYPE_ULH0_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    QT_CODEC_TYPE_ULH2_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    QT_CODEC_TYPE_UQY2_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_V210,       QT_CODEC_TYPE_V210_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_V410,       QT_CODEC_TYPE_V410_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RAWVIDEO,   QT_CODEC_TYPE_2VUY_VIDEO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RAWVIDEO,   QT_CODEC_TYPE_YUV2_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H264,     LSMASH_ISOM_CODEC_TYPE_AVC1_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H264,     LSMASH_ISOM_CODEC_TYPE_AVC3_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_HEVC,     LSMASH_ISOM_CODEC_TYPE_HVC1_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_HEVC,     LSMASH_ISOM_CODEC_TYPE_HEV1_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_VC1,      LSMASH_ISOM_CODEC_TYPE_VC_1_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DIRAC,    LSMASH_ISOM_CODEC_TYPE_DRAC_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     LSMASH_QT_CODEC_TYPE_APCH_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     LSMASH_QT_CODEC_TYPE_APCN_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     LSMASH_QT_CODEC_TYPE_APCS_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     LSMASH_QT_CODEC_TYPE_APCO_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     LSMASH_QT_CODEC_TYPE_AP4H_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PRORES,     LSMASH_QT_CODEC_TYPE_AP4X_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RAWVIDEO,   LSMASH_QT_CODEC_TYPE_DVOO_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVC_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVCP_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVPP_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DV5N_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DV5P_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVH2_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVH3_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVH5_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVH6_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVHP_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DVVIDEO,    LSMASH_QT_CODEC_TYPE_DVHQ_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_FLIC,       LSMASH_QT_CODEC_TYPE_FLIC_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H261,       LSMASH_QT_CODEC_TYPE_H261_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_H263,       LSMASH_QT_CODEC_TYPE_H263_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MJPEG,      LSMASH_QT_CODEC_TYPE_JPEG_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MJPEG,      LSMASH_QT_CODEC_TYPE_MJPA_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MJPEGB,     LSMASH_QT_CODEC_TYPE_MJPB_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PNG,        LSMASH_QT_CODEC_TYPE_PNG_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_QTRLE,      LSMASH_QT_CODEC_TYPE_RLE_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RPZA,       LSMASH_QT_CODEC_TYPE_RPZA_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_TARGA,      LSMASH_QT_CODEC_TYPE_TGA_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_TIFF,       LSMASH_QT_CODEC_TYPE_TIFF_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    LSMASH_QT_CODEC_TYPE_ULRA_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    LSMASH_QT_CODEC_TYPE_ULRG_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    LSMASH_QT_CODEC_TYPE_ULY0_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    LSMASH_QT_CODEC_TYPE_ULY2_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    LSMASH_QT_CODEC_TYPE_ULH0_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    LSMASH_QT_CODEC_TYPE_ULH2_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_UTVIDEO,    LSMASH_QT_CODEC_TYPE_UQY2_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_V210,       LSMASH_QT_CODEC_TYPE_V210_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_V410,       LSMASH_QT_CODEC_TYPE_V410_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RAWVIDEO,   LSMASH_QT_CODEC_TYPE_2VUY_VIDEO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_RAWVIDEO,   LSMASH_QT_CODEC_TYPE_YUV2_VIDEO );
     }
     else if( summary->summary_type == LSMASH_SUMMARY_TYPE_AUDIO )
     {
-        if( lsmash_check_codec_type_identical( sample_type, ISOM_CODEC_TYPE_MP4A_AUDIO )
-         || lsmash_check_codec_type_identical( sample_type,   QT_CODEC_TYPE_MP4A_AUDIO ) )
+        if( lsmash_codec_check_codec_type_identical( sample_type, LSMASH_ISOM_CODEC_TYPE_MP4A_AUDIO )
+         || lsmash_codec_check_codec_type_identical( sample_type,   LSMASH_QT_CODEC_TYPE_MP4A_AUDIO ) )
         {
-            uint32_t cs_count = lsmash_count_codec_specific_data( summary );
+            uint32_t cs_count = lsmash_codec_get_codec_specific_data_count( summary );
             lsmash_codec_specific_t *orig_cs = NULL;
             lsmash_codec_specific_t *cs      = NULL;
             for( uint32_t i = 1; i <= cs_count; i++ )
             {
-                orig_cs = lsmash_get_codec_specific_data( summary, i );
+                orig_cs = lsmash_codec_get_codec_specific_data( summary, i );
                 if( !orig_cs || orig_cs->type != LSMASH_CODEC_SPECIFIC_DATA_TYPE_MP4SYS_DECODER_CONFIG )
                     continue;
                 cs = orig_cs->format == LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED
                    ? orig_cs
-                   : lsmash_convert_codec_specific_format( orig_cs, LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED );
+                   : lsmash_codec_convert_codec_specific_format( orig_cs, LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED );
                 break;
             }
             if( !cs )
@@ -399,18 +399,18 @@ static enum AVCodecID get_codec_id_from_description
             enum AVCodecID codec_id;
             switch( mdp->objectTypeIndication )
             {
-                case MP4SYS_OBJECT_TYPE_Visual_ISO_14496_2 :
+                case LSMASH_MP4SYS_OBJECT_TYPE_Visual_ISO_14496_2 :
                     codec_id = AV_CODEC_ID_MPEG4;
                     break;
-                case MP4SYS_OBJECT_TYPE_Audio_ISO_14496_3 :
+                case LSMASH_MP4SYS_OBJECT_TYPE_Audio_ISO_14496_3 :
                     switch( ((lsmash_audio_summary_t *)summary)->aot )
                     {
-                        case MP4A_AUDIO_OBJECT_TYPE_AAC_MAIN :
-                        case MP4A_AUDIO_OBJECT_TYPE_AAC_LC :
-                        case MP4A_AUDIO_OBJECT_TYPE_AAC_LTP :
+                        case LSMASH_MP4A_AUDIO_OBJECT_TYPE_AAC_MAIN :
+                        case LSMASH_MP4A_AUDIO_OBJECT_TYPE_AAC_LC :
+                        case LSMASH_MP4A_AUDIO_OBJECT_TYPE_AAC_LTP :
                             codec_id = AV_CODEC_ID_AAC;
                             break;
-                        case MP4A_AUDIO_OBJECT_TYPE_ALS :
+                        case LSMASH_MP4A_AUDIO_OBJECT_TYPE_ALS :
                             codec_id = AV_CODEC_ID_MP4ALS;
                             break;
                         default :
@@ -418,17 +418,17 @@ static enum AVCodecID get_codec_id_from_description
                             break;
                     }
                     break;
-                case MP4SYS_OBJECT_TYPE_Audio_ISO_13818_7_Main_Profile :
-                case MP4SYS_OBJECT_TYPE_Audio_ISO_13818_7_LC_Profile :
-                case MP4SYS_OBJECT_TYPE_Audio_ISO_13818_7_SSR_Profile :
+                case LSMASH_MP4SYS_OBJECT_TYPE_Audio_ISO_13818_7_Main_Profile :
+                case LSMASH_MP4SYS_OBJECT_TYPE_Audio_ISO_13818_7_LC_Profile :
+                case LSMASH_MP4SYS_OBJECT_TYPE_Audio_ISO_13818_7_SSR_Profile :
                     codec_id = AV_CODEC_ID_AAC;
                     break;
-                case MP4SYS_OBJECT_TYPE_Audio_ISO_13818_3 :
-                case MP4SYS_OBJECT_TYPE_Audio_ISO_11172_3 :
+                case LSMASH_MP4SYS_OBJECT_TYPE_Audio_ISO_13818_3 :
+                case LSMASH_MP4SYS_OBJECT_TYPE_Audio_ISO_11172_3 :
                     /* Return temporal CODEC ID since we can't confirm what CODEC is used here. */
                     codec_id = AV_CODEC_ID_MP3;
                     break;
-                case MP4SYS_OBJECT_TYPE_PNG :
+                case LSMASH_MP4SYS_OBJECT_TYPE_PNG :
                     codec_id = AV_CODEC_ID_PNG;
                     break;
                 default :
@@ -436,46 +436,46 @@ static enum AVCodecID get_codec_id_from_description
                     break;
             }
             if( orig_cs != cs )
-                lsmash_destroy_codec_specific_data( cs );
+                lsmash_codec_destroy_codec_specific_data( cs );
             return codec_id;
         }
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_AC3,         ISOM_CODEC_TYPE_AC_3_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_EAC3,        ISOM_CODEC_TYPE_EC_3_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DTS,         ISOM_CODEC_TYPE_DTSC_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DTS,         ISOM_CODEC_TYPE_DTSH_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DTS,         ISOM_CODEC_TYPE_DTSL_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_AMR_NB,      ISOM_CODEC_TYPE_SAMR_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_AMR_WB,      ISOM_CODEC_TYPE_SAWB_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ALAC,        ISOM_CODEC_TYPE_ALAC_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ALAC,          QT_CODEC_TYPE_ALAC_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MACE3,         QT_CODEC_TYPE_MAC3_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MACE6,         QT_CODEC_TYPE_MAC6_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_QCELP,         QT_CODEC_TYPE_QCLP_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_GSM,           QT_CODEC_TYPE_AGSM_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PCM_ALAW,      QT_CODEC_TYPE_ALAW_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ADPCM_IMA_QT,  QT_CODEC_TYPE_IMA4_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PCM_MULAW,     QT_CODEC_TYPE_ULAW_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MP3,           QT_CODEC_TYPE_FULLMP3_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ADPCM_MS,      QT_CODEC_TYPE_ADPCM2_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ADPCM_IMA_WAV, QT_CODEC_TYPE_ADPCM17_AUDIO );
-        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_GSM_MS,        QT_CODEC_TYPE_GSM49_AUDIO );
-        else if( lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_LPCM_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_FL32_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_FL64_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_23NI_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_IN24_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_IN32_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_SOWT_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_TWOS_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_RAW_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_NONE_AUDIO )
-              || lsmash_check_codec_type_identical( sample_type, QT_CODEC_TYPE_NOT_SPECIFIED ) )
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_AC3,         LSMASH_ISOM_CODEC_TYPE_AC_3_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_EAC3,        LSMASH_ISOM_CODEC_TYPE_EC_3_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DTS,         LSMASH_ISOM_CODEC_TYPE_DTSC_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DTS,         LSMASH_ISOM_CODEC_TYPE_DTSH_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_DTS,         LSMASH_ISOM_CODEC_TYPE_DTSL_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_AMR_NB,      LSMASH_ISOM_CODEC_TYPE_SAMR_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_AMR_WB,      LSMASH_ISOM_CODEC_TYPE_SAWB_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ALAC,        LSMASH_ISOM_CODEC_TYPE_ALAC_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ALAC,          LSMASH_QT_CODEC_TYPE_ALAC_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MACE3,         LSMASH_QT_CODEC_TYPE_MAC3_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MACE6,         LSMASH_QT_CODEC_TYPE_MAC6_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_QCELP,         LSMASH_QT_CODEC_TYPE_QCLP_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_GSM,           LSMASH_QT_CODEC_TYPE_AGSM_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PCM_ALAW,      LSMASH_QT_CODEC_TYPE_ALAW_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ADPCM_IMA_QT,  LSMASH_QT_CODEC_TYPE_IMA4_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_PCM_MULAW,     LSMASH_QT_CODEC_TYPE_ULAW_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_MP3,           LSMASH_QT_CODEC_TYPE_FULLMP3_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ADPCM_MS,      LSMASH_QT_CODEC_TYPE_ADPCM2_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_ADPCM_IMA_WAV, LSMASH_QT_CODEC_TYPE_ADPCM17_AUDIO );
+        ELSE_IF_GET_CODEC_ID_FROM_CODEC_TYPE( AV_CODEC_ID_GSM_MS,        LSMASH_QT_CODEC_TYPE_GSM49_AUDIO );
+        else if( lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_LPCM_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_FL32_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_FL64_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_23NI_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_IN24_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_IN32_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_SOWT_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_TWOS_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_RAW_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_NONE_AUDIO )
+              || lsmash_codec_check_codec_type_identical( sample_type, LSMASH_QT_CODEC_TYPE_NOT_SPECIFIED ) )
         {
-            uint32_t cs_count = lsmash_count_codec_specific_data( summary );
+            uint32_t cs_count = lsmash_codec_get_codec_specific_data_count( summary );
             lsmash_codec_specific_t *cs = NULL;
             for( uint32_t i = 1; i <= cs_count; i++ )
             {
-                cs = lsmash_get_codec_specific_data( summary, i );
+                cs = lsmash_codec_get_codec_specific_data( summary, i );
                 if( cs
                  && cs->type == LSMASH_CODEC_SPECIFIC_DATA_TYPE_QT_AUDIO_FORMAT_SPECIFIC_FLAGS
                  && cs->format == LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED )
@@ -485,9 +485,9 @@ static enum AVCodecID get_codec_id_from_description
                 return AV_CODEC_ID_NONE;
             lsmash_audio_summary_t *audio = (lsmash_audio_summary_t *)summary;
             lsmash_qt_audio_format_specific_flags_t *data = (lsmash_qt_audio_format_specific_flags_t *)cs->data.structured;
-            int is_int    = !(data->format_flags & QT_LPCM_FORMAT_FLAG_FLOAT);
-            int is_signed = !!(data->format_flags & QT_LPCM_FORMAT_FLAG_SIGNED_INTEGER);
-            int is_be     = !!(data->format_flags & QT_LPCM_FORMAT_FLAG_BIG_ENDIAN);
+            int is_int    = !(data->format_flags & LSMASH_QT_LPCM_FORMAT_FLAG_FLOAT);
+            int is_signed = !!(data->format_flags & LSMASH_QT_LPCM_FORMAT_FLAG_SIGNED_INTEGER);
+            int is_be     = !!(data->format_flags & LSMASH_QT_LPCM_FORMAT_FLAG_BIG_ENDIAN);
             switch( audio->sample_size )
             {
                 case  8 :
@@ -535,16 +535,16 @@ static int libavsmash_is_track_supported
     uint32_t       track_id
 )
 {
-    uint32_t summary_count = lsmash_count_summary( root, track_id );
+    uint32_t summary_count = lsmash_codec_get_summary_count( root, track_id );
     if( summary_count == 0 )
         return 0;
     for( uint32_t i = 1; i <= summary_count; i++ )
     {
-        lsmash_summary_t *summary = lsmash_get_summary( root, track_id, i );
+        lsmash_summary_t *summary = lsmash_codec_get_summary( root, track_id, i );
         if( !summary )
             return 0;
         int supported = get_codec_id_from_description( summary ) != AV_CODEC_ID_NONE;
-        lsmash_cleanup_summary( summary );
+        lsmash_codec_destroy_summary( summary );
         if( !supported )
             return 0;
     }
@@ -560,8 +560,8 @@ int libavsmash_are_tracks_supported
 {
     char error_string[128] = { 0 };
     lsmash_movie_parameters_t movie_param;
-    lsmash_initialize_movie_parameters( &movie_param );
-    if( lsmash_get_movie_parameters( root, &movie_param ) < 0 )
+    lsmash_movie_init_parameters( &movie_param );
+    if( lsmash_movie_get_parameters( root, &movie_param ) < 0 )
     {
         strcpy( error_string, "Failed to get movie parameters.\n" );
         goto fail;
@@ -569,15 +569,15 @@ int libavsmash_are_tracks_supported
     uint32_t count = 0;
     for( uint32_t i = 1; i <= movie_param.number_of_tracks; i++ )
     {
-        uint32_t track_id = lsmash_get_track_ID( root, i );
+        uint32_t track_id = lsmash_track_get_id( root, i );
         if( track_id == 0 )
         {
             strcpy( error_string, "Failed to find track.\n" );
             goto fail;
         }
         lsmash_media_parameters_t media_param;
-        lsmash_initialize_media_parameters( &media_param );
-        if( lsmash_get_media_parameters( root, track_id, &media_param ) < 0 )
+        lsmash_media_init_parameters( &media_param );
+        if( lsmash_media_get_parameters( root, track_id, &media_param ) < 0 )
         {
             strcpy( error_string, "Failed to get media parameters.\n" );
             goto fail;
@@ -620,65 +620,65 @@ int libavsmash_find_and_open_decoder
     return open_decoder( &config->ctx, codecpar, codec, thread_count );
 }
 
-static lsmash_codec_specific_data_type get_codec_specific_data_type
+static lsmash_codec_specific_data_type_t get_codec_specific_data_type
 (
     lsmash_codec_type_t           codec_type,
-    lsmash_codec_specific_format *format1,
-    lsmash_codec_specific_format *format2
+    lsmash_codec_specific_format_t *format1,
+    lsmash_codec_specific_format_t *format2
 )
 {
     *format1 = LSMASH_CODEC_SPECIFIC_FORMAT_UNSPECIFIED;
     *format2 = LSMASH_CODEC_SPECIFIC_FORMAT_UNSPECIFIED;
-    if( lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_AVC1_VIDEO )
-     || lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_AVC3_VIDEO ) )
+    if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_AVC1_VIDEO )
+     || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_AVC3_VIDEO ) )
     {
         *format1 = LSMASH_CODEC_SPECIFIC_FORMAT_UNSTRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_ISOM_VIDEO_H264;
     }
-    else if( lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_HVC1_VIDEO )
-          || lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_HEV1_VIDEO ) )
+    else if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_HVC1_VIDEO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_HEV1_VIDEO ) )
     {
         *format1 = LSMASH_CODEC_SPECIFIC_FORMAT_UNSTRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_ISOM_VIDEO_HEVC;
     }
-    else if( lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_MP4A_AUDIO )
-          || lsmash_check_codec_type_identical( codec_type,   QT_CODEC_TYPE_MP4A_AUDIO )
-          || lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_MP4V_VIDEO ) )
+    else if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_MP4A_AUDIO )
+          || lsmash_codec_check_codec_type_identical( codec_type,   LSMASH_QT_CODEC_TYPE_MP4A_AUDIO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_MP4V_VIDEO ) )
     {
         *format1 = LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_MP4SYS_DECODER_CONFIG;
     }
-    else if( lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_VC_1_VIDEO ) )
+    else if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_VC_1_VIDEO ) )
     {
         *format1 = LSMASH_CODEC_SPECIFIC_FORMAT_UNSTRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_ISOM_VIDEO_VC_1;
     }
-    else if( lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_AC_3_AUDIO ) )
+    else if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_AC_3_AUDIO ) )
     {
         *format2 = LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_ISOM_AUDIO_AC_3;
     }
-    else if( lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_ALAC_AUDIO )
-          || lsmash_check_codec_type_identical( codec_type,   QT_CODEC_TYPE_ALAC_AUDIO ) )
+    else if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_ALAC_AUDIO )
+          || lsmash_codec_check_codec_type_identical( codec_type,   LSMASH_QT_CODEC_TYPE_ALAC_AUDIO ) )
     {
         *format1 = LSMASH_CODEC_SPECIFIC_FORMAT_UNSTRUCTURED;
         *format2 = LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_ISOM_AUDIO_ALAC;
     }
-    else if( lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_DTSC_AUDIO )
-          || lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_DTSH_AUDIO )
-          || lsmash_check_codec_type_identical( codec_type, ISOM_CODEC_TYPE_DTSL_AUDIO ) )
+    else if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_DTSC_AUDIO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_DTSH_AUDIO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_ISOM_CODEC_TYPE_DTSL_AUDIO ) )
     {
         *format2 = LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_ISOM_AUDIO_DTS;
     }
-    else if( lsmash_check_codec_type_identical( codec_type, QT_CODEC_TYPE_ULRA_VIDEO )
-          || lsmash_check_codec_type_identical( codec_type, QT_CODEC_TYPE_ULRG_VIDEO )
-          || lsmash_check_codec_type_identical( codec_type, QT_CODEC_TYPE_ULY0_VIDEO )
-          || lsmash_check_codec_type_identical( codec_type, QT_CODEC_TYPE_ULY2_VIDEO )
-          || lsmash_check_codec_type_identical( codec_type, QT_CODEC_TYPE_ULH0_VIDEO )
-          || lsmash_check_codec_type_identical( codec_type, QT_CODEC_TYPE_ULH2_VIDEO )
-          || lsmash_check_codec_type_identical( codec_type, QT_CODEC_TYPE_UQY2_VIDEO ) )
+    else if( lsmash_codec_check_codec_type_identical( codec_type, LSMASH_QT_CODEC_TYPE_ULRA_VIDEO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_QT_CODEC_TYPE_ULRG_VIDEO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_QT_CODEC_TYPE_ULY0_VIDEO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_QT_CODEC_TYPE_ULY2_VIDEO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_QT_CODEC_TYPE_ULH0_VIDEO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_QT_CODEC_TYPE_ULH2_VIDEO )
+          || lsmash_codec_check_codec_type_identical( codec_type, LSMASH_QT_CODEC_TYPE_UQY2_VIDEO ) )
     {
         *format1 = LSMASH_CODEC_SPECIFIC_FORMAT_STRUCTURED;
         return LSMASH_CODEC_SPECIFIC_DATA_TYPE_CODEC_GLOBAL_HEADER;
@@ -735,9 +735,9 @@ static int prepare_new_decoder_configuration
         return 0;
     }
     config->queue.bits_per_sample = av_get_bits_per_sample( new_codec_id );
-    lsmash_codec_specific_format    cs_format1;
-    lsmash_codec_specific_format    cs_format2;
-    lsmash_codec_specific_data_type cs_type = get_codec_specific_data_type( summary->sample_type, &cs_format1, &cs_format2 );
+    lsmash_codec_specific_format_t    cs_format1;
+    lsmash_codec_specific_format_t    cs_format2;
+    lsmash_codec_specific_data_type_t cs_type = get_codec_specific_data_type( summary->sample_type, &cs_format1, &cs_format2 );
     if( cs_type == LSMASH_CODEC_SPECIFIC_DATA_TYPE_UNSPECIFIED
      && cs_format1 == LSMASH_CODEC_SPECIFIC_FORMAT_UNSPECIFIED
      && cs_format2 == LSMASH_CODEC_SPECIFIC_FORMAT_UNSPECIFIED )
@@ -756,19 +756,19 @@ static int prepare_new_decoder_configuration
         config->queue.index = new_index;
         return 0;
     }
-    uint32_t cs_count = lsmash_count_codec_specific_data( summary );
+    uint32_t cs_count = lsmash_codec_get_codec_specific_data_count( summary );
     lsmash_codec_specific_t *orig_cs = NULL;
     lsmash_codec_specific_t *cs1     = NULL;
     lsmash_codec_specific_t *cs2     = NULL;
     for( uint32_t i = 1; i <= cs_count; i++ )
     {
-        orig_cs = lsmash_get_codec_specific_data( summary, i );
+        orig_cs = lsmash_codec_get_codec_specific_data( summary, i );
         if( !orig_cs )
             continue;
         if( orig_cs->type == cs_type )
         {
-            cs1 = orig_cs->format == cs_format1 ? orig_cs : lsmash_convert_codec_specific_format( orig_cs, cs_format1 );
-            cs2 = orig_cs->format == cs_format2 ? orig_cs : lsmash_convert_codec_specific_format( orig_cs, cs_format2 );
+            cs1 = orig_cs->format == cs_format1 ? orig_cs : lsmash_codec_convert_codec_specific_format( orig_cs, cs_format1 );
+            cs2 = orig_cs->format == cs_format2 ? orig_cs : lsmash_codec_convert_codec_specific_format( orig_cs, cs_format2 );
             break;
         }
     }
@@ -814,7 +814,7 @@ static int prepare_new_decoder_configuration
                 lsmash_mp4sys_decoder_parameters_t *mdp = (lsmash_mp4sys_decoder_parameters_t *)cs1->data.structured;
                 uint8_t *cs_data;
                 uint32_t cs_data_size;
-                if( lsmash_get_mp4sys_decoder_specific_info( mdp, &cs_data, &cs_data_size ) )
+                if( lsmash_mp4sys_get_decoder_specific_info( mdp, &cs_data, &cs_data_size ) )
                     goto fail;
                 int ret = queue_extradata( config, cs_data, cs_data_size );
                 lsmash_free( cs_data );
@@ -857,15 +857,15 @@ static int prepare_new_decoder_configuration
     }
     config->queue.index = new_index;
     if( orig_cs != cs1 )
-        lsmash_destroy_codec_specific_data( cs1 );
+        lsmash_codec_destroy_codec_specific_data( cs1 );
     if( orig_cs != cs2 )
-        lsmash_destroy_codec_specific_data( cs2 );
+        lsmash_codec_destroy_codec_specific_data( cs2 );
     return 0;
 fail:
     if( orig_cs != cs1 )
-        lsmash_destroy_codec_specific_data( cs1 );
+        lsmash_codec_destroy_codec_specific_data( cs1 );
     if( orig_cs != cs2 )
-        lsmash_destroy_codec_specific_data( cs2 );
+        lsmash_codec_destroy_codec_specific_data( cs2 );
     return -1;
 }
 
@@ -901,7 +901,7 @@ int get_sample
         }
         return 0;
     }
-    lsmash_sample_t *sample = lsmash_get_sample_from_media_timeline( root, track_ID, sample_number );
+    lsmash_sample_t *sample = lsmash_timeline_get_sample( root, track_ID, sample_number );
     if( !sample )
     {
         /* Reached the end of this media timeline. */
@@ -924,7 +924,7 @@ int get_sample
     {
         if( prepare_new_decoder_configuration( config, sample->index ) )
         {
-            lsmash_delete_sample( sample );
+            lsmash_sample_destroy( sample );
             return -1;
         }
         /* Queue the current packet and, instead of this, return NULL packet.
@@ -938,13 +938,13 @@ int get_sample
             /* This NULL packet must not be sent to the decoder. */
             config->update_pending = 1;
             config->dequeue_packet = 1;
-            lsmash_delete_sample( sample );
+            lsmash_sample_destroy( sample );
             return 2;
         }
         else
             config->dequeue_packet = 0;
     }
-    lsmash_delete_sample( sample );
+    lsmash_sample_destroy( sample );
     return 0;
 }
 
@@ -1035,7 +1035,7 @@ void update_configuration
         codecpar->width  = video->width;
         codecpar->height = video->height;
         /* Here, expect appropriate pixel format will be picked in avcodec_open2(). */
-        if( video->depth >= QT_VIDEO_DEPTH_GRAYSCALE_1 && video->depth <= QT_VIDEO_DEPTH_GRAYSCALE_8 )
+        if( video->depth >= LSMASH_QT_VIDEO_DEPTH_GRAYSCALE_1 && video->depth <= LSMASH_QT_VIDEO_DEPTH_GRAYSCALE_8 )
             config->queue.bits_per_sample = video->depth & 0x1f;
         else
             config->queue.bits_per_sample = video->depth;
@@ -1177,7 +1177,7 @@ int initialize_decoder_configuration
 )
 {
     /* Note: the input buffer for libavcodec's decoders must be AV_INPUT_BUFFER_PADDING_SIZE larger than the actual read bytes. */
-    uint32_t input_buffer_size = lsmash_get_max_sample_size_in_media_timeline( root, track_ID );
+    uint32_t input_buffer_size = lsmash_timeline_get_max_sample_size( root, track_ID );
     if( input_buffer_size == 0 )
         return -1;
     config->input_buffer = (uint8_t *)av_mallocz( input_buffer_size + AV_INPUT_BUFFER_PADDING_SIZE );
@@ -1212,11 +1212,11 @@ int initialize_decoder_configuration
     uint32_t valid_index_count = (config->index && config->index <= config->count);
     if( valid_index_count )
         index_list[ config->index - 1 ] = 1;
-    uint32_t sample_count = lsmash_get_sample_count_in_media_timeline( root, track_ID );
+    uint32_t sample_count = lsmash_timeline_get_sample_count( root, track_ID );
     for( uint32_t i = 2; i <= sample_count && valid_index_count < config->count; i++ )
     {
         lsmash_sample_t sample;
-        if( lsmash_get_sample_info_from_media_timeline( root, track_ID, i, &sample ) )
+        if( lsmash_timeline_get_sample_info( root, track_ID, i, &sample ) )
             continue;
         if( sample.index == config->index || sample.index == 0 )
             continue;
@@ -1288,7 +1288,7 @@ void cleanup_configuration
     if( config->entries )
     {
         for( uint32_t i = 0; i < config->count; i++ )
-            lsmash_cleanup_summary( config->entries[i].summary );
+            lsmash_codec_destroy_summary( config->entries[i].summary );
         free( config->entries );
     }
     av_channel_layout_uninit( &config->prefer.ch_layout );
