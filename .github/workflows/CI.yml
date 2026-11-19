@@ -42,7 +42,7 @@ jobs:
 
     - name: Install l-smash
       run: |
-        git clone https://github.com/l-smash/l-smash --depth 1
+        git clone https://github.com/l-smash/l-smash　--branch master --depth 1
         pushd l-smash
         mv configure configure.old
         sed 's/-Wl,--version-script,liblsmash.ver//g' configure.old >configure
